@@ -6,6 +6,8 @@ __pycache__/
 # Poetry
 .poetry/
 .venv/
+# poetry.lock should be tracked
+# Remove from ignore list if present
 poetry.lock
 
 # Jupyter Notebooks
