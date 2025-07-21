@@ -1,6 +1,6 @@
 # dgi-toolkit
 
-[![Build Status](#)](#) [![Coverage](#)](#) [![Image Size](#)](#) [![License: MIT](#)](#)
+[![Build Status](#)](#) [![Coverage](#)](#) [![License: MIT](#)](#)
 
 ## Project Pitch
 

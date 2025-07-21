@@ -35,3 +35,8 @@ tests/
 # Large files
 *.csv
 *.csv.* 
+
+# Tests
+!tests/
+!tests/*.py
+tests/__pycache__/ 
