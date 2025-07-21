@@ -33,5 +33,5 @@ jobs:
       run: docker build -t dgi-toolkit:${{ github.sha }} .
     - name: Size guard (<150 MB)
       run: |
-        SZ=$(docker images dgi-toolkit:${{ github.sha }} --format "{{.Size}}" | cut -d'MB' -f1)
+        SZ=$(docker images dgi-toolkit:${{ github.sha }} --format "{{.Size}}" | sed 's/MB//')
         awk "BEGIN { exit ($SZ<150)?0:1 }" 
