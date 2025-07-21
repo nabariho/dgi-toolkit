@@ -11,8 +11,6 @@ __pycache__/
 poetry.lock
 
 # Jupyter Notebooks
-!notebooks/
-!notebooks/*.ipynb
 notebooks/.ipynb_checkpoints/
 *.ipynb_checkpoints
 
