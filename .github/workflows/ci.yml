@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Poetry
+      run: pip install poetry
+    - name: Cache venv
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+    - name: Install deps
+      run: poetry install --no-interaction
+    - name: Pre-commit
+      run: poetry run pre-commit run --all-files --show-diff-on-failure
+    - name: Tests
+      run: poetry run pytest --cov=dgi --cov-report=xml
+    - name: Build Docker
+      run: docker build -t dgi-toolkit:${{ github.sha }} .
+    - name: Size guard (<150 MB)
+      run: |
+        SZ=$(docker images dgi-toolkit:${{ github.sha }} --format "{{.Size}}" | cut -d'MB' -f1)
+        awk "BEGIN { exit ($SZ<150)?0:1 }" 
