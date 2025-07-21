@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "dgi-toolkit"
+version = "0.1.0"
+description = ""
+authors = ["rubendominguezfalcon <nabariho@gmail.com>"]
+readme = "README.md"
+packages = [{include = "dgi_toolkit", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "^2.3.1"
+typer = {extras = ["all"], version = "^0.16.0"}
+rich = "^14.0.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+pytest-cov = "^6.2.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88

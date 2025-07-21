@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.12, 3.13]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+      - name: Run pre-commit
+        run: poetry run pre-commit run --all-files
+      - name: Run tests
+        run: poetry run pytest --cov=dgi_toolkit --cov-report=term-missing
+      - name: Build Docker image
+        run: docker build -t dgi-toolkit:dev .
+      - name: Check Docker image size
+        run: |
+          size=$(docker image inspect dgi-toolkit:dev --format='{{.Size}}')
+          size_mb=$((size / 1024 / 1024))
+          echo "Docker image size: ${size_mb}MB"
+          if [ "$size_mb" -ge 150 ]; then
+            echo "Image size exceeds 150MB!" && exit 1
+          fi 
