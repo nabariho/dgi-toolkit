@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["rubendominguezfalcon <nabariho@gmail.com>"]
 readme = "README.md"
-packages = [{include = "dgi_toolkit", from = "src"}]
+packages = [{include = "dgi", from = "."}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -16,6 +16,7 @@ rich = "^14.0.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
 pytest-cov = "^6.2.1"
+notebook = "^7.4.4"
 
 [build-system]
 requires = ["poetry-core"]

@@ -9,8 +9,10 @@ __pycache__/
 poetry.lock
 
 # Jupyter Notebooks
-*.ipynb
-notebooks/
+!notebooks/
+!notebooks/*.ipynb
+notebooks/.ipynb_checkpoints/
+*.ipynb_checkpoints
 
 # Test and coverage
 .coverage
