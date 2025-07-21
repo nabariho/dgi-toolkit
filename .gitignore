@@ -213,3 +213,36 @@ __marimo__/
 .mypy_cache/
 .pytest_cache/
 .DS_Store
+
+# Poetry
+.poetry/
+.venv/
+poetry.lock
+
+# Jupyter Notebooks
+!notebooks/
+!notebooks/*.ipynb
+notebooks/.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Test and coverage
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+tests/
+
+# Misc
+.DS_Store
+*.log
+*.tmp
+.cache/
+.env
+*.db
+*.sqlite3
+*.egg-info/
+.eggs/
+
+# Large files
+*.csv
+*.csv.*
