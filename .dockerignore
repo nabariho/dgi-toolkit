@@ -1,3 +1,6 @@
+# Allow data directory and its contents
+!data/
+!data/*
 .venv/
 __pycache__/
 *.ipynb
@@ -10,9 +13,6 @@ tests/
 *.egg-info/
 .eggs/
 .cache/
-*.csv
-!*.csv
-*.csv.*
 *.log
 *.tmp
 *.env
