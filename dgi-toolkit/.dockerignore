@@ -1,4 +1,7 @@
+.venv/
 __pycache__/
+*.ipynb
+tests/
 *.pyc
 *.pyo
 *.pyd
@@ -7,14 +10,10 @@ __pycache__/
 *.egg-info/
 .eggs/
 .cache/
-*.ipynb
-notebooks/
-tests/
 *.csv
 !*.csv
 *.csv.*
 *.log
 *.tmp
 *.env
-.venv/
 poetry.lock 
