@@ -1,8 +1,7 @@
-# mypy: disable-error-code=import
 import pandas as pd
 from typing import Any
+import pytest  # type: ignore
 from dgi.screener import load_universe, apply_filters, score
-import pytest
 
 
 def test_load_universe(tmp_path: Any) -> None:
