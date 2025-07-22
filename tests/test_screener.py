@@ -1,6 +1,6 @@
 import pandas as pd
-from typing import Any
-import pytest  # type: ignore
+from typing import Any, cast
+import pytest
 from dgi.screener import load_universe, apply_filters, score
 from dgi.models import DgiRow
 from dgi.validation import DgiRowValidator
@@ -38,9 +38,10 @@ def test_load_universe_missing_columns(tmp_path: Any) -> None:
     )
     with pytest.raises(ValueError) as excinfo:
         load_universe(str(csv))
-    assert "Missing required columns" in str(excinfo.value)
-    assert "dividend_yield" in str(excinfo.value)
-    assert "payout" in str(excinfo.value)
+    msg = str(excinfo.value)
+    assert "Missing columns:" in msg
+    assert "dividend_yield" in msg
+    assert "payout" in msg
 
 
 def test_apply_filters() -> None:
@@ -129,16 +130,13 @@ def test_dgirow_valid() -> None:
 
 def test_dgirow_invalid_type() -> None:
     # This test intentionally passes the wrong type to check runtime validation.
-    # type: ignore[arg-type] is used to silence mypy for this negative test case.
-    import pytest
-
     with pytest.raises(Exception):
         DgiRow(
             symbol="AAPL",
             name="Apple",
             sector="Tech",
             industry="Hardware",
-            dividend_yield="not_a_number",  # type: ignore[arg-type]
+            dividend_yield=cast(Any, "not_a_number"),
             payout=20.0,
             dividend_cagr=8.0,
             fcf_yield=5.0,

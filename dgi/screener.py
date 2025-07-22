@@ -34,14 +34,7 @@ def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
         "fcf_yield",
     ]
     df_raw = pd.read_csv(csv_path, dtype=str)  # Load all as str for validation
-    missing = [col for col in required_columns if col not in df_raw.columns]
-    if missing:
-        ms = ", ".join(missing)
-        logger.error("Missing columns: %s", ms)
-        em = f"Missing required columns in CSV: {ms}"
-        raise ValueError(em)
-
-    validator = DgiRowValidator(DgiRow)
+    validator = DgiRowValidator(DgiRow, required_columns)
     valid_rows = validator.validate_rows(df_raw.to_dict(orient="records"))
     logger.info(f"Successfully loaded {len(valid_rows)} valid rows from {csv_path}")
     return pd.DataFrame(valid_rows)
