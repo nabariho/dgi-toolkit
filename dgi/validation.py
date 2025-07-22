@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any, Type
+from typing import List, Dict, Any, Type, Optional
 from pydantic import BaseModel, ValidationError
 
 logger = logging.getLogger(__name__)
@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class DgiRowValidator:
     def __init__(
-        self, model: Type[BaseModel], required_columns: List[str] = None
+        self, model: Type[BaseModel], required_columns: Optional[List[str]] = None
     ) -> None:
         self.model = model
         self.required_columns = required_columns

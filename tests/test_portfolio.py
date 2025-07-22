@@ -3,7 +3,7 @@ import pytest
 from dgi.portfolio import build, summary_stats
 
 
-def sample_df():
+def sample_df() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "symbol": ["A", "B", "C"],
@@ -15,7 +15,7 @@ def sample_df():
     )
 
 
-def test_build_equal_weight():
+def test_build_equal_weight() -> None:
     df = sample_df()
     result = build(df, top_n=2, weighting="equal")
     assert result.shape[0] == 2
@@ -23,7 +23,7 @@ def test_build_equal_weight():
     assert set(result["ticker"]) == {"B", "C"}  # top 2 by score
 
 
-def test_build_score_weight():
+def test_build_score_weight() -> None:
     df = sample_df()
     result = build(df, top_n=2, weighting="score")
     assert result.shape[0] == 2
@@ -36,19 +36,19 @@ def test_build_score_weight():
     assert set(result["ticker"]) == {"B", "C"}
 
 
-def test_build_invalid_weighting():
+def test_build_invalid_weighting() -> None:
     df = sample_df()
     with pytest.raises(ValueError):
         build(df, top_n=2, weighting="invalid")
 
 
-def test_build_topn_too_large():
+def test_build_topn_too_large() -> None:
     df = sample_df()
     with pytest.raises(ValueError):
         build(df, top_n=10, weighting="equal")
 
 
-def test_summary_stats():
+def test_summary_stats() -> None:
     df = sample_df()
     stats = summary_stats(df)
     assert abs(stats["yield"] - 3.0) < 1e-8
