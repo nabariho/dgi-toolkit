@@ -128,7 +128,8 @@ def test_dgirow_valid() -> None:
 
 
 def test_dgirow_invalid_type() -> None:
-    # Should raise error for invalid type
+    # This test intentionally passes the wrong type to check runtime validation.
+    # type: ignore[arg-type] is used to silence mypy for this negative test case.
     import pytest
 
     with pytest.raises(Exception):
@@ -137,7 +138,7 @@ def test_dgirow_invalid_type() -> None:
             name="Apple",
             sector="Tech",
             industry="Hardware",
-            dividend_yield="not_a_number",
+            dividend_yield="not_a_number",  # type: ignore[arg-type]
             payout=20.0,
             dividend_cagr=8.0,
             fcf_yield=5.0,
