@@ -2,8 +2,33 @@
 
 import pandas as pd
 from pandas import DataFrame
+from pydantic import BaseModel, ValidationError, validator
+from typing import List, Dict, Any
+import logging
 
 # from typing import Any  # Remove unused import
+
+logger = logging.getLogger(__name__)
+
+
+class DgiRow(BaseModel):
+    symbol: str
+    name: str
+    sector: str
+    industry: str
+    dividend_yield: float
+    payout: float
+    dividend_cagr: float
+    fcf_yield: float
+
+    @validator("dividend_yield", "payout", "dividend_cagr", "fcf_yield", pre=True)
+    def must_be_number(cls, v: Any) -> float:
+        if isinstance(v, (int, float)):
+            return float(v)
+        try:
+            return float(v)
+        except Exception:
+            raise ValueError(f"Value '{v}' is not a valid number")
 
 
 def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
@@ -18,7 +43,7 @@ def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
 
     Expects columns: symbol, name, sector, industry, dividend_yield, payout,
     dividend_cagr, fcf_yield
-    Raises ValueError if any required columns are missing.
+    Raises ValueError if any validation fails
     """
     required_columns = [
         "symbol",
@@ -30,19 +55,33 @@ def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
         "dividend_cagr",
         "fcf_yield",
     ]
-    dtype = {
-        col: (
-            "float64"
-            if col in {"dividend_yield", "payout", "dividend_cagr", "fcf_yield"}
-            else "str"
-        )
-        for col in required_columns
-    }
-    df = pd.read_csv(csv_path, dtype=dtype)  # type: ignore[arg-type]
-    missing = [col for col in required_columns if col not in df.columns]
+    df_raw = pd.read_csv(csv_path, dtype=str)  # Load all as str for validation
+    missing = [col for col in required_columns if col not in df_raw.columns]
     if missing:
-        raise ValueError(f"Missing required columns in CSV: {missing}")
-    return df
+        ms = ", ".join(missing)
+        logger.error("Missing columns: %s", ms)
+        em = f"Missing required columns in CSV: {ms}"
+        raise ValueError(em)
+
+    valid_rows: List[Dict[str, Any]] = []
+    errors: List[str] = []
+    for row_num, (_, row) in enumerate(df_raw.iterrows(), start=2):
+        try:
+            validated = DgiRow(**row.to_dict())
+            valid_rows.append(validated.dict())
+        except ValidationError as e:
+            error_msg = f"Row {row_num}: {e}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+    if errors:
+        logger.error(
+            "CSV validation errors found in %s:\n%s",
+            csv_path,
+            "\n".join(errors),
+        )
+        raise ValueError("CSV validation errors:\n" + "\n".join(errors))
+    logger.info(f"Successfully loaded {len(valid_rows)} valid rows from {csv_path}")
+    return pd.DataFrame(valid_rows)
 
 
 def apply_filters(
@@ -68,7 +107,7 @@ def apply_filters(
     return filtered
 
 
-def score(row: pd.Series) -> float:  # type: ignore[type-arg]
+def score(row: pd.Series[Any]) -> float:
     """
     Calculate a composite score for DGI stock quality based on growth, payout,
     and free cash flow yield.
