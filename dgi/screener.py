@@ -7,7 +7,14 @@ from typing import Any
 
 def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
     """
-    Load the fundamentals universe from a CSV file into a DataFrame with correct dtypes.
+    Load the raw fundamentals universe for dividend growth investing analysis.
+
+    Business use:
+    This function ingests a CSV of stock fundamentals (including yield, payout,
+    and dividend CAGR) into a DataFrame for further screening and analysis. It
+    ensures all columns are loaded with the correct types, providing a reliable
+    starting point for building DGI watchlists and running filters.
+
     Expects columns: symbol, name, sector, industry, dividend_yield, payout,
     dividend_cagr, fcf_yield
     """
@@ -32,7 +39,13 @@ def apply_filters(
     min_cagr: float = 0.0,
 ) -> DataFrame:
     """
-    Filter the DataFrame by minimum yield, maximum payout, and minimum dividend CAGR.
+    Filter stocks by key dividend growth criteria for DGI portfolio selection.
+
+    Business use:
+    This function screens the universe for stocks that meet minimum yield,
+    maximum payout ratio, and minimum dividend CAGR requirements. It helps
+    analysts and investors quickly narrow down to candidates that fit a DGI
+    strategy, supporting repeatable, rules-based watchlist construction.
     """
     filtered = df[
         (df["dividend_yield"] >= min_yield)
@@ -44,9 +57,14 @@ def apply_filters(
 
 def score(row: pd.Series[Any]) -> float:
     """
-    Compute a 0-1 composite score: (1/3 * CAGR + 1/3 * FCF-yield - 1/3 * payout),
-    normalized to 0-1.
-    Assumes input row has dividend_cagr, fcf_yield, payout as floats (0-100 scale).
+    Calculate a composite score for DGI stock quality based on growth, payout,
+    and free cash flow yield.
+
+    Business use:
+    This scoring function enables ranking and comparison of stocks by combining
+    dividend growth (CAGR), free cash flow yield, and payout ratio into a single
+    normalized metric. It supports quantitative screening, ranking, and
+    prioritization of DGI candidates for further research or portfolio inclusion.
     """
     cagr_norm = min(max(row["dividend_cagr"] / 20.0, 0.0), 1.0)
     fcf_norm = min(max(row["fcf_yield"] / 20.0, 0.0), 1.0)
@@ -55,7 +73,3 @@ def score(row: pd.Series[Any]) -> float:
     composite = composite / 3.0
     result = max(0.0, min(composite, 1.0))
     return float(result)
-
-
-def screener_placeholder() -> None:
-    pass
