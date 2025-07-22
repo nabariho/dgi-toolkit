@@ -11,4 +11,5 @@ repos:
     rev: v1.7.1
     hooks:
       - id: mypy
-        args: ["--strict"] 
+        args: ["--strict"]
+        additional_dependencies: ["pandas-stubs"] 
