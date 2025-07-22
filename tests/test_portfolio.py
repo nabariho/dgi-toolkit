@@ -48,9 +48,30 @@ def test_build_topn_too_large() -> None:
         build(df, top_n=10, weighting="equal")
 
 
+def test_build_missing_score_column():
+    df = sample_df().drop(columns=["score"])
+    with pytest.raises(ValueError):
+        build(df, top_n=2, weighting="equal")
+
+
+def test_build_missing_ticker_column():
+    df = sample_df().drop(columns=["symbol"])
+    df = df.rename(columns={"score": "score"})
+    with pytest.raises(ValueError):
+        build(df, top_n=2, weighting="equal")
+
+
 def test_summary_stats() -> None:
     df = sample_df()
     stats = summary_stats(df)
     assert abs(stats["yield"] - 3.0) < 1e-8
     assert abs(stats["median_cagr"] - 6.0) < 1e-8
     assert abs(stats["mean_payout"] - 50.0) < 1e-8
+
+
+def test_summary_stats_empty():
+    df = sample_df().iloc[0:0]
+    stats = summary_stats(df)
+    assert stats["yield"] != stats["yield"]  # should be nan
+    assert stats["median_cagr"] != stats["median_cagr"]  # should be nan
+    assert stats["mean_payout"] != stats["mean_payout"]  # should be nan
