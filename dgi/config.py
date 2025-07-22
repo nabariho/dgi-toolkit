@@ -8,7 +8,7 @@ class Config:
     DEFAULT_MAX_PAYOUT: float
     DEFAULT_MIN_CAGR: float
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.DATA_PATH = os.getenv("DGI_DATA_PATH", "data/fundamentals_small.csv")
         self.LOG_LEVEL = os.getenv("DGI_LOG_LEVEL", "INFO")
         self.DEFAULT_MIN_YIELD = float(os.getenv("DGI_MIN_YIELD", "0.0"))

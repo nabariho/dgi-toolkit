@@ -6,7 +6,7 @@ from dgi.screener import Screener
 from dgi.portfolio import build, summary_stats
 
 
-def test_cli_help_runs():
+def test_cli_help_runs() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "dgi.cli", "--help"], capture_output=True, text=True
     )
@@ -14,7 +14,7 @@ def test_cli_help_runs():
     assert "Usage" in result.stdout or "usage" in result.stdout
 
 
-def test_integration_csv_to_portfolio(tmp_path):
+def test_integration_csv_to_portfolio(tmp_path) -> None:
     csv = tmp_path / "integration.csv"
     csv.write_text(
         "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
@@ -38,7 +38,7 @@ def test_integration_csv_to_portfolio(tmp_path):
     assert stats["mean_payout"] > 0
 
 
-def test_cli_screen_and_build_portfolio(tmp_path):
+def test_cli_screen_and_build_portfolio(tmp_path) -> None:
     csv = tmp_path / "cli_integration.csv"
     csv.write_text(
         "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"

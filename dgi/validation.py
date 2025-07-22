@@ -1,6 +1,6 @@
 import logging
-from typing import List, Dict, Any, Type, Optional
-from pydantic import BaseModel, ValidationError
+from typing import Any
+from pydantic import ValidationError
 from dgi.models import CompanyData
 from dgi.exceptions import DataValidationError
 
@@ -12,15 +12,15 @@ class RowValidationStrategy:
     Interface for row validation strategies.
     """
 
-    def validate(self, row: Dict[str, Any]) -> Dict[str, Any]:
+    def validate(self, row: dict[str, Any]) -> CompanyData:
         raise NotImplementedError
 
 
 class PydanticRowValidation(RowValidationStrategy):
-    def __init__(self, model: Type[BaseModel]):
+    def __init__(self, model: type[CompanyData]):
         self.model = model
 
-    def validate(self, row: Dict[str, Any]) -> CompanyData:
+    def validate(self, row: dict[str, Any]) -> CompanyData:
         return self.model(**row)
 
 
@@ -31,8 +31,8 @@ class DgiRowValidator:
 
     def __init__(
         self,
-        validation_strategy: Optional[RowValidationStrategy] = None,
-        required_columns: Optional[List[str]] = None,
+        validation_strategy: RowValidationStrategy | None = None,
+        required_columns: list[str] | None = None,
     ) -> None:
         if validation_strategy is None:
             self.validation_strategy = PydanticRowValidation(CompanyData)
@@ -40,9 +40,9 @@ class DgiRowValidator:
             self.validation_strategy = validation_strategy
         self.required_columns = required_columns
 
-    def validate_rows(self, rows: List[Dict[Any, Any]]) -> List[CompanyData]:
-        valid_rows: List[CompanyData] = []
-        errors: List[str] = []
+    def validate_rows(self, rows: list[dict[str, Any]]) -> list[CompanyData]:
+        valid_rows: list[CompanyData] = []
+        errors: list[str] = []
         for i, row in enumerate(rows):
             row_str_keys = {str(k): v for k, v in row.items()}
             if self.required_columns:

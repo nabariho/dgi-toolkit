@@ -202,7 +202,7 @@ def test_dgirowvalidator_invalid() -> None:
         validator.validate_rows(rows)
 
 
-def test_screener_empty_repository():
+def test_screener_empty_repository() -> None:
     class EmptyRepo:
         def get_rows(self):
             return []
@@ -212,7 +212,7 @@ def test_screener_empty_repository():
         screener.load_universe()
 
 
-def test_screener_missing_columns(tmp_path: Any):
+def test_screener_missing_columns(tmp_path: Any) -> None:
     csv = tmp_path / "missing_cols.csv"
     csv.write_text("symbol,name,sector\nAAPL,Apple,Tech\n")
     repo = CsvCompanyDataRepository(str(csv), DgiRowValidator())
@@ -221,7 +221,7 @@ def test_screener_missing_columns(tmp_path: Any):
         screener.load_universe()
 
 
-def test_screener_score_edge_cases():
+def test_screener_score_edge_cases() -> None:
     scoring = DefaultScoring()
     # All zeros
     company = CompanyData(

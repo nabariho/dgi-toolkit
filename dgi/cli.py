@@ -44,7 +44,7 @@ def screen(
     min_cagr: float = typer.Option(
         config.DEFAULT_MIN_CAGR, help="Minimum dividend CAGR"
     ),
-):
+) -> None:
     repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
     screener = Screener(
         repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
@@ -68,7 +68,7 @@ def build_portfolio(
     min_cagr: float = typer.Option(
         config.DEFAULT_MIN_CAGR, help="Minimum dividend CAGR"
     ),
-):
+) -> None:
     repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
     screener = Screener(
         repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
