@@ -92,3 +92,60 @@ def test_cli_screen_and_build_portfolio(tmp_path) -> None:
     )
     assert result.returncode == 0
     assert "ticker" in result.stdout
+
+
+def test_cli_screen_rich_table_output(tmp_path) -> None:
+    csv = tmp_path / "rich_table.csv"
+    csv.write_text(
+        "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
+        "AAPL,Apple,Tech,Hardware,2.0,40,5,4\n"
+        "MSFT,Microsoft,Tech,Software,3.0,50,6,5\n"
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dgi.cli",
+            "screen",
+            "--csv-path",
+            str(csv),
+            "--min-yield",
+            "2.0",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    # Check for Rich table headers and at least one row
+    assert "DGI Screen Results" in result.stdout
+    assert "Symbol" in result.stdout
+    assert "AAPL" in result.stdout or "MSFT" in result.stdout
+
+
+def test_cli_screen_bad_param(tmp_path) -> None:
+    csv = tmp_path / "bad_param.csv"
+    csv.write_text(
+        "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
+        "AAPL,Apple,Tech,Hardware,2.0,40,5,4\n"
+    )
+    # Use an invalid parameter (e.g., negative min-yield)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "dgi.cli",
+            "screen",
+            "--csv-path",
+            str(csv),
+            "--min-yield",
+            "-1.0",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    # Should exit with code 1 and print an error
+    assert (
+        result.returncode == 1
+        or "[ERROR]" in result.stdout
+        or "[ERROR]" in result.stderr
+    )

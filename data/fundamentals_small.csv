@@ -1,1 +1,2 @@
-symbol,name,sector,industry,dividend_yield 
+symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield
+AAPL,Apple Inc.,Technology,Consumer Electronics,0.60,15.0,8.5,5.2 
