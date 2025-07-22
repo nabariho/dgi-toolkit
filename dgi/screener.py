@@ -3,7 +3,7 @@
 import pandas as pd
 from pandas import DataFrame
 from pydantic import BaseModel, ValidationError, validator
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Type
 import logging
 
 # from typing import Any  # Remove unused import
@@ -29,6 +29,26 @@ class DgiRow(BaseModel):
             return float(v)
         except Exception:
             raise ValueError(f"Value '{v}' is not a valid number")
+
+
+class DgiRowValidator:
+    def __init__(self, model: Type[BaseModel]) -> None:
+        self.model = model
+
+    def validate_rows(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        valid_rows: List[Dict[str, Any]] = []
+        errors: List[str] = []
+        for i, row in enumerate(rows):
+            try:
+                valid_rows.append(self.model(**row).dict())
+            except ValidationError as e:
+                error_msg = f"Row {i+2}: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+        if errors:
+            logger.error("Validation errors:\n%s", "\n".join(errors))
+            raise ValueError("Validation errors:\n" + "\n".join(errors))
+        return valid_rows
 
 
 def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
@@ -63,23 +83,8 @@ def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
         em = f"Missing required columns in CSV: {ms}"
         raise ValueError(em)
 
-    valid_rows: List[Dict[str, Any]] = []
-    errors: List[str] = []
-    for row_num, (_, row) in enumerate(df_raw.iterrows(), start=2):
-        try:
-            validated = DgiRow(**row.to_dict())
-            valid_rows.append(validated.dict())
-        except ValidationError as e:
-            error_msg = f"Row {row_num}: {e}"
-            logger.error(error_msg)
-            errors.append(error_msg)
-    if errors:
-        logger.error(
-            "CSV validation errors found in %s:\n%s",
-            csv_path,
-            "\n".join(errors),
-        )
-        raise ValueError("CSV validation errors:\n" + "\n".join(errors))
+    validator = DgiRowValidator(DgiRow)
+    valid_rows = validator.validate_rows(df_raw.to_dict(orient="records"))
     logger.info(f"Successfully loaded {len(valid_rows)} valid rows from {csv_path}")
     return pd.DataFrame(valid_rows)
 
