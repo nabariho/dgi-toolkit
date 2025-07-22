@@ -2,53 +2,11 @@
 
 import pandas as pd
 from pandas import DataFrame
-from pydantic import BaseModel, ValidationError, validator
-from typing import List, Dict, Any, Type
 import logging
-
-# from typing import Any  # Remove unused import
+from dgi.models import DgiRow
+from dgi.validation import DgiRowValidator
 
 logger = logging.getLogger(__name__)
-
-
-class DgiRow(BaseModel):
-    symbol: str
-    name: str
-    sector: str
-    industry: str
-    dividend_yield: float
-    payout: float
-    dividend_cagr: float
-    fcf_yield: float
-
-    @validator("dividend_yield", "payout", "dividend_cagr", "fcf_yield", pre=True)
-    def must_be_number(cls, v: Any) -> float:
-        if isinstance(v, (int, float)):
-            return float(v)
-        try:
-            return float(v)
-        except Exception:
-            raise ValueError(f"Value '{v}' is not a valid number")
-
-
-class DgiRowValidator:
-    def __init__(self, model: Type[BaseModel]) -> None:
-        self.model = model
-
-    def validate_rows(self, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        valid_rows: List[Dict[str, Any]] = []
-        errors: List[str] = []
-        for i, row in enumerate(rows):
-            try:
-                valid_rows.append(self.model(**row).dict())
-            except ValidationError as e:
-                error_msg = f"Row {i+2}: {e}"
-                logger.error(error_msg)
-                errors.append(error_msg)
-        if errors:
-            logger.error("Validation errors:\n%s", "\n".join(errors))
-            raise ValueError("Validation errors:\n" + "\n".join(errors))
-        return valid_rows
 
 
 def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
@@ -112,7 +70,7 @@ def apply_filters(
     return filtered
 
 
-def score(row: pd.Series[Any]) -> float:
+def score(row: pd.Series) -> float:
     """
     Calculate a composite score for DGI stock quality based on growth, payout,
     and free cash flow yield.
