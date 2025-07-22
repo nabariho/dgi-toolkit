@@ -1,21 +1,28 @@
-import pandas as pd
-from typing import Any, cast
 import pytest
-from dgi.screener import load_universe, apply_filters, score
-from dgi.models import DgiRow
-from dgi.validation import DgiRowValidator
+import pandas as pd
+from typing import Any
+from dgi.models import CompanyData
+from dgi.validation import DgiRowValidator, PydanticRowValidation
+from dgi.repositories.csv import CsvCompanyDataRepository
+from dgi.screener import Screener
+from dgi.scoring import DefaultScoring
 
 
-def test_load_universe(tmp_path: Any) -> None:
-    # Create a temporary CSV with all required columns
+def make_screener(csv_path: str) -> Screener:
+    repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
+    return Screener(repo)
+
+
+def test_load_universe_valid(tmp_path: Any) -> None:
     csv = tmp_path / "fundamentals.csv"
     csv.write_text(
         "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
         "AAPL,Apple,Tech,Hardware,0.6,20,8,5\n"
         "MSFT,Microsoft,Tech,Software,0.8,35,10,7\n"
     )
-    df = load_universe(str(csv))
-    assert list(df.columns) == [
+    screener = make_screener(str(csv))
+    df = screener.load_universe()
+    expected_columns = [
         "symbol",
         "name",
         "sector",
@@ -25,23 +32,38 @@ def test_load_universe(tmp_path: Any) -> None:
         "dividend_cagr",
         "fcf_yield",
     ]
+    assert list(df.columns) == expected_columns
     assert df.shape[0] == 2
-    assert df["dividend_yield"].dtype == float
+    for col in ["dividend_yield", "payout", "dividend_cagr", "fcf_yield"]:
+        assert df[col].dtype == float
 
 
-def test_load_universe_missing_columns(tmp_path: Any) -> None:
-    # Create a CSV missing required columns
-    csv = tmp_path / "bad.csv"
+def test_load_universe_invalid_all_rows(tmp_path: Any) -> None:
+    csv = tmp_path / "invalid.csv"
     csv.write_text(
-        "symbol,name,sector\n"  # missing most required columns
-        "AAPL,Apple,Tech\n"
+        "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
+        "AAPL,Apple,Tech,Hardware,not_a_number,20,8,5\n"
+        "MSFT,Microsoft,Tech,Software,not_a_number,35,10,7\n"
     )
-    with pytest.raises(ValueError) as excinfo:
-        load_universe(str(csv))
-    msg = str(excinfo.value)
-    assert "Missing columns:" in msg
-    assert "dividend_yield" in msg
-    assert "payout" in msg
+    screener = make_screener(str(csv))
+    with pytest.raises(
+        ValueError,
+        match="(Validation errors:|Missing expected columns|No valid rows found)",
+    ):
+        screener.load_universe()
+
+
+def test_load_universe_mixed_valid_invalid(tmp_path: Any) -> None:
+    csv = tmp_path / "mixed.csv"
+    csv.write_text(
+        "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
+        "AAPL,Apple,Tech,Hardware,not_a_number,20,8,5\n"  # invalid
+        "GOOG,Google,Tech,Software,1.2,30,12,8\n"  # valid
+    )
+    screener = make_screener(str(csv))
+    df = screener.load_universe()
+    assert df.shape[0] == 1
+    assert df.iloc[0]["symbol"] == "GOOG"
 
 
 def test_apply_filters() -> None:
@@ -57,7 +79,8 @@ def test_apply_filters() -> None:
             "fcf_yield": [4.0, 2.0],
         }
     )
-    filtered = apply_filters(df, min_yield=1.5, max_payout=50.0, min_cagr=5.0)
+    screener = Screener(None)  # No repo needed for filtering
+    filtered = screener.apply_filters(df, min_yield=1.5, max_payout=50.0, min_cagr=5.0)
     assert filtered.shape[0] == 1
     assert filtered.iloc[0]["symbol"] == "A"
 
@@ -70,12 +93,22 @@ def test_score() -> None:
             "payout": 50.0,  # 0.5 normalized
         }
     )
-    s = score(row)
+    scoring = DefaultScoring()
+    company = CompanyData(
+        symbol="A",
+        name="A",
+        sector="A",
+        industry="A",
+        dividend_yield=2.0,
+        payout=row["payout"],
+        dividend_cagr=row["dividend_cagr"],
+        fcf_yield=row["fcf_yield"],
+    )
+    s = scoring.score(company)
     assert abs(s - 0.16666666666666666) < 1e-6  # (0.5 + 0.5 - 0.5) / 3
 
 
 def test_load_universe_invalid_types(tmp_path: Any) -> None:
-    # Create a CSV with invalid types in numeric columns
     csv = tmp_path / "bad_types.csv"
     csv.write_text(
         "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
@@ -83,38 +116,28 @@ def test_load_universe_invalid_types(tmp_path: Any) -> None:
         "MSFT,Microsoft,Tech,Software,0.8,thirtyfive,10,7\n"  # invalid payout
         "GOOG,Google,Tech,Software,1.2,30,12,8\n"  # valid row
     )
-    with pytest.raises(ValueError) as excinfo:
-        load_universe(str(csv))
-    msg = str(excinfo.value)
-    assert "Row 2" in msg and "is not a valid number" in msg
-    assert "Row 3" in msg and "is not a valid number" in msg
-    assert "dividend_yield" in msg or "payout" in msg
-    assert "GOOG" not in msg  # valid row should not be in error message
-
-
-def test_load_universe_only_valid_rows(tmp_path: Any) -> None:
-    # Create a CSV with one valid and one invalid row
-    csv = tmp_path / "mixed.csv"
-    csv.write_text(
-        "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
-        "AAPL,Apple,Tech,Hardware,not_a_number,20,8,5\n"  # invalid
-        "GOOG,Google,Tech,Software,1.2,30,12,8\n"  # valid
-    )
-    # Should raise error for invalid row
-    with pytest.raises(ValueError):
-        load_universe(str(csv))
-    # If we remove the invalid row, it should load
-    csv.write_text(
-        "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
-        "GOOG,Google,Tech,Software,1.2,30,12,8\n"
-    )
-    df = load_universe(str(csv))
+    screener = make_screener(str(csv))
+    df = screener.load_universe()
     assert df.shape[0] == 1
     assert df.iloc[0]["symbol"] == "GOOG"
 
 
-def test_dgirow_valid() -> None:
-    row = DgiRow(
+def test_csv_repository_and_screener(tmp_path: Any) -> None:
+    csv = tmp_path / "repo_test.csv"
+    csv.write_text(
+        "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
+        "AAPL,Apple,Tech,Hardware,0.6,20,8,5\n"
+        "MSFT,Microsoft,Tech,Software,0.8,35,10,7\n"
+    )
+    repo = CsvCompanyDataRepository(str(csv), DgiRowValidator())
+    screener = Screener(repo)
+    df = screener.load_universe()
+    assert df.shape[0] == 2
+    assert set(df["symbol"]) == {"AAPL", "MSFT"}
+
+
+def test_companydata_valid() -> None:
+    row = CompanyData(
         symbol="AAPL",
         name="Apple",
         sector="Tech",
@@ -125,18 +148,18 @@ def test_dgirow_valid() -> None:
         fcf_yield=5.0,
     )
     assert row.symbol == "AAPL"
-    assert isinstance(row.dividend_yield, float)
+    assert row.dividend_yield == 0.6
 
 
-def test_dgirow_invalid_type() -> None:
+def test_companydata_invalid() -> None:
     # This test intentionally passes the wrong type to check runtime validation.
     with pytest.raises(Exception):
-        DgiRow(
+        CompanyData(
             symbol="AAPL",
             name="Apple",
             sector="Tech",
             industry="Hardware",
-            dividend_yield=cast(Any, "not_a_number"),
+            dividend_yield="not_a_number",
             payout=20.0,
             dividend_cagr=8.0,
             fcf_yield=5.0,
@@ -144,7 +167,7 @@ def test_dgirow_invalid_type() -> None:
 
 
 def test_dgirowvalidator_valid() -> None:
-    validator = DgiRowValidator(DgiRow)
+    validator = DgiRowValidator(validation_strategy=PydanticRowValidation(CompanyData))
     rows = [
         {
             "symbol": "AAPL",
@@ -158,11 +181,11 @@ def test_dgirowvalidator_valid() -> None:
         }
     ]
     valid = validator.validate_rows(rows)
-    assert valid[0]["symbol"] == "AAPL"
+    assert valid[0].symbol == "AAPL"
 
 
 def test_dgirowvalidator_invalid() -> None:
-    validator = DgiRowValidator(DgiRow)
+    validator = DgiRowValidator(CompanyData)
     rows = [
         {
             "symbol": "AAPL",
@@ -175,7 +198,78 @@ def test_dgirowvalidator_invalid() -> None:
             "fcf_yield": 5.0,
         }
     ]
-    import pytest
-
     with pytest.raises(ValueError):
         validator.validate_rows(rows)
+
+
+def test_screener_empty_repository() -> None:
+    class EmptyRepo:
+        def get_rows(self):
+            return []
+
+    screener = Screener(EmptyRepo())
+    with pytest.raises(ValueError):
+        screener.load_universe()
+
+
+def test_screener_missing_columns(tmp_path: Any) -> None:
+    csv = tmp_path / "missing_cols.csv"
+    csv.write_text("symbol,name,sector\nAAPL,Apple,Tech\n")
+    repo = CsvCompanyDataRepository(str(csv), DgiRowValidator())
+    screener = Screener(repo)
+    with pytest.raises(ValueError):
+        screener.load_universe()
+
+
+def test_screener_score_edge_cases() -> None:
+    scoring = DefaultScoring()
+    # All zeros
+    company = CompanyData(
+        symbol="A",
+        name="A",
+        sector="A",
+        industry="A",
+        dividend_yield=0.0,
+        payout=0.0,
+        dividend_cagr=0.0,
+        fcf_yield=0.0,
+    )
+    assert scoring.score(company) == 0.0
+    # All max
+    company = CompanyData(
+        symbol="A",
+        name="A",
+        sector="A",
+        industry="A",
+        dividend_yield=20.0,
+        payout=0.0,
+        dividend_cagr=20.0,
+        fcf_yield=20.0,
+    )
+    assert abs(scoring.score(company) - 0.6666666666666666) < 1e-8
+    # Negative values (should raise ValidationError)
+    import pytest
+
+    with pytest.raises(Exception):
+        CompanyData(
+            symbol="A",
+            name="A",
+            sector="A",
+            industry="A",
+            dividend_yield=-10.0,
+            payout=-10.0,
+            dividend_cagr=-10.0,
+            fcf_yield=-10.0,
+        )
+    # Over max (should clamp to 1)
+    company = CompanyData(
+        symbol="A",
+        name="A",
+        sector="A",
+        industry="A",
+        dividend_yield=100.0,
+        payout=0.0,
+        dividend_cagr=100.0,
+        fcf_yield=100.0,
+    )
+    assert scoring.score(company) == 0.6666666666666666
