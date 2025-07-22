@@ -8,6 +8,7 @@ from dgi.filtering import DefaultFilter
 from dgi.screener import Screener
 from dgi.portfolio import build
 from dgi.config import get_config
+from dgi.cli_helpers import render_screen_table
 
 config = get_config()
 
@@ -57,16 +58,14 @@ def screen(
         raise typer.Exit(code=1)
     try:
         try:
-            from rich.console import Console
-            from rich.table import Table
-            from rich import box
+            # Try importing rich to check if it's available
+            import rich  # noqa: F401
         except ImportError:
             typer.echo(
                 "[ERROR] The 'rich' package is required for table output. Please install it.",
                 err=True,
             )
             raise typer.Exit(code=1)
-
         repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
         screener = Screener(
             repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
@@ -78,28 +77,7 @@ def screen(
             typer.echo("[INFO] No stocks matched the filter criteria.")
             raise typer.Exit(code=0)
         scored = scored.sort_values("score", ascending=False)
-
-        table = Table(title="DGI Screen Results", box=box.SIMPLE_HEAVY)
-        table.add_column("Symbol", style="bold cyan")
-        table.add_column("Name", style="white")
-        table.add_column("Yield", style="green", justify="right")
-        table.add_column("Payout", style="magenta", justify="right")
-        table.add_column("CAGR", style="yellow", justify="right")
-        table.add_column("FCF Yield", style="blue", justify="right")
-        table.add_column("Score", style="bold bright_white", justify="right")
-
-        for _, row in scored.iterrows():
-            table.add_row(
-                str(row["symbol"]),
-                str(row["name"]),
-                f"{row['dividend_yield']:.2f}",
-                f"{row['payout']:.2f}",
-                f"{row['dividend_cagr']:.2f}",
-                f"{row['fcf_yield']:.2f}",
-                f"[bold]{row['score']:.3f}[/bold]",
-            )
-        console = Console()
-        console.print(table)
+        render_screen_table(scored)
     except Exception as e:
         typer.echo(f"[ERROR] {e}", err=True)
         raise typer.Exit(code=1)
