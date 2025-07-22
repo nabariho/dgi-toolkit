@@ -2,6 +2,7 @@ import logging
 from typing import List, Dict, Any, Type, Optional
 from pydantic import BaseModel, ValidationError
 from dgi.models import CompanyData
+from dgi.exceptions import DataValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ class DgiRowValidator:
                 errors.append(error_msg)
         if not valid_rows:
             logger.error("Validation errors:\n%s", "\n".join(errors))
-            raise ValueError("Validation errors:\n" + "\n".join(errors))
+            raise DataValidationError("Validation errors:\n" + "\n".join(errors))
         if errors:
             logger.warning("Some rows were invalid and skipped:\n%s", "\n".join(errors))
         return valid_rows

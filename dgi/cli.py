@@ -1,5 +1,10 @@
 import typer
-from dgi import screener, portfolio
+from dgi.repositories.csv import CsvCompanyDataRepository
+from dgi.validation import DgiRowValidator
+from dgi.scoring import DefaultScoring
+from dgi.filtering import DefaultFilter
+from dgi.screener import Screener
+from dgi.portfolio import build
 
 app = typer.Typer(help="DGI Toolkit CLI: screen stocks and build portfolios.")
 
@@ -16,7 +21,11 @@ def screen(
     """
     Screen stocks from a fundamentals CSV using DGI criteria.
     """
-    df = screener.load_universe(csv_path)
+    repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
+    screener = Screener(
+        repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
+    )
+    df = screener.load_universe()
     filtered = screener.apply_filters(df, min_yield, max_payout, min_cagr)
     typer.echo(filtered)
 
@@ -35,11 +44,14 @@ def build_portfolio(
     """
     Build a DGI portfolio from a fundamentals CSV.
     """
-    df = screener.load_universe(csv_path)
+    repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
+    screener = Screener(
+        repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
+    )
+    df = screener.load_universe()
     filtered = screener.apply_filters(df, min_yield, max_payout, min_cagr)
-    scored = filtered.copy()
-    scored["score"] = scored.apply(screener.score, axis=1)
-    port = portfolio.build(scored, top_n, weighting)
+    scored = screener.add_scores(filtered)
+    port = build(scored, top_n, weighting)
     typer.echo(port)
 
 

@@ -3,11 +3,13 @@
 import pandas as pd
 from pandas import DataFrame
 import logging
-from typing import Callable, Any, Optional, List
+from typing import Any, Optional, List
 from dgi.models import CompanyData
 from dgi.validation import DgiRowValidator
 from dgi.repositories.base import CompanyDataRepository
 from dgi.repositories.csv import CsvCompanyDataRepository
+from dgi.scoring import ScoringStrategy, DefaultScoring
+from dgi.filtering import FilterStrategy, DefaultFilter
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +23,12 @@ class Screener:
     def __init__(
         self,
         repository: CompanyDataRepository,
-        scorer: Optional[Callable[[CompanyData], float]] = None,
+        scoring_strategy: Optional[ScoringStrategy] = None,
+        filter_strategy: Optional[FilterStrategy] = None,
     ) -> None:
         self.repository = repository
-        self.scorer = scorer or Screener.default_score
+        self.scoring_strategy = scoring_strategy or DefaultScoring()
+        self.filter_strategy = filter_strategy or DefaultFilter()
 
     @staticmethod
     def rows_to_dataframe(rows: List[CompanyData]) -> DataFrame:
@@ -74,29 +78,18 @@ class Screener:
             max_payout,
             min_cagr,
         )
-        filtered = df[
-            (df["dividend_yield"] >= min_yield)
-            & (df["payout"] <= max_payout)
-            & (df["dividend_cagr"] >= min_cagr)
-        ]
-        logger.info(f"Filtered universe to {len(filtered)} rows")
-        return filtered
+        return self.filter_strategy.filter(df, min_yield, max_payout, min_cagr)
 
     def add_scores(self, df: DataFrame) -> DataFrame:
         logger.info("Scoring DataFrame rows")
         df = df.copy()
-        df["score"] = df.apply(self.scorer, axis=1)
-        return df
 
-    @staticmethod
-    def default_score(row: Any) -> float:
-        cagr_norm = min(max(row["dividend_cagr"] / 20.0, 0.0), 1.0)
-        fcf_norm = min(max(row["fcf_yield"] / 20.0, 0.0), 1.0)
-        payout_norm = min(max(row["payout"] / 100.0, 0.0), 1.0)
-        composite = cagr_norm + fcf_norm - payout_norm
-        composite = composite / 3.0
-        result = max(0.0, min(composite, 1.0))
-        return float(result)
+        # Convert each row to CompanyData and score
+        def score_row(row):
+            return self.scoring_strategy.score(CompanyData(**row.to_dict()))
+
+        df["score"] = df.apply(score_row, axis=1)
+        return df
 
 
 # For backward compatibility, provide functional API using CSV repository

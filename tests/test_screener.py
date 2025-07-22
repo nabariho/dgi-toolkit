@@ -5,6 +5,7 @@ from dgi.models import CompanyData
 from dgi.validation import DgiRowValidator, PydanticRowValidation
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.screener import Screener
+from dgi.scoring import DefaultScoring
 
 
 def make_screener(csv_path: str) -> Screener:
@@ -92,8 +93,18 @@ def test_score() -> None:
             "payout": 50.0,  # 0.5 normalized
         }
     )
-    screener = Screener(None)
-    s = screener.default_score(row)
+    scoring = DefaultScoring()
+    company = CompanyData(
+        symbol="A",
+        name="A",
+        sector="A",
+        industry="A",
+        dividend_yield=2.0,
+        payout=row["payout"],
+        dividend_cagr=row["dividend_cagr"],
+        fcf_yield=row["fcf_yield"],
+    )
+    s = scoring.score(company)
     assert abs(s - 0.16666666666666666) < 1e-6  # (0.5 + 0.5 - 0.5) / 3
 
 
@@ -211,16 +222,54 @@ def test_screener_missing_columns(tmp_path: Any):
 
 
 def test_screener_score_edge_cases():
-    screener = Screener(None)
+    scoring = DefaultScoring()
     # All zeros
-    row = pd.Series({"dividend_cagr": 0.0, "fcf_yield": 0.0, "payout": 0.0})
-    assert screener.default_score(row) == 0.0
+    company = CompanyData(
+        symbol="A",
+        name="A",
+        sector="A",
+        industry="A",
+        dividend_yield=0.0,
+        payout=0.0,
+        dividend_cagr=0.0,
+        fcf_yield=0.0,
+    )
+    assert scoring.score(company) == 0.0
     # All max
-    row = pd.Series({"dividend_cagr": 20.0, "fcf_yield": 20.0, "payout": 0.0})
-    assert abs(screener.default_score(row) - 0.6666666666666666) < 1e-8
-    # Negative values (should clamp to 0)
-    row = pd.Series({"dividend_cagr": -10.0, "fcf_yield": -10.0, "payout": -10.0})
-    assert screener.default_score(row) == 0.0
+    company = CompanyData(
+        symbol="A",
+        name="A",
+        sector="A",
+        industry="A",
+        dividend_yield=20.0,
+        payout=0.0,
+        dividend_cagr=20.0,
+        fcf_yield=20.0,
+    )
+    assert abs(scoring.score(company) - 0.6666666666666666) < 1e-8
+    # Negative values (should raise ValidationError)
+    import pytest
+
+    with pytest.raises(Exception):
+        CompanyData(
+            symbol="A",
+            name="A",
+            sector="A",
+            industry="A",
+            dividend_yield=-10.0,
+            payout=-10.0,
+            dividend_cagr=-10.0,
+            fcf_yield=-10.0,
+        )
     # Over max (should clamp to 1)
-    row = pd.Series({"dividend_cagr": 100.0, "fcf_yield": 100.0, "payout": 0.0})
-    assert screener.default_score(row) == 0.6666666666666666
+    company = CompanyData(
+        symbol="A",
+        name="A",
+        sector="A",
+        industry="A",
+        dividend_yield=100.0,
+        payout=0.0,
+        dividend_cagr=100.0,
+        fcf_yield=100.0,
+    )
+    assert scoring.score(company) == 0.6666666666666666
