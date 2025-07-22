@@ -39,7 +39,7 @@ def test_load_universe_missing_columns(tmp_path: Any) -> None:
     with pytest.raises(ValueError) as excinfo:
         load_universe(str(csv))
     msg = str(excinfo.value)
-    assert "Missing columns:" in msg
+    assert "Missing:" in msg
     assert "dividend_yield" in msg
     assert "payout" in msg
 
