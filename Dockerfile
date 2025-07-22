@@ -18,9 +18,7 @@ RUN poetry install --no-root --only main
 # Copy source
 COPY dgi/ ./dgi/
 COPY ai_chat/ ./ai_chat/
-COPY notebooks/ ./notebooks/
 COPY data/ ./data/
-COPY docs/ ./docs/
 
 # Final image
 FROM --platform=linux/amd64 python:3.12-slim AS runtime
