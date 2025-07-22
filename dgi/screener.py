@@ -2,7 +2,8 @@
 
 import pandas as pd
 from pandas import DataFrame
-from typing import Any
+
+# from typing import Any  # Remove unused import
 
 
 def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
@@ -17,18 +18,30 @@ def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
 
     Expects columns: symbol, name, sector, industry, dividend_yield, payout,
     dividend_cagr, fcf_yield
+    Raises ValueError if any required columns are missing.
     """
+    required_columns = [
+        "symbol",
+        "name",
+        "sector",
+        "industry",
+        "dividend_yield",
+        "payout",
+        "dividend_cagr",
+        "fcf_yield",
+    ]
     dtype = {
-        "symbol": "str",
-        "name": "str",
-        "sector": "str",
-        "industry": "str",
-        "dividend_yield": "float64",
-        "payout": "float64",
-        "dividend_cagr": "float64",
-        "fcf_yield": "float64",
+        col: (
+            "float64"
+            if col in {"dividend_yield", "payout", "dividend_cagr", "fcf_yield"}
+            else "str"
+        )
+        for col in required_columns
     }
     df = pd.read_csv(csv_path, dtype=dtype)  # type: ignore[arg-type]
+    missing = [col for col in required_columns if col not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns in CSV: {missing}")
     return df
 
 
@@ -55,7 +68,7 @@ def apply_filters(
     return filtered
 
 
-def score(row: pd.Series[Any]) -> float:
+def score(row: pd.Series) -> float:  # type: ignore[type-arg]
     """
     Calculate a composite score for DGI stock quality based on growth, payout,
     and free cash flow yield.

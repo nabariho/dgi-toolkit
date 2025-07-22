@@ -1,6 +1,8 @@
+# mypy: disable-error-code=import
 import pandas as pd
 from typing import Any
 from dgi.screener import load_universe, apply_filters, score
+import pytest
 
 
 def test_load_universe(tmp_path: Any) -> None:
@@ -24,6 +26,20 @@ def test_load_universe(tmp_path: Any) -> None:
     ]
     assert df.shape[0] == 2
     assert df["dividend_yield"].dtype == float
+
+
+def test_load_universe_missing_columns(tmp_path: Any) -> None:
+    # Create a CSV missing required columns
+    csv = tmp_path / "bad.csv"
+    csv.write_text(
+        "symbol,name,sector\n"  # missing most required columns
+        "AAPL,Apple,Tech\n"
+    )
+    with pytest.raises(ValueError) as excinfo:
+        load_universe(str(csv))
+    assert "Missing required columns" in str(excinfo.value)
+    assert "dividend_yield" in str(excinfo.value)
+    assert "payout" in str(excinfo.value)
 
 
 def test_apply_filters() -> None:
