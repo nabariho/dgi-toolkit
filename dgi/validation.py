@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Protocol
 from pydantic import ValidationError
 from dgi.models import CompanyData
 from dgi.exceptions import DataValidationError
@@ -7,16 +7,15 @@ from dgi.exceptions import DataValidationError
 logger = logging.getLogger(__name__)
 
 
-class RowValidationStrategy:
+class RowValidationStrategy(Protocol):
     """
     Interface for row validation strategies.
     """
 
-    def validate(self, row: dict[str, Any]) -> CompanyData:
-        raise NotImplementedError
+    def validate(self, row: dict[str, Any]) -> CompanyData: ...
 
 
-class PydanticRowValidation(RowValidationStrategy):
+class PydanticRowValidation:
     def __init__(self, model: type[CompanyData]):
         self.model = model
 

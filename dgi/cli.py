@@ -8,6 +8,7 @@ from dgi.filtering import DefaultFilter
 from dgi.screener import Screener
 from dgi.portfolio import build
 from dgi.config import get_config
+from dgi.cli_helpers import render_screen_table
 
 config = get_config()
 
@@ -45,13 +46,41 @@ def screen(
         config.DEFAULT_MIN_CAGR, help="Minimum dividend CAGR"
     ),
 ) -> None:
-    repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
-    screener = Screener(
-        repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
-    )
-    df = screener.load_universe()
-    filtered = screener.apply_filters(df, min_yield, max_payout, min_cagr)
-    typer.echo(filtered)
+    """
+    Screen stocks by yield, payout, and dividend CAGR, and display a rich table sorted by score.
+    """
+    # Parameter validation
+    if min_yield < 0 or max_payout < 0 or min_cagr < 0:
+        typer.echo(
+            "[ERROR] min_yield, max_payout, and min_cagr must all be non-negative.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    try:
+        try:
+            # Try importing rich to check if it's available
+            import rich  # noqa: F401
+        except ImportError:
+            typer.echo(
+                "[ERROR] The 'rich' package is required for table output. Please install it.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+        repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
+        screener = Screener(
+            repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
+        )
+        df = screener.load_universe()
+        filtered = screener.apply_filters(df, min_yield, max_payout, min_cagr)
+        scored = screener.add_scores(filtered)
+        if scored.empty:
+            typer.echo("[INFO] No stocks matched the filter criteria.")
+            raise typer.Exit(code=0)
+        scored = scored.sort_values("score", ascending=False)
+        render_screen_table(scored)
+    except Exception as e:
+        typer.echo(f"[ERROR] {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command()

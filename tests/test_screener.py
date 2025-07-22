@@ -273,3 +273,77 @@ def test_screener_score_edge_cases() -> None:
         fcf_yield=100.0,
     )
     assert scoring.score(company) == 0.6666666666666666
+
+
+def test_dgirowvalidator_all_invalid() -> None:
+    validator = DgiRowValidator(validation_strategy=PydanticRowValidation(CompanyData))
+    rows = [
+        {
+            "symbol": "AAPL",
+            "name": "Apple",
+            "sector": "Tech",
+            "industry": "Hardware",
+            "dividend_yield": "not_a_number",
+            "payout": 20.0,
+            "dividend_cagr": 8.0,
+            "fcf_yield": 5.0,
+        },
+        {
+            "symbol": "MSFT",
+            "name": "Microsoft",
+            "sector": "Tech",
+            "industry": "Software",
+            "dividend_yield": "not_a_number",
+            "payout": 30.0,
+            "dividend_cagr": 10.0,
+            "fcf_yield": 7.0,
+        },
+    ]
+    with pytest.raises(Exception):
+        validator.validate_rows(rows)
+
+
+def test_dgirowvalidator_some_invalid(caplog) -> None:
+    validator = DgiRowValidator(validation_strategy=PydanticRowValidation(CompanyData))
+    rows = [
+        {
+            "symbol": "AAPL",
+            "name": "Apple",
+            "sector": "Tech",
+            "industry": "Hardware",
+            "dividend_yield": "not_a_number",
+            "payout": 20.0,
+            "dividend_cagr": 8.0,
+            "fcf_yield": 5.0,
+        },
+        {
+            "symbol": "MSFT",
+            "name": "Microsoft",
+            "sector": "Tech",
+            "industry": "Software",
+            "dividend_yield": 1.2,
+            "payout": 30.0,
+            "dividend_cagr": 10.0,
+            "fcf_yield": 7.0,
+        },
+    ]
+    valid = validator.validate_rows(rows)
+    assert len(valid) == 1
+    assert valid[0].symbol == "MSFT"
+    assert any(
+        "Some rows were invalid and skipped" in r.message for r in caplog.records
+    )
+
+
+def test_companydata_must_be_number_exception() -> None:
+    with pytest.raises(Exception):
+        CompanyData(
+            symbol="AAPL",
+            name="Apple",
+            sector="Tech",
+            industry="Hardware",
+            dividend_yield="not_a_number",
+            payout=20.0,
+            dividend_cagr=8.0,
+            fcf_yield=5.0,
+        )
