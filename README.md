@@ -1,6 +1,7 @@
 # dgi-toolkit
 
 [![Build Status](https://img.shields.io/badge/build-pending-lightgrey)](https://github.com/your-org/dgi-toolkit/actions) [![Coverage](https://img.shields.io/badge/coverage-pending-lightgrey)](https://github.com/your-org/dgi-toolkit/actions) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/nabariho/dgi-toolkit/main?filepath=notebooks%2Fdgi_portfolio_builder.ipynb)
 
 ## Project Pitch
 

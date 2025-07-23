@@ -347,3 +347,32 @@ def test_companydata_must_be_number_exception() -> None:
             dividend_cagr=8.0,
             fcf_yield=5.0,
         )
+
+
+def test_notebook_pipeline_matches_csv(tmp_path) -> None:
+    from dgi.validation import DgiRowValidator
+    from dgi.repositories.csv import CsvCompanyDataRepository
+    from dgi.screener import Screener
+    from dgi.scoring import DefaultScoring
+    from dgi.filtering import DefaultFilter
+
+    # Use the real CSV file
+    csv_path = "data/fundamentals_small.csv"
+    repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
+    screener = Screener(
+        repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
+    )
+    df = screener.load_universe()
+    # Print for debug
+    print("Loaded DataFrame:")
+    print(df)
+    print("Dtypes:")
+    print(df.dtypes)
+    filtered = screener.apply_filters(df, min_yield=0.5, max_payout=60, min_cagr=5.0)
+    print("Filtered DataFrame:")
+    print(filtered)
+    print("Filtered dtypes:")
+    print(filtered.dtypes)
+    assert (
+        filtered.shape[0] == 5
+    ), f"Expected 5 rows after filtering, got {filtered.shape[0]}\n{filtered}"
