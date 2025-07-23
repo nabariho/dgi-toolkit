@@ -3,36 +3,66 @@
 import pandas as pd
 from pandas import DataFrame
 import logging
-from typing import Any, Optional, List
+from typing import Any, Optional, List, Protocol
 from dgi.models import CompanyData
-from dgi.validation import DgiRowValidator
+from dgi.validation import DgiRowValidator, PydanticRowValidation
 from dgi.repositories.base import CompanyDataRepository
 from dgi.repositories.csv import CsvCompanyDataRepository
-from dgi.scoring import ScoringStrategy, DefaultScoring
-from dgi.filtering import FilterStrategy, DefaultFilter
+from dgi.scoring import ScoringStrategy
 
 logger = logging.getLogger(__name__)
 
 
+class CompanyFilter(Protocol):
+    """Protocol for company filtering strategies."""
+
+    def filter(self, companies: List[CompanyData]) -> List[CompanyData]: ...
+
+
 class Screener:
-    """
-    Enterprise-ready screener for Dividend Growth Investing (DGI).
-    Encapsulates universe loading, filtering, and scoring with pluggable validation and scoring strategies.
-    """
+    """Screen companies based on DGI criteria."""
 
     def __init__(
         self,
         repository: CompanyDataRepository,
+        filters: Optional[list[CompanyFilter]] = None,
         scoring_strategy: Optional[ScoringStrategy] = None,
-        filter_strategy: Optional[FilterStrategy] = None,
     ) -> None:
-        self.repository = repository
-        self.scoring_strategy = scoring_strategy or DefaultScoring()
-        self.filter_strategy = filter_strategy or DefaultFilter()
+        self._repository = repository
+        self._filters = filters or []
+        self._scoring_strategy = scoring_strategy
+
+    def default_score(self, company: CompanyData) -> float:
+        """Calculate a default score for a company."""
+        # Simple scoring based on yield and growth
+        # Convert to decimals if needed - assume input is already in correct format
+        yield_score = float(company.dividend_yield) * 1.0  # Use yield as-is
+        growth_score = float(company.dividend_growth_5y) * 0.5  # Scale growth
+        payout_penalty = (
+            max(0, float(company.payout_ratio) - 60.0) * -0.1
+        )  # Penalize high payout over 60%
+        return float(yield_score + growth_score + payout_penalty)
 
     @staticmethod
     def rows_to_dataframe(rows: List[CompanyData]) -> DataFrame:
-        df = pd.DataFrame([row.dict() for row in rows])
+        # Convert to dict and then create mapping to use alias names
+        data_for_df = []
+        for row in rows:
+            row_dict = row.dict()
+            # Map back to alias names for DataFrame columns
+            mapped_dict = {
+                "symbol": row_dict["symbol"],
+                "name": row_dict["name"],
+                "sector": row_dict["sector"],
+                "industry": row_dict["industry"],
+                "dividend_yield": row_dict["dividend_yield"],
+                "payout": row_dict["payout_ratio"],  # Map back to alias
+                "dividend_cagr": row_dict["dividend_growth_5y"],  # Map back to alias
+                "fcf_yield": row_dict["fcf_yield"],
+            }
+            data_for_df.append(mapped_dict)
+
+        df = pd.DataFrame(data_for_df)
         expected_columns = [
             "symbol",
             "name",
@@ -59,9 +89,9 @@ class Screener:
         Raises ValueError if validation fails or no valid rows are found.
         """
         logger.info(
-            f"Loading universe from repository: {type(self.repository).__name__}"
+            f"Loading universe from repository: {type(self._repository).__name__}"
         )
-        rows = self.repository.get_rows()
+        rows = self._repository.get_rows()
         logger.info(f"Successfully loaded {len(rows)} valid rows from repository")
         return self.rows_to_dataframe(rows)
 
@@ -78,22 +108,45 @@ class Screener:
             max_payout,
             min_cagr,
         )
-        return self.filter_strategy.filter(df, min_yield, max_payout, min_cagr)
+        # For now, implement simple filtering logic directly
+        filtered = df[
+            (df["dividend_yield"] >= min_yield)
+            & (
+                df["payout"] <= max_payout
+            )  # Use 'payout' column name, not 'payout_ratio'
+            & (df["dividend_cagr"] >= min_cagr)  # Use 'dividend_cagr' column name
+        ]
+        logger.info(f"Filtered to {len(filtered)} rows from {len(df)} rows")
+        return filtered
 
     def add_scores(self, df: DataFrame) -> DataFrame:
         logger.info("Scoring DataFrame rows")
         df = df.copy()
 
+        # Handle empty DataFrame
+        if df.empty:
+            df["score"] = []  # Add empty score column
+            return df
+
         # Convert each row to CompanyData and score
-        def score_row(row):
-            return self.scoring_strategy.score(CompanyData(**row.to_dict()))
+        def score_row(row: Any) -> float:
+            try:
+                company = CompanyData(**row.to_dict())
+                if self._scoring_strategy:
+                    score = self._scoring_strategy.score(company)
+                else:
+                    score = self.default_score(company)
+                return float(score)  # Ensure we return a scalar float
+            except Exception as e:
+                logger.error(f"Error scoring row: {e}")
+                return 0.0
 
         df["score"] = df.apply(score_row, axis=1)
         return df
 
 
 # For backward compatibility, provide functional API using CSV repository
-_default_validator = DgiRowValidator()
+_default_validator = DgiRowValidator(PydanticRowValidation(CompanyData))
 _default_repo = CsvCompanyDataRepository(
     "data/fundamentals_small.csv", _default_validator
 )
@@ -115,5 +168,5 @@ def apply_filters(
     return _default_screener.apply_filters(df, min_yield, max_payout, min_cagr)
 
 
-def score(row: Any) -> float:
-    return _default_screener.default_score(row)
+def score(company: CompanyData) -> float:
+    return _default_screener.default_score(company)

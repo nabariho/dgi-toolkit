@@ -2,20 +2,21 @@ import typer
 import logging
 import json
 from dgi.repositories.csv import CsvCompanyDataRepository
-from dgi.validation import DgiRowValidator
+from dgi.validation import DgiRowValidator, PydanticRowValidation
 from dgi.scoring import DefaultScoring
-from dgi.filtering import DefaultFilter
 from dgi.screener import Screener
 from dgi.portfolio import build
 from dgi.config import get_config
 from dgi.cli_helpers import render_screen_table
+from dgi.models.company import CompanyData
+from typing import Optional
 
 config = get_config()
 
 
 # Structured logging setup
 class JsonFormatter(logging.Formatter):
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         log_record = {
             "level": record.levelname,
             "name": record.name,
@@ -35,20 +36,14 @@ app = typer.Typer(help="DGI Toolkit CLI: screen stocks and build portfolios.")
 
 @app.command()
 def screen(
-    csv_path: str = typer.Option(config.DATA_PATH, help="Path to fundamentals CSV"),
-    min_yield: float = typer.Option(
-        config.DEFAULT_MIN_YIELD, help="Minimum dividend yield"
-    ),
-    max_payout: float = typer.Option(
-        config.DEFAULT_MAX_PAYOUT, help="Maximum payout ratio"
-    ),
-    min_cagr: float = typer.Option(
-        config.DEFAULT_MIN_CAGR, help="Minimum dividend CAGR"
+    min_yield: float = typer.Option(0.02, help="Minimum dividend yield"),
+    max_payout: float = typer.Option(80.0, help="Maximum payout ratio (percentage)"),
+    min_cagr: float = typer.Option(0.05, help="Minimum dividend CAGR"),
+    csv_path: Optional[str] = typer.Option(
+        None, help="Path to CSV file (defaults to config)"
     ),
 ) -> None:
-    """
-    Screen stocks by yield, payout, and dividend CAGR, and display a rich table sorted by score.
-    """
+    """Screen companies using DGI criteria and display results in a rich table."""
     # Parameter validation
     if min_yield < 0 or max_payout < 0 or min_cagr < 0:
         typer.echo(
@@ -57,19 +52,20 @@ def screen(
         )
         raise typer.Exit(code=1)
     try:
-        try:
-            # Try importing rich to check if it's available
-            import rich  # noqa: F401
-        except ImportError:
-            typer.echo(
-                "[ERROR] The 'rich' package is required for table output. Please install it.",
-                err=True,
-            )
-            raise typer.Exit(code=1)
-        repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
-        screener = Screener(
-            repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
+        # Just check if rich is available by trying to import it
+        import rich  # noqa: F401
+    except ImportError:
+        typer.echo(
+            "[ERROR] The 'rich' package is required for table output. Please install it.",
+            err=True,
         )
+        raise typer.Exit(code=1)
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+    data_path = csv_path or config.DATA_PATH  # Use provided path or default
+    repo = CsvCompanyDataRepository(data_path, validator)
+    screener = Screener(repo, scoring_strategy=DefaultScoring())
+
+    try:
         df = screener.load_universe()
         filtered = screener.apply_filters(df, min_yield, max_payout, min_cagr)
         scored = screener.add_scores(filtered)
@@ -98,10 +94,9 @@ def build_portfolio(
         config.DEFAULT_MIN_CAGR, help="Minimum dividend CAGR"
     ),
 ) -> None:
-    repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
-    screener = Screener(
-        repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
-    )
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+    repo = CsvCompanyDataRepository(csv_path, validator)
+    screener = Screener(repo, scoring_strategy=DefaultScoring())
     df = screener.load_universe()
     filtered = screener.apply_filters(df, min_yield, max_payout, min_cagr)
     scored = screener.add_scores(filtered)

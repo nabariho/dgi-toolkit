@@ -12,4 +12,9 @@ class CsvCompanyDataRepository(CompanyDataRepository):
 
     def get_rows(self) -> List[CompanyData]:
         df_raw = pd.read_csv(self.csv_path, dtype=str)
-        return self.validator.validate_rows(df_raw.to_dict(orient="records"))
+        # Convert to list of dicts with string keys to satisfy type checker
+        records = df_raw.to_dict(orient="records")
+        string_key_records = [
+            {str(k): v for k, v in record.items()} for record in records
+        ]
+        return self.validator.validate_rows(string_key_records)
