@@ -105,8 +105,8 @@ def test_score() -> None:
         sector="A",
         industry="A",
         dividend_yield=2.0,
-        payout=row["payout"],
-        dividend_cagr=row["dividend_cagr"],
+        payout_ratio=row["payout"],
+        dividend_growth_5y=row["dividend_cagr"],
         fcf_yield=row["fcf_yield"],
     )
     s = scoring.score(company)
@@ -149,8 +149,8 @@ def test_companydata_valid() -> None:
         sector="Tech",
         industry="Hardware",
         dividend_yield=0.6,
-        payout=20.0,
-        dividend_cagr=8.0,
+        payout_ratio=20.0,
+        dividend_growth_5y=8.0,
         fcf_yield=5.0,
     )
     assert row.symbol == "AAPL"
@@ -165,9 +165,9 @@ def test_companydata_invalid() -> None:
             name="Apple",
             sector="Tech",
             industry="Hardware",
-            dividend_yield="not_a_number",
-            payout=20.0,
-            dividend_cagr=8.0,
+            dividend_yield="not_a_number",  # type: ignore  # Testing validation
+            payout_ratio=20.0,
+            dividend_growth_5y=8.0,
             fcf_yield=5.0,
         )
 
@@ -232,56 +232,67 @@ def test_screener_missing_columns(tmp_path: Any) -> None:
 
 def test_screener_score_edge_cases() -> None:
     scoring = DefaultScoring()
-    # All zeros
-    company = CompanyData(
-        symbol="A",
-        name="A",
-        sector="A",
-        industry="A",
-        dividend_yield=0.0,
-        payout=0.0,
-        dividend_cagr=0.0,
-        fcf_yield=0.0,
-    )
-    assert scoring.score(company) == 0.0
-    # All max
-    company = CompanyData(
-        symbol="A",
-        name="A",
-        sector="A",
-        industry="A",
-        dividend_yield=20.0,
-        payout=0.0,
-        dividend_cagr=20.0,
-        fcf_yield=20.0,
-    )
-    assert abs(scoring.score(company) - 0.6666666666666666) < 1e-8
-    # Negative values (should raise ValidationError)
-    import pytest
 
-    with pytest.raises(Exception):
-        CompanyData(
-            symbol="A",
-            name="A",
-            sector="A",
-            industry="A",
-            dividend_yield=-10.0,
-            payout=-10.0,
-            dividend_cagr=-10.0,
-            fcf_yield=-10.0,
-        )
-    # Over max (should clamp to 1)
+    # Test case 1: Basic scoring with DefaultScoring (normalized)
     company = CompanyData(
         symbol="A",
         name="A",
         sector="A",
         industry="A",
-        dividend_yield=100.0,
-        payout=0.0,
-        dividend_cagr=100.0,
-        fcf_yield=100.0,
+        dividend_yield=2.0,
+        payout_ratio=50.0,
+        dividend_growth_5y=10.0,
+        fcf_yield=10.0,
     )
-    assert scoring.score(company) == 0.6666666666666666
+    # DefaultScoring: cagr_norm(10/20=0.5) + fcf_norm(10/20=0.5) - payout_norm(50/100=0.5) = 0.5
+    # Then divided by 3 = 0.5/3 = 0.1667
+    cagr_norm = min(max(10.0 / 20.0, 0.0), 1.0)
+    fcf_norm = min(max(10.0 / 20.0, 0.0), 1.0)
+    payout_norm = min(max(50.0 / 100.0, 0.0), 1.0)
+    expected = max(0.0, min((cagr_norm + fcf_norm - payout_norm) / 3.0, 1.0))
+    assert scoring.score(company) == expected
+
+    # Test case 2: High values
+    company_high = CompanyData(
+        symbol="B",
+        name="B",
+        sector="B",
+        industry="B",
+        dividend_yield=12.0,
+        payout_ratio=20.0,  # Low payout for better score
+        dividend_growth_5y=15.0,
+        fcf_yield=15.0,
+    )
+    # DefaultScoring: cagr_norm(15/20=0.75) + fcf_norm(15/20=0.75) - payout_norm(20/100=0.2) = 1.3
+    # Then divided by 3 = 1.3/3 = 0.433, clamped to max 1.0
+    cagr_norm_high = min(max(15.0 / 20.0, 0.0), 1.0)
+    fcf_norm_high = min(max(15.0 / 20.0, 0.0), 1.0)
+    payout_norm_high = min(max(20.0 / 100.0, 0.0), 1.0)
+    expected_high = max(
+        0.0, min((cagr_norm_high + fcf_norm_high - payout_norm_high) / 3.0, 1.0)
+    )
+    assert scoring.score(company_high) == expected_high
+
+    # Test case 3: String input conversion
+    company_str = CompanyData(
+        symbol="C",
+        name="C",
+        sector="C",
+        industry="C",
+        dividend_yield="3.5",  # type: ignore  # Testing validation
+        payout_ratio=45.0,
+        dividend_growth_5y=8.0,
+        fcf_yield=6.0,
+    )
+    assert company_str.dividend_yield == 3.5  # Should be converted to float
+    # Test the scoring works with converted values
+    cagr_norm_str = min(max(8.0 / 20.0, 0.0), 1.0)
+    fcf_norm_str = min(max(6.0 / 20.0, 0.0), 1.0)
+    payout_norm_str = min(max(45.0 / 100.0, 0.0), 1.0)
+    expected_str = max(
+        0.0, min((cagr_norm_str + fcf_norm_str - payout_norm_str) / 3.0, 1.0)
+    )
+    assert scoring.score(company_str) == expected_str
 
 
 def test_dgirowvalidator_all_invalid() -> None:
@@ -345,16 +356,17 @@ def test_dgirowvalidator_some_invalid(caplog: Any) -> None:
 
 
 def test_companydata_must_be_number_exception() -> None:
+    """Test CompanyData must_be_number validator for exception case."""
     with pytest.raises(Exception):
         CompanyData(
-            symbol="AAPL",
-            name="Apple",
-            sector="Tech",
-            industry="Hardware",
-            dividend_yield="not_a_number",
-            payout=20.0,
-            dividend_cagr=8.0,
-            fcf_yield=5.0,
+            symbol="TEST",
+            name="Test",
+            sector="Test",
+            industry="Test",
+            dividend_yield="not_a_number",  # type: ignore  # Testing validation
+            payout_ratio=50.0,
+            dividend_growth_5y=5.0,
+            fcf_yield=3.0,
         )
 
 

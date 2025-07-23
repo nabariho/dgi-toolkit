@@ -20,7 +20,7 @@ class PydanticRowValidation:
         self.model = model
 
     def validate(self, row: dict[str, Any]) -> CompanyData:
-        return self.model(**row)
+        return self.model.model_validate(row)
 
 
 class DgiRowValidator:

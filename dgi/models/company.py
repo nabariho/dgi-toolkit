@@ -1,22 +1,25 @@
 from typing import Any
-from pydantic import BaseModel, validator, Field
-from pydantic.types import constr, confloat
+from pydantic import BaseModel, field_validator, Field
+from typing import Annotated
 
 
 class CompanyData(BaseModel):
     """Model for company financial data."""
 
-    symbol: constr(min_length=1, max_length=10)  # type: ignore
-    name: constr(min_length=1)  # type: ignore
-    sector: constr(min_length=1)  # type: ignore
-    industry: constr(min_length=1)  # type: ignore
-    dividend_yield: confloat(ge=0.0, le=100.0)  # type: ignore  # Allow up to 100% yield
-    payout_ratio: confloat(ge=0.0, le=200.0) = Field(alias="payout")  # type: ignore  # Allow up to 200% payout
-    dividend_growth_5y: confloat(ge=-50.0, le=100.0) = Field(alias="dividend_cagr")  # type: ignore  # Allow negative growth
-    fcf_yield: confloat(ge=-50.0, le=100.0)  # type: ignore  # Allow negative FCF yield
+    symbol: Annotated[str, Field(min_length=1, max_length=10)]
+    name: Annotated[str, Field(min_length=1)]
+    sector: Annotated[str, Field(min_length=1)]
+    industry: Annotated[str, Field(min_length=1)]
+    dividend_yield: Annotated[float, Field(ge=0.0, le=100.0)]  # Allow up to 100% yield
+    payout_ratio: Annotated[
+        float, Field(ge=0.0, le=200.0, alias="payout")
+    ]  # Allow up to 200% payout
+    dividend_growth_5y: Annotated[
+        float, Field(ge=-50.0, le=100.0, alias="dividend_cagr")
+    ]  # Allow negative growth
+    fcf_yield: Annotated[float, Field(ge=-50.0, le=100.0)]  # Allow negative FCF yield
 
-    class Config:
-        allow_population_by_field_name = True
+    model_config = {"populate_by_name": True}
 
     # Support old field names as aliases
     @property
@@ -27,9 +30,14 @@ class CompanyData(BaseModel):
     def dividend_cagr(self) -> float:
         return float(self.dividend_growth_5y)
 
-    @validator(
-        "dividend_yield", "payout_ratio", "dividend_growth_5y", "fcf_yield", pre=True
+    @field_validator(
+        "dividend_yield",
+        "payout_ratio",
+        "dividend_growth_5y",
+        "fcf_yield",
+        mode="before",
     )
+    @classmethod
     def must_be_number(cls, v: Any) -> float:
         if isinstance(v, (int, float)):
             return float(v)

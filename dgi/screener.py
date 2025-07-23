@@ -48,7 +48,7 @@ class Screener:
         # Convert to dict and then create mapping to use alias names
         data_for_df = []
         for row in rows:
-            row_dict = row.dict()
+            row_dict = row.model_dump()
             # Map back to alias names for DataFrame columns
             mapped_dict = {
                 "symbol": row_dict["symbol"],
