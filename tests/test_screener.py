@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from typing import Any
+from typing import Any, List
 from dgi.models import CompanyData
 from dgi.validation import DgiRowValidator, PydanticRowValidation
 from dgi.repositories.csv import CsvCompanyDataRepository
@@ -9,7 +9,8 @@ from dgi.scoring import DefaultScoring
 
 
 def make_screener(csv_path: str) -> Screener:
-    repo = CsvCompanyDataRepository(csv_path, DgiRowValidator())
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+    repo = CsvCompanyDataRepository(csv_path, validator)
     return Screener(repo)
 
 
@@ -79,7 +80,11 @@ def test_apply_filters() -> None:
             "fcf_yield": [4.0, 2.0],
         }
     )
-    screener = Screener(None)  # No repo needed for filtering
+    # Create a mock repository for the test
+    from unittest.mock import Mock
+
+    mock_repo = Mock()
+    screener = Screener(mock_repo)  # Mock repo for filtering
     filtered = screener.apply_filters(df, min_yield=1.5, max_payout=50.0, min_cagr=5.0)
     assert filtered.shape[0] == 1
     assert filtered.iloc[0]["symbol"] == "A"
@@ -129,7 +134,8 @@ def test_csv_repository_and_screener(tmp_path: Any) -> None:
         "AAPL,Apple,Tech,Hardware,0.6,20,8,5\n"
         "MSFT,Microsoft,Tech,Software,0.8,35,10,7\n"
     )
-    repo = CsvCompanyDataRepository(str(csv), DgiRowValidator())
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+    repo = CsvCompanyDataRepository(str(csv), validator)
     screener = Screener(repo)
     df = screener.load_universe()
     assert df.shape[0] == 2
@@ -167,7 +173,7 @@ def test_companydata_invalid() -> None:
 
 
 def test_dgirowvalidator_valid() -> None:
-    validator = DgiRowValidator(validation_strategy=PydanticRowValidation(CompanyData))
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     rows = [
         {
             "symbol": "AAPL",
@@ -203,8 +209,10 @@ def test_dgirowvalidator_invalid() -> None:
 
 
 def test_screener_empty_repository() -> None:
-    class EmptyRepo:
-        def get_rows(self):
+    from dgi.repositories.base import CompanyDataRepository
+
+    class EmptyRepo(CompanyDataRepository):
+        def get_rows(self) -> List[CompanyData]:
             return []
 
     screener = Screener(EmptyRepo())
@@ -215,7 +223,8 @@ def test_screener_empty_repository() -> None:
 def test_screener_missing_columns(tmp_path: Any) -> None:
     csv = tmp_path / "missing_cols.csv"
     csv.write_text("symbol,name,sector\nAAPL,Apple,Tech\n")
-    repo = CsvCompanyDataRepository(str(csv), DgiRowValidator())
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+    repo = CsvCompanyDataRepository(str(csv), validator)
     screener = Screener(repo)
     with pytest.raises(ValueError):
         screener.load_universe()
@@ -276,7 +285,7 @@ def test_screener_score_edge_cases() -> None:
 
 
 def test_dgirowvalidator_all_invalid() -> None:
-    validator = DgiRowValidator(validation_strategy=PydanticRowValidation(CompanyData))
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     rows = [
         {
             "symbol": "AAPL",
@@ -303,8 +312,8 @@ def test_dgirowvalidator_all_invalid() -> None:
         validator.validate_rows(rows)
 
 
-def test_dgirowvalidator_some_invalid(caplog) -> None:
-    validator = DgiRowValidator(validation_strategy=PydanticRowValidation(CompanyData))
+def test_dgirowvalidator_some_invalid(caplog: Any) -> None:
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     rows = [
         {
             "symbol": "AAPL",
@@ -347,3 +356,30 @@ def test_companydata_must_be_number_exception() -> None:
             dividend_cagr=8.0,
             fcf_yield=5.0,
         )
+
+
+def test_notebook_pipeline_matches_csv(tmp_path: Any) -> None:
+    from dgi.validation import DgiRowValidator
+    from dgi.repositories.csv import CsvCompanyDataRepository
+    from dgi.screener import Screener
+    from dgi.scoring import DefaultScoring
+
+    # Use the real CSV file
+    csv_path = "data/fundamentals_small.csv"
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+    repo = CsvCompanyDataRepository(csv_path, validator)
+    screener = Screener(repo, scoring_strategy=DefaultScoring())
+    df = screener.load_universe()
+    # Print for debug
+    print("Loaded DataFrame:")
+    print(df)
+    print("Dtypes:")
+    print(df.dtypes)
+    filtered = screener.apply_filters(df, min_yield=0.5, max_payout=60, min_cagr=5.0)
+    print("Filtered DataFrame:")
+    print(filtered)
+    print("Filtered dtypes:")
+    print(filtered.dtypes)
+    assert (
+        filtered.shape[0] == 5
+    ), f"Expected 5 rows after filtering, got {filtered.shape[0]}\n{filtered}"

@@ -1,6 +1,8 @@
 import subprocess
 import sys
-from dgi.validation import DgiRowValidator
+from typing import Any
+from dgi.validation import DgiRowValidator, PydanticRowValidation
+from dgi.models import CompanyData
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.screener import Screener
 from dgi.portfolio import build, summary_stats
@@ -14,7 +16,7 @@ def test_cli_help_runs() -> None:
     assert "Usage" in result.stdout or "usage" in result.stdout
 
 
-def test_integration_csv_to_portfolio(tmp_path) -> None:
+def test_integration_csv_to_portfolio(tmp_path: Any) -> None:
     csv = tmp_path / "integration.csv"
     csv.write_text(
         "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
@@ -22,7 +24,8 @@ def test_integration_csv_to_portfolio(tmp_path) -> None:
         "MSFT,Microsoft,Tech,Software,3.0,50,6,5\n"
         "GOOG,Google,Tech,Software,4.0,60,7,6\n"
     )
-    repo = CsvCompanyDataRepository(str(csv), DgiRowValidator())
+    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+    repo = CsvCompanyDataRepository(str(csv), validator)
     screener = Screener(repo)
     df = screener.load_universe()
     filtered = screener.apply_filters(df, min_yield=2.0, max_payout=60, min_cagr=5.0)
@@ -38,7 +41,7 @@ def test_integration_csv_to_portfolio(tmp_path) -> None:
     assert stats["mean_payout"] > 0
 
 
-def test_cli_screen_and_build_portfolio(tmp_path) -> None:
+def test_cli_screen_and_build_portfolio(tmp_path: Any) -> None:
     csv = tmp_path / "cli_integration.csv"
     csv.write_text(
         "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
@@ -94,7 +97,7 @@ def test_cli_screen_and_build_portfolio(tmp_path) -> None:
     assert "ticker" in result.stdout
 
 
-def test_cli_screen_rich_table_output(tmp_path) -> None:
+def test_cli_screen_rich_table_output(tmp_path: Any) -> None:
     csv = tmp_path / "rich_table.csv"
     csv.write_text(
         "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"
@@ -122,7 +125,7 @@ def test_cli_screen_rich_table_output(tmp_path) -> None:
     assert "AAPL" in result.stdout or "MSFT" in result.stdout
 
 
-def test_cli_screen_bad_param(tmp_path) -> None:
+def test_cli_screen_bad_param(tmp_path: Any) -> None:
     csv = tmp_path / "bad_param.csv"
     csv.write_text(
         "symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield\n"

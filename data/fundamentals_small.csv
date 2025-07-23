@@ -1,2 +1,6 @@
 symbol,name,sector,industry,dividend_yield,payout,dividend_cagr,fcf_yield
-AAPL,Apple Inc.,Technology,Consumer Electronics,0.60,15.0,8.5,5.2 
+AAPL,Apple Inc.,Technology,Consumer Electronics,0.60,15.0,8.5,5.2
+MSFT,Microsoft Corp.,Technology,Software,0.80,35.0,10.0,7.0
+GOOG,Alphabet Inc.,Technology,Internet,0.70,25.0,12.0,6.5
+JNJ,Johnson & Johnson,Healthcare,Pharmaceuticals,2.50,50.0,6.0,4.0
+PG,Procter & Gamble,Consumer Staples,Household Products,1.20,55.0,5.5,3.8

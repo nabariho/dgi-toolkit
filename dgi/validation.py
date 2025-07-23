@@ -24,22 +24,19 @@ class PydanticRowValidation:
 
 
 class DgiRowValidator:
-    """
-    Validates rows of data using a pluggable validation strategy and required columns check.
-    """
+    """Validates CSV rows for DGI analysis."""
 
-    def __init__(
-        self,
-        validation_strategy: RowValidationStrategy | None = None,
-        required_columns: list[str] | None = None,
-    ) -> None:
-        if validation_strategy is None:
-            self.validation_strategy = PydanticRowValidation(CompanyData)
-        else:
-            self.validation_strategy = validation_strategy
-        self.required_columns = required_columns
+    def __init__(self, strategy: RowValidationStrategy) -> None:
+        self._strategy = (
+            strategy  # Remove explicit type annotation that was causing issues
+        )
+        self.required_columns = (
+            None  # This attribute is no longer used in the new_code, but kept for now
+        )
 
-    def validate_rows(self, rows: list[dict[str, Any]]) -> list[CompanyData]:
+    def validate_rows(
+        self, rows: list[dict[str, Any]]
+    ) -> list[CompanyData]:  # Fix type
         valid_rows: list[CompanyData] = []
         errors: list[str] = []
         for i, row in enumerate(rows):
@@ -54,7 +51,7 @@ class DgiRowValidator:
                     errors.append(error_msg)
                     continue
             try:
-                validated = self.validation_strategy.validate(row_str_keys)
+                validated = self._strategy.validate(row_str_keys)
                 valid_rows.append(validated)
             except ValidationError as e:
                 error_msg = f"Row {i+2}: {e}"
