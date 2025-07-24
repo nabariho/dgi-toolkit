@@ -1,15 +1,18 @@
 # Contributing to DGI Toolkit
 
-We welcome contributions to the DGI Toolkit! This guide will help you understand our architecture, development process, and how to contribute effectively.
+We welcome contributions to the DGI Toolkit! This guide will help you understand our
+architecture, development process, and how to contribute effectively.
 
 ## Development Setup
 
 ### Prerequisites
+
 - **Python 3.12+** (for latest security and features)
 - **Poetry** (for dependency management)
 - **Git** (for version control)
 
 ### Environment Setup
+
 ```bash
 # Clone the repository
 git clone <repository-url>
@@ -32,9 +35,11 @@ poetry run pytest
 ## Architecture Guidelines
 
 ### Strategy Pattern Implementation
+
 Our codebase extensively uses the Strategy pattern. When adding new features:
 
 1. **Define the Interface First**
+
    ```python
    class NewStrategy(ABC):
        @abstractmethod
@@ -42,6 +47,7 @@ Our codebase extensively uses the Strategy pattern. When adding new features:
    ```
 
 2. **Implement Concrete Strategy**
+
    ```python
    class ConcreteStrategy(NewStrategy):
        def process(self, data: Input) -> Output:
@@ -56,6 +62,7 @@ Our codebase extensively uses the Strategy pattern. When adding new features:
    ```
 
 ### Adding New Filtering Strategies
+
 To add a new filter strategy:
 
 ```python
@@ -63,8 +70,8 @@ To add a new filter strategy:
 class ESGFilter(FilterStrategy):
     def __init__(self, min_esg_score: float):
         self.min_esg_score = min_esg_score
-    
-    def filter(self, df: DataFrame, min_yield: float, 
+
+    def filter(self, df: DataFrame, min_yield: float,
               max_payout: float, min_cagr: float) -> DataFrame:
         # Apply base DGI filters first
         base_filtered = df[
@@ -87,18 +94,21 @@ def test_esg_filter():
 ## Code Quality Standards
 
 ### Testing Requirements
+
 - **Minimum 85% test coverage** (enforced by CI)
 - **Unit tests** for all strategies and business logic
 - **Integration tests** for end-to-end workflows
 - **Architecture tests** to verify strategy injection works
 
 ### Code Style
+
 - **Black** for code formatting (`poetry run black dgi/ tests/`)
 - **Ruff** for linting (`poetry run ruff check dgi/ tests/`)
 - **MyPy** for type checking (`poetry run mypy dgi/`)
 - **Pre-commit hooks** run automatically on commit
 
 ### Documentation
+
 - **Docstrings** for all public classes and methods
 - **Type hints** for all function signatures
 - **README updates** for new features
@@ -107,18 +117,22 @@ def test_esg_filter():
 ## Development Workflow
 
 ### 1. Create Feature Branch
+
 ```bash
 git checkout -b feature/your-feature-name
 ```
 
 ### 2. Implement Changes
+
 Follow the architecture patterns:
+
 - Use dependency injection
 - Implement strategy interfaces
 - Add comprehensive tests
 - Update documentation
 
 ### 3. Run Quality Checks
+
 ```bash
 # Format code
 poetry run black dgi/ tests/
@@ -137,6 +151,7 @@ poetry run pre-commit run --all-files
 ```
 
 ### 4. Submit Pull Request
+
 - Clear description of changes
 - Reference any related issues
 - Include test results
@@ -145,6 +160,7 @@ poetry run pre-commit run --all-files
 ## Testing Guidelines
 
 ### Unit Testing
+
 ```python
 def test_strategy_behavior():
     """Test individual strategy in isolation."""
@@ -160,6 +176,7 @@ def test_dependency_injection():
 ```
 
 ### Integration Testing
+
 ```python
 def test_end_to_end_workflow():
     """Test complete workflow with real data."""
@@ -168,11 +185,11 @@ def test_end_to_end_workflow():
         filter_strategy=DefaultFilter(),
         scoring_strategy=DefaultScoring()
     )
-    
+
     df = screener.load_universe()
     filtered = screener.apply_filters(df, min_yield=0.02, max_payout=80, min_cagr=0.05)
     scored = screener.add_scores(filtered)
-    
+
     assert len(scored) > 0
     assert "score" in scored.columns
 ```
@@ -180,20 +197,25 @@ def test_end_to_end_workflow():
 ## Architectural Decisions
 
 ### When to Use Strategy Pattern
+
 Use strategy pattern when:
+
 - Algorithm needs to be swappable at runtime
 - Multiple implementations exist for the same interface
 - Testing requires mocking behavior
 - Future extensions are likely
 
 ### When to Use Repository Pattern
+
 Use repository pattern when:
+
 - Data source might change (CSV → API → Database)
 - Testing requires mock data sources
 - Data access logic is complex
 - Multiple data sources need the same interface
 
 ### Dependency Management
+
 - **Poetry** for all dependency management
 - **Python 3.12+** for security and performance
 - **Locked dependencies** for reproducible builds
@@ -202,11 +224,12 @@ Use repository pattern when:
 ## Common Patterns
 
 ### Error Handling
+
 ```python
 def process_data(self, data: List[Dict]) -> List[ValidatedData]:
     valid_items = []
     errors = []
-    
+
     for i, item in enumerate(data):
         try:
             validated = self.validate(item)
@@ -215,17 +238,18 @@ def process_data(self, data: List[Dict]) -> List[ValidatedData]:
             error_msg = f"Row {i+1}: {e}"
             logger.error(error_msg)
             errors.append(error_msg)
-    
+
     if not valid_items:
         raise DataValidationError(f"No valid items found. Errors:\n{chr(10).join(errors)}")
-    
+
     if errors:
         logger.warning(f"Some items were invalid:\n{chr(10).join(errors)}")
-    
+
     return valid_items
 ```
 
 ### Configuration
+
 ```python
 # Use environment variables with sensible defaults
 class Config:
@@ -235,6 +259,7 @@ class Config:
 ```
 
 ### Logging
+
 ```python
 # Use structured logging with context
 logger.info(
@@ -247,9 +272,10 @@ logger.info(f"Filtered to {len(filtered)} rows from {len(df)} rows")
 ## Questions?
 
 If you have questions about:
+
 - **Architecture decisions**: Check `docs/ARCHITECTURE.md`
 - **Development setup**: Follow this guide or ask in issues
 - **Feature requests**: Create an issue with detailed requirements
 - **Bug reports**: Include minimal reproduction case
 
-Thank you for contributing to DGI Toolkit! 
+Thank you for contributing to DGI Toolkit!

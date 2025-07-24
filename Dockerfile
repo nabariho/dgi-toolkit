@@ -31,4 +31,4 @@ COPY --from=builder /app/dgi ./dgi
 COPY --from=builder /app/ai_chat ./ai_chat
 COPY --from=builder /app/data ./data
 
-CMD ["python3"] 
+CMD ["python3"]

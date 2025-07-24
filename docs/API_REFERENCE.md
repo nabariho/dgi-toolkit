@@ -1,6 +1,7 @@
 # DGI Toolkit API Reference
 
-This document provides detailed technical documentation for developers who want to extend, integrate with, or contribute to the DGI Toolkit.
+This document provides detailed technical documentation for developers who want to
+extend, integrate with, or contribute to the DGI Toolkit.
 
 ## 📚 Module Overview
 
@@ -43,10 +44,10 @@ class CompanyDataRepository(ABC):
     def get_rows(self) -> List[CompanyData]:
         """
         Return a list of validated CompanyData objects from the data source.
-        
+
         Returns:
             List[CompanyData]: Validated company financial data
-            
+
         Raises:
             DataValidationError: If data validation fails
             IOError: If data source is inaccessible
@@ -55,9 +56,11 @@ class CompanyDataRepository(ABC):
 ```
 
 **Implementations:**
+
 - `CsvCompanyDataRepository`: Reads from CSV files
 
 **Future Extensions:**
+
 - `DatabaseRepository`: SQL database integration
 - `APIRepository`: Real-time API data feeds
 - `ParquetRepository`: High-performance columnar storage
@@ -75,10 +78,10 @@ class ScoringStrategy(ABC):
     def score(self, company: CompanyData) -> float:
         """
         Calculate a score for a company based on financial metrics.
-        
+
         Args:
             company: CompanyData object with financial metrics
-            
+
         Returns:
             float: Score between 0.0 and 1.0 (higher = better)
         """
@@ -86,9 +89,11 @@ class ScoringStrategy(ABC):
 ```
 
 **Implementations:**
+
 - `DefaultScoring`: Balanced yield/growth/payout algorithm
 
 **Future Extensions:**
+
 - `MomentumScoring`: Price momentum-based scoring
 - `ValueScoring`: Traditional value metrics
 - `ESGScoring`: Environmental/social/governance factors
@@ -106,10 +111,10 @@ class WeightingStrategy(ABC):
     def compute_weights(self, df: DataFrame) -> DataFrame:
         """
         Compute portfolio weights for selected stocks.
-        
+
         Args:
             df: DataFrame with stock data and scores
-            
+
         Returns:
             DataFrame: Same DataFrame with 'weight' column added
         """
@@ -117,6 +122,7 @@ class WeightingStrategy(ABC):
 ```
 
 **Implementations:**
+
 - `EqualWeighting`: Equal allocation (1/N)
 - `ScoreWeighting`: Score-proportional allocation
 
@@ -135,7 +141,7 @@ from pydantic.types import constr, confloat
 
 class CompanyData(BaseModel):
     """Model for company financial data with validation."""
-    
+
     # Required fields with constraints
     symbol: constr(min_length=1, max_length=10)           # Stock ticker
     name: constr(min_length=1)                            # Company name
@@ -145,19 +151,19 @@ class CompanyData(BaseModel):
     payout_ratio: confloat(ge=0.0, le=200.0) = Field(alias="payout")  # % payout ratio
     dividend_growth_5y: confloat(ge=-50.0, le=100.0) = Field(alias="dividend_cagr")  # % 5-year CAGR
     fcf_yield: confloat(ge=-50.0, le=100.0)              # % free cash flow yield
-    
+
     class Config:
         allow_population_by_field_name = True  # Support both field names and aliases
-    
+
     # Backward compatibility properties
     @property
     def payout(self) -> float:
         return float(self.payout_ratio)
-    
+
     @property
     def dividend_cagr(self) -> float:
         return float(self.dividend_growth_5y)
-    
+
     @validator("dividend_yield", "payout_ratio", "dividend_growth_5y", "fcf_yield", pre=True)
     def must_be_number(cls, v: Any) -> float:
         """Ensure numeric fields can be converted to float."""
@@ -170,10 +176,12 @@ class CompanyData(BaseModel):
 ```
 
 **Field Aliases:**
+
 - `payout_ratio` ↔ `payout` (for CSV compatibility)
 - `dividend_growth_5y` ↔ `dividend_cagr` (for CSV compatibility)
 
 **Validation Rules:**
+
 - Dividend yield: 0-100% (allows high-yield scenarios)
 - Payout ratio: 0-200% (allows unsustainable payouts)
 - Dividend growth: -50% to 100% (allows dividend cuts)
@@ -190,7 +198,7 @@ class CompanyData(BaseModel):
 ```python
 class Screener:
     """Screen companies based on DGI criteria."""
-    
+
     def __init__(
         self,
         repository: CompanyDataRepository,
@@ -199,7 +207,7 @@ class Screener:
     ) -> None:
         """
         Initialize screener with dependencies.
-        
+
         Args:
             repository: Data source implementation
             filters: Optional list of filter strategies (future)
@@ -208,18 +216,18 @@ class Screener:
         self._repository = repository
         self._filters = filters or []
         self._scoring_strategy = scoring_strategy
-    
+
     def load_universe(self) -> DataFrame:
         """
         Load and validate the raw fundamentals universe.
-        
+
         Returns:
             DataFrame: Validated data ready for screening
-            
+
         Raises:
             DataValidationError: If validation fails
         """
-        
+
     def apply_filters(
         self,
         df: DataFrame,
@@ -229,40 +237,40 @@ class Screener:
     ) -> DataFrame:
         """
         Filter stocks by DGI criteria.
-        
+
         Args:
             df: Universe DataFrame
             min_yield: Minimum dividend yield (decimal, e.g., 0.02 = 2%)
             max_payout: Maximum payout ratio (percentage, e.g., 80.0 = 80%)
             min_cagr: Minimum dividend CAGR (decimal, e.g., 0.05 = 5%)
-            
+
         Returns:
             DataFrame: Filtered stocks meeting criteria
         """
-        
+
     def add_scores(self, df: DataFrame) -> DataFrame:
         """
         Add composite scores for ranking.
-        
+
         Args:
             df: Filtered DataFrame
-            
+
         Returns:
             DataFrame: Same DataFrame with 'score' column added
         """
-        
+
     def default_score(self, company: CompanyData) -> float:
         """
         Default scoring algorithm (if no strategy provided).
-        
+
         Algorithm:
         - Yield Score: dividend_yield * 1.0
-        - Growth Score: dividend_growth_5y * 0.5  
+        - Growth Score: dividend_growth_5y * 0.5
         - Payout Penalty: max(0, payout_ratio - 60.0) * -0.1
-        
+
         Args:
             company: CompanyData object
-            
+
         Returns:
             float: Composite score
         """
@@ -281,16 +289,16 @@ def build(
 ) -> DataFrame:
     """
     Build a portfolio by selecting top-N stocks and applying weighting.
-    
+
     Args:
         df: DataFrame with at least 'score' column and ticker column
         top_n: Number of top stocks to select
         weighting: 'equal' or 'score'
         ticker_col: Optional override for ticker column name
-        
+
     Returns:
         DataFrame: Portfolio with columns ['ticker', 'weight', 'score']
-        
+
     Raises:
         ValueError: If top_n > len(df), missing columns, or invalid weighting
     """
@@ -298,11 +306,11 @@ def build(
 def summary_stats(portfolio_df: DataFrame, universe_df: DataFrame) -> Dict[str, float]:
     """
     Calculate portfolio summary statistics.
-    
+
     Args:
         portfolio_df: Portfolio DataFrame with weights
         universe_df: Full universe DataFrame for comparison
-        
+
     Returns:
         Dict with keys: 'avg_yield', 'median_cagr', 'mean_payout'
     """
@@ -315,55 +323,55 @@ def summary_stats(portfolio_df: DataFrame, universe_df: DataFrame) -> Dict[str, 
 ```python
 class DgiRowValidator:
     """Validates CSV rows for DGI analysis."""
-    
+
     def __init__(self, strategy: RowValidationStrategy) -> None:
         """
         Initialize with validation strategy.
-        
+
         Args:
             strategy: Implementation of RowValidationStrategy protocol
         """
-        
+
     def validate_rows(self, rows: list[dict[str, Any]]) -> list[CompanyData]:
         """
         Validate a list of raw data rows.
-        
+
         Args:
             rows: List of dictionaries from CSV/database
-            
+
         Returns:
             List[CompanyData]: Successfully validated rows
-            
+
         Raises:
             DataValidationError: If no valid rows found
-            
+
         Behavior:
         - Logs validation errors for each invalid row
-        - Continues processing after individual row failures  
+        - Continues processing after individual row failures
         - Raises exception only if ALL rows fail validation
         """
 
 class PydanticRowValidation:
     """Pydantic-based validation strategy."""
-    
+
     def __init__(self, model_class: type[CompanyData]) -> None:
         """
         Initialize with Pydantic model class.
-        
+
         Args:
             model_class: CompanyData or subclass
         """
-        
+
     def validate(self, row: dict[str, Any]) -> CompanyData:
         """
         Validate a single row using Pydantic.
-        
+
         Args:
             row: Dictionary of field values
-            
+
         Returns:
             CompanyData: Validated model instance
-            
+
         Raises:
             ValidationError: If validation fails
         """
@@ -392,7 +400,7 @@ def screen(
 ) -> None:
     """Screen companies using DGI criteria and display in rich table."""
 
-@app.command() 
+@app.command()
 def build_portfolio(
     csv_path: str = typer.Option("data/fundamentals_small.csv", help="Path to CSV"),
     top_n: int = typer.Option(10, help="Number of stocks in portfolio"),
@@ -410,10 +418,10 @@ def build_portfolio(
 def render_screen_table(df: DataFrame) -> None:
     """
     Render screening results as a Rich table.
-    
+
     Args:
         df: DataFrame with screening results and scores
-        
+
     Features:
     - Color-coded columns (green for good metrics)
     - Sorted by score (descending)
@@ -431,7 +439,7 @@ def render_screen_table(df: DataFrame) -> None:
 ```python
 class Config:
     """Configuration with environment variable support."""
-    
+
     def __init__(self) -> None:
         self.DATA_PATH = os.getenv("DGI_DATA_PATH", "data/fundamentals_small.csv")
         self.LOG_LEVEL = os.getenv("DGI_LOG_LEVEL", "INFO")
@@ -449,7 +457,7 @@ def get_config() -> Config:
 ```python
 class JsonFormatter(logging.Formatter):
     """Structured JSON logging formatter."""
-    
+
     def format(self, record: logging.LogRecord) -> str:
         log_record = {
             "level": record.levelname,
@@ -471,7 +479,7 @@ class JsonFormatter(logging.Formatter):
 class DataValidationError(ValueError):
     """
     Raised when data validation fails in the DGI toolkit.
-    
+
     Use Cases:
     - Invalid CSV data format
     - Missing required columns
@@ -483,6 +491,7 @@ class DataValidationError(ValueError):
 ### Error Handling Patterns
 
 **Graceful Degradation:**
+
 ```python
 # Skip invalid rows, continue processing
 try:
@@ -494,6 +503,7 @@ except ValidationError as e:
 ```
 
 **Fail Fast:**
+
 ```python
 # Validate critical parameters immediately
 if top_n > len(df):
@@ -501,6 +511,7 @@ if top_n > len(df):
 ```
 
 **User-Friendly CLI Errors:**
+
 ```python
 try:
     # Business logic
@@ -519,10 +530,10 @@ except Exception as e:
 def create_test_company(**overrides) -> CompanyData:
     """
     Create a test CompanyData instance with sensible defaults.
-    
+
     Args:
         **overrides: Field values to override defaults
-        
+
     Returns:
         CompanyData: Test instance
     """
@@ -542,11 +553,11 @@ def create_test_company(**overrides) -> CompanyData:
 def create_test_csv(tmp_path: Path, companies: List[dict]) -> Path:
     """
     Create a temporary CSV file for testing.
-    
+
     Args:
         tmp_path: pytest temporary directory
         companies: List of company data dictionaries
-        
+
     Returns:
         Path: Path to created CSV file
     """
@@ -557,19 +568,19 @@ def create_test_csv(tmp_path: Path, companies: List[dict]) -> Path:
 ```python
 class MockRepository(CompanyDataRepository):
     """Mock repository for testing."""
-    
+
     def __init__(self, companies: List[CompanyData]):
         self.companies = companies
-    
+
     def get_rows(self) -> List[CompanyData]:
         return self.companies
 
 class MockScoringStrategy(ScoringStrategy):
     """Mock scoring strategy for testing."""
-    
+
     def __init__(self, score_value: float = 0.5):
         self.score_value = score_value
-    
+
     def score(self, company: CompanyData) -> float:
         return self.score_value
 ```
@@ -581,17 +592,19 @@ class MockScoringStrategy(ScoringStrategy):
 ### Adding New Data Sources
 
 1. **Implement Repository Interface:**
+
 ```python
 class DatabaseRepository(CompanyDataRepository):
     def __init__(self, connection_string: str):
         self.connection = create_connection(connection_string)
-    
+
     def get_rows(self) -> List[CompanyData]:
         # SQL query logic
         # Return List[CompanyData]
 ```
 
 2. **Register with Dependency Injection:**
+
 ```python
 repo = DatabaseRepository("postgresql://...")
 screener = Screener(repo)
@@ -600,6 +613,7 @@ screener = Screener(repo)
 ### Adding New Scoring Algorithms
 
 1. **Implement Strategy Interface:**
+
 ```python
 class MomentumScoring(ScoringStrategy):
     def score(self, company: CompanyData) -> float:
@@ -608,6 +622,7 @@ class MomentumScoring(ScoringStrategy):
 ```
 
 2. **Use in Screener:**
+
 ```python
 screener = Screener(repo, scoring_strategy=MomentumScoring())
 ```
@@ -615,6 +630,7 @@ screener = Screener(repo, scoring_strategy=MomentumScoring())
 ### Adding New Weighting Methods
 
 1. **Implement Strategy Interface:**
+
 ```python
 class VolatilityWeighting(WeightingStrategy):
     def compute_weights(self, df: DataFrame) -> DataFrame:
@@ -625,11 +641,12 @@ class VolatilityWeighting(WeightingStrategy):
 ```
 
 2. **Register in Portfolio Builder:**
+
 ```python
 # Add to strategies dictionary in portfolio.py
 strategies = {
     "equal": EqualWeighting(),
-    "score": ScoreWeighting(), 
+    "score": ScoreWeighting(),
     "volatility": VolatilityWeighting(),  # New strategy
 }
 ```
@@ -668,7 +685,7 @@ gc.collect()  # Force garbage collection if needed
 # Vectorized operations when possible
 df['score'] = (
     df['dividend_yield'] * 1.0 +
-    df['dividend_cagr'] * 0.5 - 
+    df['dividend_cagr'] * 0.5 -
     (df['payout'] - 60.0).clip(lower=0) * 0.1
 )
 
@@ -714,4 +731,5 @@ if not str(requested_path).startswith(str(allowed_dir)):
 
 ---
 
-This API reference provides the technical foundation for extending and integrating with the DGI Toolkit. For business use cases and examples, see `FEATURES.md`. 
+This API reference provides the technical foundation for extending and integrating with
+the DGI Toolkit. For business use cases and examples, see `FEATURES.md`.

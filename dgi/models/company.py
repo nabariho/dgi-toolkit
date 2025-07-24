@@ -1,6 +1,6 @@
-from typing import Any
-from pydantic import BaseModel, field_validator, Field
-from typing import Annotated
+from typing import Annotated, Any
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class CompanyData(BaseModel):

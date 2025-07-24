@@ -3,9 +3,9 @@ import pandas as pd
 
 def render_screen_table(df: pd.DataFrame) -> None:
     try:
+        from rich import box
         from rich.console import Console
         from rich.table import Table
-        from rich import box
     except ImportError:
         print(
             "[ERROR] The 'rich' package is required for table output. Please install it."

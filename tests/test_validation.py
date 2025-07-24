@@ -1,9 +1,10 @@
 """Test validation functionality."""
 
 import unittest
-from typing import Any, Dict, List
-from dgi.validation import DgiRowValidator, PydanticRowValidation, DataValidationError
+from typing import Any
+
 from dgi.models import CompanyData
+from dgi.validation import DataValidationError, DgiRowValidator, PydanticRowValidation
 
 
 class TestDgiRowValidator(unittest.TestCase):
@@ -12,14 +13,14 @@ class TestDgiRowValidator(unittest.TestCase):
     def test_validate_empty_list(self) -> None:
         """Test validation with empty list."""
         validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
         errors = validator.validate_rows(rows)
         self.assertEqual(errors, [])
 
     def test_validate_missing_required_fields(self) -> None:
         """Test validation with missing required fields."""
         validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-        rows: List[Dict[str, Any]] = [
+        rows: list[dict[str, Any]] = [
             {"symbol": "AAPL"},  # Missing required fields
             {
                 "symbol": "MSFT",
@@ -49,7 +50,7 @@ class TestDgiRowValidator(unittest.TestCase):
     def test_validate_valid_rows(self) -> None:
         """Test validation with all valid rows."""
         validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-        rows: List[Dict[str, Any]] = [
+        rows: list[dict[str, Any]] = [
             {
                 "symbol": "AAPL",
                 "company_name": "Apple Inc",
@@ -71,7 +72,7 @@ class TestDgiRowValidator(unittest.TestCase):
     def test_validate_raises_error_with_all_invalid(self) -> None:
         """Test that validation raises error when all rows are invalid."""
         validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-        rows: List[Dict[str, Any]] = [
+        rows: list[dict[str, Any]] = [
             {"symbol": "INVALID1"},  # Missing required fields
             {"symbol": "INVALID2"},  # Missing required fields
         ]
@@ -82,7 +83,7 @@ class TestDgiRowValidator(unittest.TestCase):
     def test_validate_partial_errors_returns_valid_rows(self) -> None:
         """Test validation with some errors returns only valid rows."""
         validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-        rows: List[Dict[str, Any]] = [
+        rows: list[dict[str, Any]] = [
             {"symbol": "INVALID"},  # Missing required fields
             {
                 "symbol": "MSFT",

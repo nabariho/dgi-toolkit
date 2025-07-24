@@ -16,4 +16,4 @@ tests/
 *.log
 *.tmp
 *.env
-poetry.lock 
+poetry.lock

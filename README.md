@@ -1,6 +1,8 @@
 # DGI Toolkit
 
-A comprehensive toolkit for Dividend Growth Investing (DGI) analysis, providing tools for screening stocks, building portfolios, and analyzing dividend-focused investment strategies.
+A comprehensive toolkit for Dividend Growth Investing (DGI) analysis, providing tools
+for screening stocks, building portfolios, and analyzing dividend-focused investment
+strategies.
 
 ## Quick Start
 
@@ -12,12 +14,14 @@ A comprehensive toolkit for Dividend Growth Investing (DGI) analysis, providing 
 ### Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone <repository-url>
    cd dgi-toolkit
    ```
 
 2. **Install dependencies using Poetry:**
+
    ```bash
    # Install Poetry if you haven't already
    curl -sSL https://install.python-poetry.org | python3 -
@@ -27,15 +31,17 @@ A comprehensive toolkit for Dividend Growth Investing (DGI) analysis, providing 
    ```
 
 3. **Activate the virtual environment:**
+
    ```bash
    poetry shell
    ```
 
 4. **Set up environment variables (optional):**
+
    ```bash
    # Copy the example environment file
    cp env.example .env
-   
+
    # Edit .env with your API keys and preferences
    # Note: .env is gitignored for security
    ```
@@ -45,6 +51,7 @@ A comprehensive toolkit for Dividend Growth Investing (DGI) analysis, providing 
 #### Command Line Interface
 
 Screen stocks using DGI criteria:
+
 ```bash
 # Basic screening
 dgi screen
@@ -73,7 +80,7 @@ repo = CsvCompanyDataRepository("data/fundamentals_small.csv", validator)
 # Use sector-specific filtering
 tech_filter = SectorFilter(["Technology", "Software"])
 screener = Screener(
-    repo, 
+    repo,
     filter_strategy=tech_filter,
     scoring_strategy=DefaultScoring()
 )
@@ -89,16 +96,19 @@ scored = screener.add_scores(filtered)
 ### Development Environment Setup
 
 1. **Install development dependencies:**
+
    ```bash
    poetry install --with dev
    ```
 
 2. **Install pre-commit hooks:**
+
    ```bash
    poetry run pre-commit install
    ```
 
 3. **Run tests:**
+
    ```bash
    # All tests with coverage
    poetry run pytest
@@ -111,6 +121,7 @@ scored = screener.add_scores(filtered)
    ```
 
 4. **Code formatting and linting:**
+
    ```bash
    # Format code
    poetry run black dgi/ tests/
@@ -127,18 +138,21 @@ scored = screener.add_scores(filtered)
 This project uses **Poetry** for dependency management. Key dependencies include:
 
 **Core Dependencies:**
+
 - `pandas ^2.3.1` - Data manipulation and analysis
-- `pydantic ^2.0` - Data validation using type hints  
+- `pydantic ^2.0` - Data validation using type hints
 - `typer` - CLI framework
 - `rich ^14.0.0` - Rich text and beautiful formatting
 
 **AI/LLM Dependencies:**
+
 - `langchain ^0.3.26` - LLM framework
 - `openai ^1.97.1` - OpenAI API client
 - `langchain-openai ^0.3.28` - LangChain OpenAI integration
 - `langchain-anthropic ^0.3.17` - LangChain Anthropic integration
 
 **Development Dependencies:**
+
 - `pytest ^8.4.1` - Testing framework
 - `pytest-cov ^6.2.1` - Coverage reporting
 - `black ^25.1.0` - Code formatting
@@ -151,7 +165,7 @@ This project uses **Poetry** for dependency management. Key dependencies include
 # Add runtime dependency
 poetry add package-name
 
-# Add development dependency  
+# Add development dependency
 poetry add --group dev package-name
 
 # Update dependencies
@@ -179,7 +193,7 @@ The toolkit follows a modular architecture with strategy patterns:
   - `SectorFilter`: Sector-specific filtering with DGI criteria
   - `CompositeFilter`: Combines multiple filter strategies
   - `TopNFilter`: Limits results to top N stocks
-- **Scoring Strategy**: Pluggable scoring algorithms (`dgi.scoring`) 
+- **Scoring Strategy**: Pluggable scoring algorithms (`dgi.scoring`)
   - `DefaultScoring`: Balanced scoring across multiple metrics
   - Extensible for ESG, momentum, or custom scoring
 - **Repository Pattern**: Data source abstraction (`dgi.repositories`)
@@ -190,12 +204,14 @@ The toolkit follows a modular architecture with strategy patterns:
   - Graceful error handling and reporting
 
 **Key Design Principles:**
+
 - **Strategy Pattern**: Runtime behavior customization
 - **Dependency Injection**: Improved testability and flexibility
 - **Single Responsibility**: Each class has one focused purpose
 - **Open/Closed**: Open for extension, closed for modification
 
 **Example of Strategy Composition:**
+
 ```python
 # Technology sector focus with custom filtering
 tech_filter = CompositeFilter(
@@ -218,7 +234,9 @@ screener = Screener(
 
 ## Project Pitch
 
-**dgi-toolkit** is a Python toolkit for building, analyzing, and managing Dividend Growth Investing portfolios. It aims to provide robust, extensible tools for research, automation, and reporting for DGI investors.
+**dgi-toolkit** is a Python toolkit for building, analyzing, and managing Dividend
+Growth Investing portfolios. It aims to provide robust, extensible tools for research,
+automation, and reporting for DGI investors.
 
 ## Example CLI Output
 
@@ -244,4 +262,5 @@ You can try the full pipeline in your browser (no install needed):
 ---
 
 ## License
+
 MIT

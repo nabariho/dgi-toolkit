@@ -1,7 +1,9 @@
 """Tests for CLI helper functions."""
 
 import unittest
+
 import pandas as pd
+
 from dgi.cli_helpers import render_screen_table
 
 

@@ -1,8 +1,10 @@
 import logging
 from typing import Any, Protocol
+
 from pydantic import ValidationError
-from dgi.models import CompanyData
+
 from dgi.exceptions import DataValidationError
+from dgi.models import CompanyData
 
 # Export for external use
 __all__ = ["DgiRowValidator", "PydanticRowValidation", "DataValidationError"]

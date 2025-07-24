@@ -1,16 +1,17 @@
-import typer
-import logging
 import json
-from dgi.repositories.csv import CsvCompanyDataRepository
-from dgi.validation import DgiRowValidator, PydanticRowValidation
-from dgi.scoring import DefaultScoring
-from dgi.filtering import DefaultFilter
-from dgi.screener import Screener
-from dgi.portfolio import build
-from dgi.config import get_config
+import logging
+
+import typer
+
 from dgi.cli_helpers import render_screen_table
+from dgi.config import get_config
+from dgi.filtering import DefaultFilter
 from dgi.models.company import CompanyData
-from typing import Optional
+from dgi.portfolio import build
+from dgi.repositories.csv import CsvCompanyDataRepository
+from dgi.scoring import DefaultScoring
+from dgi.screener import Screener
+from dgi.validation import DgiRowValidator, PydanticRowValidation
 
 config = get_config()
 
@@ -40,7 +41,7 @@ def screen(
     min_yield: float = typer.Option(0.02, help="Minimum dividend yield"),
     max_payout: float = typer.Option(80.0, help="Maximum payout ratio (percentage)"),
     min_cagr: float = typer.Option(0.05, help="Minimum dividend CAGR"),
-    csv_path: Optional[str] = typer.Option(
+    csv_path: str | None = typer.Option(
         None, help="Path to CSV file (defaults to config)"
     ),
 ) -> None:

@@ -1,14 +1,15 @@
 """Tests for LLM provider abstraction."""
 
 import os
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 from dgi.providers import (
-    LLMConfig,
-    ProviderType,
-    OpenAIProvider,
     AnthropicProvider,
+    LLMConfig,
+    OpenAIProvider,
+    ProviderType,
     create_provider,
     create_provider_from_env,
     get_available_providers,
@@ -215,8 +216,8 @@ class TestOpenAIProvider:
 
     def test_openai_provider_error_on_missing_api_key(self, monkeypatch):
         """Test OpenAIProvider raises ValueError if API key is missing."""
-        from dgi.providers.openai_provider import OpenAIProvider
         from dgi.providers.base import LLMConfig, ProviderType
+        from dgi.providers.openai_provider import OpenAIProvider
 
         config = LLMConfig(provider=ProviderType.OPENAI, model="gpt-4o-mini")
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -227,8 +228,8 @@ class TestOpenAIProvider:
 
     def test_openai_provider_extra_params(self):
         """Test OpenAIProvider passes extra_params to client."""
-        from dgi.providers.openai_provider import OpenAIProvider
         from dgi.providers.base import LLMConfig, ProviderType
+        from dgi.providers.openai_provider import OpenAIProvider
 
         config = LLMConfig(
             provider=ProviderType.OPENAI,
@@ -242,8 +243,8 @@ class TestOpenAIProvider:
 
     def test_openai_provider_agent_kwargs(self):
         """Test OpenAIProvider.create_agent accepts extra kwargs."""
-        from dgi.providers.openai_provider import OpenAIProvider
         from dgi.providers.base import LLMConfig, ProviderType
+        from dgi.providers.openai_provider import OpenAIProvider
 
         config = LLMConfig(
             provider=ProviderType.OPENAI, model="gpt-4o-mini", api_key="test"
@@ -253,8 +254,8 @@ class TestOpenAIProvider:
         assert agent is not None
 
     def test_openai_provider_context_and_pricing_tiers(self):
-        from dgi.providers.openai_provider import OpenAIProvider
         from dgi.providers.base import LLMConfig, ProviderType
+        from dgi.providers.openai_provider import OpenAIProvider
 
         config = LLMConfig(
             provider=ProviderType.OPENAI, model="gpt-4-turbo", api_key="test"
@@ -428,7 +429,7 @@ class TestAnthropicProvider:
 
 class TestProviderBase:
     def test_llmprovider_abstract_methods(self):
-        from dgi.providers.base import LLMProvider, LLMConfig, ProviderType
+        from dgi.providers.base import LLMConfig, LLMProvider, ProviderType
 
         class DummyProvider(LLMProvider):
             def _initialize_client(self):
@@ -454,7 +455,7 @@ class TestProviderBase:
         assert isinstance(dummy.get_config_summary(), dict)
 
     def test_llmprovider_config_summary_keys(self):
-        from dgi.providers.base import LLMProvider, LLMConfig, ProviderType
+        from dgi.providers.base import LLMConfig, LLMProvider, ProviderType
 
         class DummyProvider(LLMProvider):
             def _initialize_client(self):
@@ -478,8 +479,9 @@ class TestProviderBase:
 
 
 def test_factory_unsupported_provider():
-    from dgi.providers.factory import create_provider
     import pytest
+
+    from dgi.providers.factory import create_provider
 
     with pytest.raises(ValueError, match="Unsupported provider"):
         create_provider("notarealprovider")

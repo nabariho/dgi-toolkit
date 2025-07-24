@@ -1,12 +1,13 @@
 """OpenAI LLM provider implementation."""
 
 import os
-from typing import Any, Dict, List
-from langchain.agents import initialize_agent, AgentType
-from langchain_openai import ChatOpenAI
-from langchain.tools import BaseTool
+from typing import Any
 
-from .base import LLMProvider, LLMConfig, ProviderType
+from langchain.agents import AgentType, initialize_agent
+from langchain.tools import BaseTool
+from langchain_openai import ChatOpenAI
+
+from .base import LLMConfig, LLMProvider, ProviderType
 
 
 class OpenAIProvider(LLMProvider):
@@ -28,7 +29,7 @@ class OpenAIProvider(LLMProvider):
             )
 
         # Build client kwargs with proper types
-        client_kwargs: Dict[str, Any] = {
+        client_kwargs: dict[str, Any] = {
             "model": self.config.model,
             "temperature": self.config.temperature,
             "timeout": self.config.timeout,
@@ -46,9 +47,9 @@ class OpenAIProvider(LLMProvider):
 
         return ChatOpenAI(**client_kwargs)
 
-    def create_agent(self, tools: List[BaseTool], **kwargs: Any) -> Any:
+    def create_agent(self, tools: list[BaseTool], **kwargs: Any) -> Any:
         """Create a LangChain agent with OpenAI."""
-        default_kwargs: Dict[str, Any] = {
+        default_kwargs: dict[str, Any] = {
             "agent": AgentType.OPENAI_FUNCTIONS,
             "verbose": True,
             "handle_parsing_errors": True,
@@ -63,7 +64,7 @@ class OpenAIProvider(LLMProvider):
         api_key = self.config.api_key or os.getenv("OPENAI_API_KEY")
         return api_key is not None and len(api_key) > 0
 
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """Get information about the current model."""
         return {
             "provider": self.config.provider.value,

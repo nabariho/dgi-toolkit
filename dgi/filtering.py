@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
+
 from pandas import DataFrame
-from typing import List, Optional
 
 
 class FilterStrategy(ABC):
@@ -27,7 +27,7 @@ class DefaultFilter(FilterStrategy):
 class SectorFilter(FilterStrategy):
     """Filter stocks by allowed sectors, then apply DGI criteria."""
 
-    def __init__(self, allowed_sectors: List[str]):
+    def __init__(self, allowed_sectors: list[str]):
         self.allowed_sectors = allowed_sectors
 
     def filter(
@@ -65,7 +65,7 @@ class CompositeFilter(FilterStrategy):
 class TopNFilter(FilterStrategy):
     """Filter to top N stocks after applying DGI criteria, requires 'score' column."""
 
-    def __init__(self, top_n: int, base_filter: Optional[FilterStrategy] = None):
+    def __init__(self, top_n: int, base_filter: FilterStrategy | None = None):
         self.top_n = top_n
         self.base_filter = base_filter or DefaultFilter()
 

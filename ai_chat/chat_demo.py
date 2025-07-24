@@ -2,7 +2,7 @@
 
 import os
 import sys
-from typing import Any, List
+from typing import Any
 
 # Add the parent directory to Python path to import dgi modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -30,10 +30,10 @@ def show_welcome() -> None:
     """Display welcome message and instructions."""
     welcome_text = """
     🤖 Welcome to DGI Toolkit AI Chat Demo!
-    
+
     This demo showcases the LLM provider integration capabilities.
     You can chat with different AI models and ask about dividend growth investing.
-    
+
     Commands:
     • Type your questions naturally
     • Type 'quit' or 'exit' to end the session
@@ -101,7 +101,7 @@ def run_chat_demo() -> None:
         show_provider_info(provider)
 
         # Create a simple agent (you might want to add actual tools here)
-        tools: List[Any] = []  # Empty for now, can be extended with DGI-specific tools
+        tools: list[Any] = []  # Empty for now, can be extended with DGI-specific tools
 
         try:
             agent = provider.create_agent(tools, verbose=True)

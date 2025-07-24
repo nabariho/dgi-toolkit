@@ -4,13 +4,15 @@ This module exposes the DGI stock screener as a LangChain tool that can be used
 by GPT-4o and other LLMs via function calling.
 """
 
-from typing import List, Dict, Any
+from typing import Any
+
 from langchain.tools import tool
-from dgi.screener import Screener
-from dgi.repositories.csv import CsvCompanyDataRepository
-from dgi.validation import DgiRowValidator, PydanticRowValidation
+
 from dgi.models.company import CompanyData
+from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import DefaultScoring
+from dgi.screener import Screener
+from dgi.validation import DgiRowValidator, PydanticRowValidation
 
 
 @tool
@@ -19,7 +21,7 @@ def screen_dividends(
     max_payout: float = 100.0,
     min_cagr: float = 0.0,
     top_n: int = 10,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Screen dividend growth stocks based on financial criteria.
 
     This tool filters and ranks dividend-paying stocks based on yield, payout ratio,
@@ -87,4 +89,4 @@ def screen_dividends(
 
     except Exception as e:
         # Return error information for debugging
-        return [{"error": f"Screening failed: {str(e)}"}]
+        return [{"error": f"Screening failed: {e!s}"}]

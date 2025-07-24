@@ -1,8 +1,10 @@
 """Tests for filtering strategies."""
 
 import unittest
+
 import pandas as pd
-from dgi.filtering import FilterStrategy, DefaultFilter
+
+from dgi.filtering import DefaultFilter, FilterStrategy
 
 
 class TestDefaultFilter(unittest.TestCase):

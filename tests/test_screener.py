@@ -1,11 +1,13 @@
-import pytest
+from typing import Any
+
 import pandas as pd
-from typing import Any, List
+import pytest
+
 from dgi.models import CompanyData
-from dgi.validation import DgiRowValidator, PydanticRowValidation
 from dgi.repositories.csv import CsvCompanyDataRepository
-from dgi.screener import Screener
 from dgi.scoring import DefaultScoring
+from dgi.screener import Screener
+from dgi.validation import DgiRowValidator, PydanticRowValidation
 
 
 def make_screener(csv_path: str) -> Screener:
@@ -212,7 +214,7 @@ def test_screener_empty_repository() -> None:
     from dgi.repositories.base import CompanyDataRepository
 
     class EmptyRepo(CompanyDataRepository):
-        def get_rows(self) -> List[CompanyData]:
+        def get_rows(self) -> list[CompanyData]:
             return []
 
     screener = Screener(EmptyRepo())
@@ -371,10 +373,10 @@ def test_companydata_must_be_number_exception() -> None:
 
 
 def test_notebook_pipeline_matches_csv(tmp_path: Any) -> None:
-    from dgi.validation import DgiRowValidator
     from dgi.repositories.csv import CsvCompanyDataRepository
-    from dgi.screener import Screener
     from dgi.scoring import DefaultScoring
+    from dgi.screener import Screener
+    from dgi.validation import DgiRowValidator
 
     # Use the real CSV file
     csv_path = "data/fundamentals_small.csv"
@@ -400,9 +402,10 @@ def test_notebook_pipeline_matches_csv(tmp_path: Any) -> None:
 def test_screener_with_default_filter():
     """Test screener uses DefaultFilter by default."""
     from unittest.mock import Mock
+
+    from dgi.filtering import DefaultFilter
     from dgi.repositories.base import CompanyDataRepository
     from dgi.screener import Screener
-    from dgi.filtering import DefaultFilter
 
     repo = Mock(spec=CompanyDataRepository)
     screener = Screener(repo)
@@ -415,9 +418,10 @@ def test_screener_with_default_filter():
 def test_screener_with_custom_filter():
     """Test screener accepts custom filter strategy."""
     from unittest.mock import Mock
+
+    from dgi.filtering import FilterStrategy
     from dgi.repositories.base import CompanyDataRepository
     from dgi.screener import Screener
-    from dgi.filtering import FilterStrategy
 
     class TestFilter(FilterStrategy):
         def filter(self, df, min_yield, max_payout, min_cagr):
@@ -434,9 +438,10 @@ def test_screener_with_custom_filter():
 def test_apply_filters_uses_strategy():
     """Test that apply_filters delegates to the filter strategy."""
     from unittest.mock import Mock
+
+    from dgi.filtering import FilterStrategy
     from dgi.repositories.base import CompanyDataRepository
     from dgi.screener import Screener
-    from dgi.filtering import FilterStrategy
 
     # Mock filter strategy
     mock_filter = Mock(spec=FilterStrategy)

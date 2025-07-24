@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class ProviderType(Enum):
@@ -19,13 +19,13 @@ class LLMConfig:
 
     provider: ProviderType
     model: str
-    api_key: Optional[str] = None
+    api_key: str | None = None
     temperature: float = 0.1
-    max_tokens: Optional[int] = None
+    max_tokens: int | None = None
     timeout: int = 30
     max_retries: int = 2
     # Provider-specific settings
-    extra_params: Optional[Dict[str, Any]] = None
+    extra_params: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if self.extra_params is None:
@@ -37,12 +37,11 @@ class LLMProvider(ABC):
 
     def __init__(self, config: LLMConfig) -> None:
         self.config = config
-        self._client: Optional[Any] = None
+        self._client: Any | None = None
 
     @abstractmethod
     def _initialize_client(self) -> Any:
         """Initialize the provider-specific client."""
-        pass
 
     @property
     def client(self) -> Any:
@@ -52,21 +51,18 @@ class LLMProvider(ABC):
         return self._client
 
     @abstractmethod
-    def create_agent(self, tools: List[Any], **kwargs: Any) -> Any:
+    def create_agent(self, tools: list[Any], **kwargs: Any) -> Any:
         """Create an agent with the specified tools."""
-        pass
 
     @abstractmethod
     def validate_api_key(self) -> bool:
         """Validate that the API key is present and potentially valid."""
-        pass
 
     @abstractmethod
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """Get information about the current model."""
-        pass
 
-    def get_config_summary(self) -> Dict[str, Any]:
+    def get_config_summary(self) -> dict[str, Any]:
         """Get a summary of the current configuration."""
         return {
             "provider": self.config.provider.value,

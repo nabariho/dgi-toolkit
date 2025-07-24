@@ -1,12 +1,11 @@
 """Factory for creating LLM providers based on configuration."""
 
 import os
-from typing import Dict, Any, Optional
+from typing import Any
 
-from .base import LLMProvider, LLMConfig, ProviderType
-from .openai_provider import OpenAIProvider
 from .anthropic_provider import AnthropicProvider
-
+from .base import LLMConfig, LLMProvider, ProviderType
+from .openai_provider import OpenAIProvider
 
 # Default model configurations for each provider
 DEFAULT_MODELS = {
@@ -23,8 +22,8 @@ API_KEY_ENV_VARS = {
 
 def create_provider(
     provider_type: str | ProviderType,
-    model: Optional[str] = None,
-    api_key: Optional[str] = None,
+    model: str | None = None,
+    api_key: str | None = None,
     **kwargs: Any,
 ) -> LLMProvider:
     """Create an LLM provider instance.
@@ -119,7 +118,7 @@ def create_provider_from_env(
     return create_provider(provider_type=provider_str, model=model, **kwargs)
 
 
-def get_available_providers() -> Dict[str, Dict[str, Any]]:
+def get_available_providers() -> dict[str, dict[str, Any]]:
     """Get information about all available providers.
 
     Returns:

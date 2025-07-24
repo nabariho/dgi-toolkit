@@ -2,7 +2,9 @@
 
 import unittest
 from unittest.mock import Mock
+
 import pandas as pd
+
 from dgi.screener import Screener
 
 

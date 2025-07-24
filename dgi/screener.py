@@ -1,15 +1,17 @@
 # screener.py
 
+import logging
+from typing import Any, Protocol
+
 import pandas as pd
 from pandas import DataFrame
-import logging
-from typing import Any, Optional, List, Protocol
+
+from dgi.filtering import DefaultFilter, FilterStrategy
 from dgi.models import CompanyData
-from dgi.validation import DgiRowValidator, PydanticRowValidation
 from dgi.repositories.base import CompanyDataRepository
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import ScoringStrategy
-from dgi.filtering import FilterStrategy, DefaultFilter
+from dgi.validation import DgiRowValidator, PydanticRowValidation
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 class CompanyFilter(Protocol):
     """Protocol for company filtering strategies."""
 
-    def filter(self, companies: List[CompanyData]) -> List[CompanyData]: ...
+    def filter(self, companies: list[CompanyData]) -> list[CompanyData]: ...
 
 
 class Screener:
@@ -26,9 +28,9 @@ class Screener:
     def __init__(
         self,
         repository: CompanyDataRepository,
-        filters: Optional[list[CompanyFilter]] = None,
-        scoring_strategy: Optional[ScoringStrategy] = None,
-        filter_strategy: Optional[FilterStrategy] = None,
+        filters: list[CompanyFilter] | None = None,
+        scoring_strategy: ScoringStrategy | None = None,
+        filter_strategy: FilterStrategy | None = None,
     ) -> None:
         self._repository = repository
         self._filters = filters or []
@@ -47,7 +49,7 @@ class Screener:
         return float(yield_score + growth_score + payout_penalty)
 
     @staticmethod
-    def rows_to_dataframe(rows: List[CompanyData]) -> DataFrame:
+    def rows_to_dataframe(rows: list[CompanyData]) -> DataFrame:
         # Convert to dict and then create mapping to use alias names
         data_for_df = []
         for row in rows:

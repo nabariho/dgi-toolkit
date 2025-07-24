@@ -1,11 +1,12 @@
 import subprocess
 import sys
 from typing import Any
-from dgi.validation import DgiRowValidator, PydanticRowValidation
+
 from dgi.models import CompanyData
+from dgi.portfolio import build, summary_stats
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.screener import Screener
-from dgi.portfolio import build, summary_stats
+from dgi.validation import DgiRowValidator, PydanticRowValidation
 
 
 def test_cli_help_runs() -> None:

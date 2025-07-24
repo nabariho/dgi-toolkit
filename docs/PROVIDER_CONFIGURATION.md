@@ -1,6 +1,8 @@
 # LLM Provider Configuration
 
-The DGI Toolkit supports multiple LLM providers through a flexible, configurable abstraction layer. This allows you to easily switch between OpenAI, Anthropic, and future providers based on your needs, budget, and preferences.
+The DGI Toolkit supports multiple LLM providers through a flexible, configurable
+abstraction layer. This allows you to easily switch between OpenAI, Anthropic, and
+future providers based on your needs, budget, and preferences.
 
 ## 🚀 **Quick Start**
 
@@ -15,12 +17,13 @@ export DGI_LLM_PROVIDER="openai"
 export DGI_LLM_MODEL="gpt-4o-mini"
 
 # Or use Anthropic
-export ANTHROPIC_API_KEY="sk-ant-your-anthropic-key"  
+export ANTHROPIC_API_KEY="sk-ant-your-anthropic-key"
 export DGI_LLM_PROVIDER="anthropic"
 export DGI_LLM_MODEL="claude-3-5-haiku-20241022"
 ```
 
 Then run the chat demo:
+
 ```bash
 poetry run python ai_chat/chat_demo.py
 ```
@@ -38,7 +41,7 @@ openai_provider = create_provider(
     temperature=0.1
 )
 
-# Create Anthropic provider  
+# Create Anthropic provider
 anthropic_provider = create_provider(
     "anthropic",
     model="claude-3-5-sonnet-20241022",
@@ -54,16 +57,17 @@ agent = provider.create_agent([screen_dividends])
 
 ### OpenAI
 
-**Default Model**: `gpt-4o-mini`  
-**API Key**: `OPENAI_API_KEY`  
-**Capabilities**: Function calling, streaming, vision (gpt-4o)
+**Default Model**: `gpt-4o-mini` **API Key**: `OPENAI_API_KEY` **Capabilities**:
+Function calling, streaming, vision (gpt-4o)
 
 **Recommended Models**:
+
 - `gpt-4o-mini` - Low cost, fast, excellent for screening
-- `gpt-4o` - Premium quality, vision support  
+- `gpt-4o` - Premium quality, vision support
 - `gpt-4-turbo` - High performance, large context
 
 **Example Configuration**:
+
 ```python
 provider = create_provider(
     "openai",
@@ -76,19 +80,20 @@ provider = create_provider(
 
 ### Anthropic (Claude)
 
-**Default Model**: `claude-3-5-sonnet-20241022`  
-**API Key**: `ANTHROPIC_API_KEY`  
+**Default Model**: `claude-3-5-sonnet-20241022` **API Key**: `ANTHROPIC_API_KEY`
 **Capabilities**: Function calling, streaming, vision, large context
 
 **Recommended Models**:
+
 - `claude-3-5-haiku-20241022` - Low cost, fast responses
 - `claude-3-5-sonnet-20241022` - Best balance of performance/cost
 - `claude-3-opus-20240229` - Premium quality, complex reasoning
 
 **Example Configuration**:
+
 ```python
 provider = create_provider(
-    "anthropic", 
+    "anthropic",
     model="claude-3-5-haiku-20241022",
     temperature=0.1,
     max_tokens=2000
@@ -99,12 +104,12 @@ provider = create_provider(
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DGI_LLM_PROVIDER` | `"openai"` | Provider type (`openai`, `anthropic`) |
-| `DGI_LLM_MODEL` | Provider default | Specific model to use |
-| `OPENAI_API_KEY` | None | OpenAI API key |
-| `ANTHROPIC_API_KEY` | None | Anthropic API key |
+| Variable            | Default          | Description                           |
+| ------------------- | ---------------- | ------------------------------------- |
+| `DGI_LLM_PROVIDER`  | `"openai"`       | Provider type (`openai`, `anthropic`) |
+| `DGI_LLM_MODEL`     | Provider default | Specific model to use                 |
+| `OPENAI_API_KEY`    | None             | OpenAI API key                        |
+| `ANTHROPIC_API_KEY` | None             | Anthropic API key                     |
 
 ### LLMConfig Parameters
 
@@ -126,15 +131,17 @@ class LLMConfig:
 ### Model Selection by Use Case
 
 **High-Volume Screening** (Cost-Optimized):
+
 ```python
 # OpenAI - Lowest cost
 provider = create_provider("openai", model="gpt-4o-mini")
 
-# Anthropic - Low cost alternative  
+# Anthropic - Low cost alternative
 provider = create_provider("anthropic", model="claude-3-5-haiku-20241022")
 ```
 
 **Complex Analysis** (Quality-Optimized):
+
 ```python
 # OpenAI - Premium quality
 provider = create_provider("openai", model="gpt-4o")
@@ -144,6 +151,7 @@ provider = create_provider("anthropic", model="claude-3-opus-20240229")
 ```
 
 **Balanced Performance**:
+
 ```python
 # OpenAI - Good balance
 provider = create_provider("openai", model="gpt-4-turbo")
@@ -154,14 +162,14 @@ provider = create_provider("anthropic", model="claude-3-5-sonnet-20241022")
 
 ### Cost Comparison (Approximate)
 
-| Provider | Model | Cost Tier | Input/Output | Use Case |
-|----------|-------|-----------|--------------|----------|
-| OpenAI | gpt-4o-mini | Low | $0.15/$0.60 per 1M tokens | High-volume screening |
-| Anthropic | claude-3-5-haiku | Low | $0.25/$1.25 per 1M tokens | Fast responses |
-| OpenAI | gpt-4-turbo | Standard | $10/$30 per 1M tokens | Balanced performance |
-| Anthropic | claude-3-5-sonnet | Standard | $3/$15 per 1M tokens | Best value |
-| OpenAI | gpt-4o | Premium | $5/$15 per 1M tokens | Premium quality |
-| Anthropic | claude-3-opus | Premium | $15/$75 per 1M tokens | Complex reasoning |
+| Provider  | Model             | Cost Tier | Input/Output              | Use Case              |
+| --------- | ----------------- | --------- | ------------------------- | --------------------- |
+| OpenAI    | gpt-4o-mini       | Low       | $0.15/$0.60 per 1M tokens | High-volume screening |
+| Anthropic | claude-3-5-haiku  | Low       | $0.25/$1.25 per 1M tokens | Fast responses        |
+| OpenAI    | gpt-4-turbo       | Standard  | $10/$30 per 1M tokens     | Balanced performance  |
+| Anthropic | claude-3-5-sonnet | Standard  | $3/$15 per 1M tokens      | Best value            |
+| OpenAI    | gpt-4o            | Premium   | $5/$15 per 1M tokens      | Premium quality       |
+| Anthropic | claude-3-opus     | Premium   | $15/$75 per 1M tokens     | Complex reasoning     |
 
 ## 🔧 **Advanced Configuration**
 
@@ -190,22 +198,22 @@ class DGIMultiProvider:
     def __init__(self):
         # Fast provider for basic screening
         self.fast_provider = create_provider(
-            "openai", 
+            "openai",
             model="gpt-4o-mini",
             temperature=0.0
         )
-        
+
         # Premium provider for complex analysis
         self.premium_provider = create_provider(
             "anthropic",
-            model="claude-3-5-sonnet-20241022", 
+            model="claude-3-5-sonnet-20241022",
             temperature=0.1
         )
-    
+
     def quick_screen(self, query):
         agent = self.fast_provider.create_agent([screen_dividends])
         return agent.run(query)
-    
+
     def detailed_analysis(self, query):
         agent = self.premium_provider.create_agent([screen_dividends])
         return agent.run(query)
@@ -222,7 +230,7 @@ providers = get_available_providers()
 for name, info in providers.items():
     print(f"{name}:")
     print(f"  Default: {info['default_model']}")
-    print(f"  API Key: {info['api_key_env']}")  
+    print(f"  API Key: {info['api_key_env']}")
     print(f"  Models: {info['supported_models']}")
     print(f"  Capabilities: {info['capabilities']}")
 ```
@@ -232,11 +240,13 @@ for name, info in providers.items():
 ### Common Issues
 
 **❌ ImportError: cannot import 'ChatAnthropic'**
+
 ```bash
 poetry add langchain-anthropic
 ```
 
 **❌ Missing API Key Error**
+
 ```bash
 # Check your environment
 echo $OPENAI_API_KEY
@@ -247,6 +257,7 @@ export OPENAI_API_KEY="your-key-here"
 ```
 
 **❌ Unsupported Provider**
+
 ```python
 # Check available providers
 from dgi.providers import get_available_providers
@@ -281,7 +292,7 @@ Current Model: gpt-4o-mini
      API Key: OPENAI_API_KEY
      Models: gpt-4o, gpt-4o-mini, gpt-4-turbo...
 
-  ❌ ANTHROPIC  
+  ❌ ANTHROPIC
      Default: claude-3-5-sonnet-20241022
      API Key: ANTHROPIC_API_KEY
      Models: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022...
@@ -292,7 +303,7 @@ Current Model: gpt-4o-mini
 The provider abstraction is designed to easily support additional providers:
 
 - **Azure OpenAI**: Enterprise-grade OpenAI deployment
-- **Google PaLM/Gemini**: Google's LLM offerings  
+- **Google PaLM/Gemini**: Google's LLM offerings
 - **Cohere**: Specialized for business applications
 - **Local Models**: Ollama, LM Studio, etc.
 
@@ -317,4 +328,5 @@ class NewProvider(LLMProvider):
 
 ---
 
-**Need help?** Check the chat demo's `config` command or run the provider tests to verify your setup. 
+**Need help?** Check the chat demo's `config` command or run the provider tests to
+verify your setup.

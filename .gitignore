@@ -34,13 +34,13 @@ tests/
 
 # Large files
 *.csv
-*.csv.* 
+*.csv.*
 
 # Tests
 !tests/
 !tests/*.py
-tests/__pycache__/ 
+tests/__pycache__/
 
 # Allow data directory and its CSV files
 !data/
-!data/*.csv 
+!data/*.csv
