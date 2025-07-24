@@ -87,6 +87,40 @@ class Screener:
         df = df[expected_columns]
         return df
 
+    def screen(
+        self,
+        min_yield: float = 0.0,
+        max_payout: float = 100.0,
+        min_cagr: float = 0.0,
+        top_n: int = 10,
+    ) -> DataFrame:
+        """
+        Complete screening pipeline: load, filter, score, and return top stocks.
+
+        Args:
+            min_yield: Minimum dividend yield (%)
+            max_payout: Maximum payout ratio (%)
+            min_cagr: Minimum dividend CAGR (%)
+            top_n: Number of top stocks to return
+
+        Returns:
+            DataFrame with top stocks sorted by score
+        """
+        # Load universe
+        df = self.load_universe()
+
+        # Apply filters
+        filtered = self.apply_filters(df, min_yield, max_payout, min_cagr)
+
+        # Add scores
+        scored = self.add_scores(filtered)
+
+        # Return top N
+        if scored.empty:
+            return scored
+
+        return scored.sort_values("score", ascending=False).head(top_n)
+
     def load_universe(self) -> DataFrame:
         """
         Load and validate the raw fundamentals universe for DGI analysis from the repository.

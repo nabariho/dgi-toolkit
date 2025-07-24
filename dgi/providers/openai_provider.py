@@ -59,16 +59,38 @@ class OpenAIProvider(LLMProvider):
 
         return initialize_agent(tools=tools, llm=self.client, **default_kwargs)
 
+    def get_model_info(self) -> dict[str, Any]:
+        """Get information about the current OpenAI model."""
+        return {
+            "provider": "OpenAI",
+            "model": self.config.model,
+            "supports_functions": True,
+            "context_window": self._get_context_window(),
+            "pricing_tier": self._get_pricing_tier(),
+        }
+
+    def _get_context_window(self) -> int:
+        """Get context window size for the current model."""
+        model_context_windows = {
+            "gpt-4": 8192,
+            "gpt-4-turbo": 128000,
+            "gpt-4o": 128000,
+            "gpt-4o-mini": 128000,
+            "gpt-3.5-turbo": 16385,
+            "gpt-3.5-turbo-16k": 16385,
+        }
+        return model_context_windows.get(self.config.model, 8192)
+
+    def _get_pricing_tier(self) -> str:
+        """Get pricing tier for the current model."""
+        if "mini" in self.config.model or "3.5" in self.config.model:
+            return "low-cost"
+        elif "4o" in self.config.model:
+            return "medium-cost"
+        else:
+            return "high-cost"
+
     def validate_api_key(self) -> bool:
         """Validate that the API key is present and potentially valid."""
         api_key = self.config.api_key or os.getenv("OPENAI_API_KEY")
         return api_key is not None and len(api_key) > 0
-
-    def get_model_info(self) -> dict[str, Any]:
-        """Get information about the current model."""
-        return {
-            "provider": self.config.provider.value,
-            "model": self.config.model,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens,
-        }

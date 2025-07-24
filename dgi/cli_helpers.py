@@ -22,12 +22,12 @@ def render_screen_table(df: pd.DataFrame) -> None:
     for _, row in df.iterrows():
         table.add_row(
             str(row["symbol"]),
-            str(row["name"]),
+            str(row.get("name", row.get("company_name", "N/A"))),
             f"{row['dividend_yield']:.2f}",
             f"{row['payout']:.2f}",
             f"{row['dividend_cagr']:.2f}",
-            f"{row['fcf_yield']:.2f}",
-            f"[bold]{row['score']:.3f}[/bold]",
+            f"{row.get('fcf_yield', 0.0):.2f}",
+            f"[bold]{row.get('score', 0.0):.3f}[/bold]",
         )
     console = Console()
     console.print(table)

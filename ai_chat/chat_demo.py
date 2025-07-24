@@ -46,8 +46,14 @@ def show_welcome() -> None:
     )
 
 
-def show_provider_info(provider: Any) -> None:
+def show_provider_info(provider: Any = None) -> None:
     """Display information about the current provider."""
+    if provider is None:
+        try:
+            provider = create_provider_from_env()
+        except Exception as e:
+            console.print(f"[red]Error creating provider: {e}[/red]")
+            return
     try:
         config_summary = provider.get_config_summary()
         model_info = provider.get_model_info()
@@ -69,6 +75,38 @@ def show_provider_info(provider: Any) -> None:
 
     except Exception as e:
         console.print(f"[red]Error getting provider info: {e}[/red]")
+
+
+def create_dgi_agent() -> Any:
+    """Create a DGI agent with tools."""
+    try:
+        provider = create_provider_from_env()
+        if not provider.validate_api_key():
+            console.print("[red]❌ Invalid or missing API key[/red]")
+            sys.exit(1)
+
+        # Import screener tool
+        from ai_chat.screener_tool import screen_dividends
+
+        tools = [screen_dividends]
+
+        return provider.create_agent(tools, verbose=True)
+    except Exception as e:
+        console.print(f"[red]❌ Error creating agent: {e}[/red]")
+        sys.exit(1)
+
+
+def demo_queries() -> list[str]:
+    """Get a list of demo queries for testing the DGI toolkit."""
+    return [
+        "What makes a good dividend growth stock?",
+        "How do I calculate dividend yield?",
+        "What's the difference between dividend yield and dividend growth?",
+        "Can you screen for high-quality dividend stocks with yield > 3%?",
+        "What are some dividend aristocrats?",
+        "How do payout ratios affect dividend sustainability?",
+        "What sectors are best for dividend growth investing?",
+    ]
 
 
 def run_chat_demo() -> None:

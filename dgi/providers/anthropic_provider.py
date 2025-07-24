@@ -59,16 +59,40 @@ class AnthropicProvider(LLMProvider):
 
         return initialize_agent(tools=tools, llm=self.client, **default_kwargs)
 
+    def get_model_info(self) -> dict[str, Any]:
+        """Get information about the current Anthropic model."""
+        return {
+            "provider": "Anthropic",
+            "model": self.config.model,
+            "supports_functions": True,
+            "context_window": self._get_context_window(),
+            "pricing_tier": self._get_pricing_tier(),
+        }
+
+    def _get_context_window(self) -> int:
+        """Get context window size for the current model."""
+        model_context_windows = {
+            "claude-3-5-sonnet-20241022": 200000,
+            "claude-3-5-haiku-20241022": 200000,
+            "claude-3-opus-20240229": 200000,
+            "claude-3-sonnet-20240229": 200000,
+            "claude-3-haiku-20240307": 200000,
+            "claude-2.1": 200000,
+            "claude-2.0": 100000,
+            "claude-instant-1.2": 100000,
+        }
+        return model_context_windows.get(self.config.model, 200000)
+
+    def _get_pricing_tier(self) -> str:
+        """Get pricing tier for the current model."""
+        if "haiku" in self.config.model:
+            return "low-cost"
+        elif "sonnet" in self.config.model:
+            return "medium-cost"
+        else:
+            return "high-cost"
+
     def validate_api_key(self) -> bool:
         """Validate that the API key is present and potentially valid."""
         api_key = self.config.api_key or os.getenv("ANTHROPIC_API_KEY")
         return api_key is not None and len(api_key) > 0
-
-    def get_model_info(self) -> dict[str, Any]:
-        """Get information about the current model."""
-        return {
-            "provider": self.config.provider.value,
-            "model": self.config.model,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens,
-        }
