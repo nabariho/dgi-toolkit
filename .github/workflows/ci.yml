@@ -39,5 +39,30 @@ jobs:
         run: docker build -t dgi-toolkit:${{ github.sha }} .
       - name: Size guard (<150 MB)
         run: |
-          SZ=$(docker images dgi-toolkit:${{ github.sha }} --format "{{.Size}}" | sed 's/MB//')
-          awk "BEGIN { exit ($SZ<150)?0:1 }"
+          # Get image size and convert to MB if needed
+          SIZE_RAW=$(docker images dgi-toolkit:${{ github.sha }} --format "{{.Size}}")
+          echo "Docker image size: $SIZE_RAW"
+
+          # Extract numeric value and convert to MB
+          if [[ $SIZE_RAW == *"GB"* ]]; then
+            SIZE_NUM=$(echo $SIZE_RAW | sed 's/GB//')
+            # Convert GB to MB (multiply by 1024)
+            SIZE_MB=$(python3 -c "print(int(float('$SIZE_NUM') * 1024))")
+          elif [[ $SIZE_RAW == *"MB"* ]]; then
+            SIZE_MB=$(echo $SIZE_RAW | sed 's/MB//')
+          else
+            echo "Unknown size format: $SIZE_RAW"
+            exit 1
+          fi
+
+          echo "Size in MB: $SIZE_MB"
+
+          # Check if size is less than 150MB using Python for reliable float comparison
+          EXCEEDS=$(python3 -c "print('true' if float('$SIZE_MB') > 150 else 'false')")
+
+          if [[ $EXCEEDS == "true" ]]; then
+            echo "Error: Docker image size ($SIZE_MB MB) exceeds 150MB limit"
+            exit 1
+          else
+            echo "Success: Docker image size ($SIZE_MB MB) is within 150MB limit"
+          fi
