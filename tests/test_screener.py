@@ -395,3 +395,105 @@ def test_notebook_pipeline_matches_csv(tmp_path: Any) -> None:
     assert (
         filtered.shape[0] == 5
     ), f"Expected 5 rows after filtering, got {filtered.shape[0]}\n{filtered}"
+
+
+def test_screener_with_default_filter():
+    """Test screener uses DefaultFilter by default."""
+    from unittest.mock import Mock
+    from dgi.repositories.base import CompanyDataRepository
+    from dgi.screener import Screener
+    from dgi.filtering import DefaultFilter
+
+    repo = Mock(spec=CompanyDataRepository)
+    screener = Screener(repo)
+
+    # Check that default filter was set
+    assert screener._filter_strategy is not None
+    assert isinstance(screener._filter_strategy, DefaultFilter)
+
+
+def test_screener_with_custom_filter():
+    """Test screener accepts custom filter strategy."""
+    from unittest.mock import Mock
+    from dgi.repositories.base import CompanyDataRepository
+    from dgi.screener import Screener
+    from dgi.filtering import FilterStrategy
+
+    class TestFilter(FilterStrategy):
+        def filter(self, df, min_yield, max_payout, min_cagr):
+            # Test filter that returns only first row
+            return df.head(1)
+
+    repo = Mock(spec=CompanyDataRepository)
+    custom_filter = TestFilter()
+    screener = Screener(repo, filter_strategy=custom_filter)
+
+    assert screener._filter_strategy is custom_filter
+
+
+def test_apply_filters_uses_strategy():
+    """Test that apply_filters delegates to the filter strategy."""
+    from unittest.mock import Mock
+    from dgi.repositories.base import CompanyDataRepository
+    from dgi.screener import Screener
+    from dgi.filtering import FilterStrategy
+
+    # Mock filter strategy
+    mock_filter = Mock(spec=FilterStrategy)
+    expected_result = pd.DataFrame({"test": [1, 2, 3]})
+    mock_filter.filter.return_value = expected_result
+
+    repo = Mock(spec=CompanyDataRepository)
+    screener = Screener(repo, filter_strategy=mock_filter)
+
+    # Test data
+    test_df = pd.DataFrame(
+        {
+            "dividend_yield": [1.0, 2.0, 3.0],
+            "payout": [30.0, 40.0, 50.0],
+            "dividend_cagr": [5.0, 6.0, 7.0],
+        }
+    )
+
+    # Call apply_filters
+    result = screener.apply_filters(
+        test_df, min_yield=2.0, max_payout=60.0, min_cagr=4.0
+    )
+
+    # Verify strategy was called with correct parameters
+    mock_filter.filter.assert_called_once_with(test_df, 2.0, 60.0, 4.0)
+
+    # Verify result is what strategy returned
+    pd.testing.assert_frame_equal(result, expected_result)
+
+
+def test_default_filter_behavior():
+    """Test that DefaultFilter works correctly."""
+    from dgi.filtering import DefaultFilter
+
+    filter_strategy = DefaultFilter()
+
+    # Test data with mixed values
+    test_df = pd.DataFrame(
+        {
+            "dividend_yield": [1.0, 2.5, 3.0, 0.5],
+            "payout": [30.0, 70.0, 40.0, 90.0],
+            "dividend_cagr": [8.0, 3.0, 6.0, 2.0],
+        }
+    )
+
+    # Apply filters: min_yield=2.0, max_payout=60.0, min_cagr=5.0
+    result = filter_strategy.filter(
+        test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
+    )
+
+    # Should only return row with yield>=2.0, payout<=60.0, cagr>=5.0
+    # Row 0: yield=1.0 (fail), payout=30.0 (pass), cagr=8.0 (pass) -> FAIL
+    # Row 1: yield=2.5 (pass), payout=70.0 (fail), cagr=3.0 (fail) -> FAIL
+    # Row 2: yield=3.0 (pass), payout=40.0 (pass), cagr=6.0 (pass) -> PASS
+    # Row 3: yield=0.5 (fail), payout=90.0 (fail), cagr=2.0 (fail) -> FAIL
+
+    assert len(result) == 1
+    assert result.iloc[0]["dividend_yield"] == 3.0
+    assert result.iloc[0]["payout"] == 40.0
+    assert result.iloc[0]["dividend_cagr"] == 6.0

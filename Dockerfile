@@ -13,7 +13,8 @@ RUN curl -sSL https://install.python-poetry.org | python3 - \
 
 # Copy only requirements to cache dependencies
 COPY pyproject.toml poetry.lock* ./
-RUN poetry install --no-root --only main
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-root --only main
 
 # Copy source
 COPY dgi/ ./dgi/
@@ -24,7 +25,10 @@ COPY data/ ./data/
 FROM --platform=linux/amd64 python:3.12-slim AS runtime
 WORKDIR /app
 
-COPY --from=builder /app /app
-ENV PATH="/app/.venv/bin:$PATH"
+# Copy installed packages and source from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /app/dgi ./dgi
+COPY --from=builder /app/ai_chat ./ai_chat
+COPY --from=builder /app/data ./data
 
 CMD ["python3"] 

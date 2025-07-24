@@ -1,5 +1,6 @@
+import sys
 import pandas as pd
-from typing import Any
+import dgi.cli_helpers as helpers
 
 
 def test_cli_helpers_import() -> None:
@@ -8,30 +9,24 @@ def test_cli_helpers_import() -> None:
     # The function should work without creating mock objects
 
 
-def test_render_screen_table_importerror(monkeypatch: Any, capsys: Any) -> None:
-    # Patch the render_screen_table function to simulate ImportError
-    def mock_render_screen_table(df: Any) -> None:
-        print(
-            "[ERROR] The 'rich' package is required for table output. Please install it."
-        )
-
-    import dgi.cli_helpers
-
-    monkeypatch.setattr(
-        dgi.cli_helpers, "render_screen_table", mock_render_screen_table
-    )
-
+def test_render_screen_table_importerror(monkeypatch, capsys):
+    # Patch import to raise ImportError
+    monkeypatch.setitem(sys.modules, "rich.console", None)
+    monkeypatch.setitem(sys.modules, "rich.table", None)
+    monkeypatch.setitem(sys.modules, "rich", None)
     df = pd.DataFrame(
-        {
-            "symbol": ["A"],
-            "name": ["Apple"],
-            "dividend_yield": [1.0],
-            "payout": [10.0],
-            "dividend_cagr": [5.0],
-            "fcf_yield": [2.0],
-            "score": [0.5],
-        }
+        [
+            {
+                "symbol": "A",
+                "name": "A",
+                "dividend_yield": 1,
+                "payout": 1,
+                "dividend_cagr": 1,
+                "fcf_yield": 1,
+                "score": 1,
+            }
+        ]
     )
-    dgi.cli_helpers.render_screen_table(df)
-    out = capsys.readouterr().out
-    assert "The 'rich' package is required" in out
+    helpers.render_screen_table(df)
+    out, err = capsys.readouterr()
+    assert "rich" in out or "rich" in err

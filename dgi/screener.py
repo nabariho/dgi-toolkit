@@ -9,6 +9,7 @@ from dgi.validation import DgiRowValidator, PydanticRowValidation
 from dgi.repositories.base import CompanyDataRepository
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import ScoringStrategy
+from dgi.filtering import FilterStrategy, DefaultFilter
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +28,12 @@ class Screener:
         repository: CompanyDataRepository,
         filters: Optional[list[CompanyFilter]] = None,
         scoring_strategy: Optional[ScoringStrategy] = None,
+        filter_strategy: Optional[FilterStrategy] = None,
     ) -> None:
         self._repository = repository
         self._filters = filters or []
         self._scoring_strategy = scoring_strategy
+        self._filter_strategy = filter_strategy or DefaultFilter()
 
     def default_score(self, company: CompanyData) -> float:
         """Calculate a default score for a company."""
@@ -108,14 +111,8 @@ class Screener:
             max_payout,
             min_cagr,
         )
-        # For now, implement simple filtering logic directly
-        filtered = df[
-            (df["dividend_yield"] >= min_yield)
-            & (
-                df["payout"] <= max_payout
-            )  # Use 'payout' column name, not 'payout_ratio'
-            & (df["dividend_cagr"] >= min_cagr)  # Use 'dividend_cagr' column name
-        ]
+        # Use the filter strategy instead of hardcoded logic
+        filtered = self._filter_strategy.filter(df, min_yield, max_payout, min_cagr)
         logger.info(f"Filtered to {len(filtered)} rows from {len(df)} rows")
         return filtered
 

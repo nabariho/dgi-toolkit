@@ -4,6 +4,7 @@ import json
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.validation import DgiRowValidator, PydanticRowValidation
 from dgi.scoring import DefaultScoring
+from dgi.filtering import DefaultFilter
 from dgi.screener import Screener
 from dgi.portfolio import build
 from dgi.config import get_config
@@ -63,7 +64,9 @@ def screen(
     validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     data_path = csv_path or config.DATA_PATH  # Use provided path or default
     repo = CsvCompanyDataRepository(data_path, validator)
-    screener = Screener(repo, scoring_strategy=DefaultScoring())
+    screener = Screener(
+        repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
+    )
 
     try:
         df = screener.load_universe()
@@ -96,7 +99,9 @@ def build_portfolio(
 ) -> None:
     validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     repo = CsvCompanyDataRepository(csv_path, validator)
-    screener = Screener(repo, scoring_strategy=DefaultScoring())
+    screener = Screener(
+        repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
+    )
     df = screener.load_universe()
     filtered = screener.apply_filters(df, min_yield, max_payout, min_cagr)
     scored = screener.add_scores(filtered)
