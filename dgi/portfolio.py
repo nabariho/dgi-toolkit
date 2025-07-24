@@ -1,9 +1,10 @@
 # portfolio.py
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
-from pandas import DataFrame
 import logging
+from abc import ABC, abstractmethod
+from typing import Any
+
+from pandas import DataFrame
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ def build(
     df: DataFrame,
     top_n: int,
     weighting: str = "equal",
-    ticker_col: Optional[str] = None,
+    ticker_col: str | None = None,
 ) -> DataFrame:
     """
     Build a portfolio by selecting top-N stocks and applying a weighting strategy.
@@ -82,7 +83,7 @@ def build(
     )
 
 
-def summary_stats(df: DataFrame) -> Dict[str, Any]:
+def summary_stats(df: DataFrame) -> dict[str, Any]:
     """
     Compute summary statistics for a portfolio DataFrame.
 

@@ -1,3 +1,3 @@
 [run]
 omit =
-    dgi/models.py 
+    dgi/models.py

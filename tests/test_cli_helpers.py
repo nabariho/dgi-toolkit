@@ -1,37 +1,33 @@
+"""Tests for CLI helper functions."""
+
+import contextlib
+import unittest
+
 import pandas as pd
-from typing import Any
+
+from dgi.cli_helpers import render_screen_table
 
 
-def test_cli_helpers_import() -> None:
-    """Test that CLI helpers can be imported without Rich dependency."""
+class TestCliHelpers(unittest.TestCase):
+    """Tests for CLI helper functions."""
 
-    # The function should work without creating mock objects
-
-
-def test_render_screen_table_importerror(monkeypatch: Any, capsys: Any) -> None:
-    # Patch the render_screen_table function to simulate ImportError
-    def mock_render_screen_table(df: Any) -> None:
-        print(
-            "[ERROR] The 'rich' package is required for table output. Please install it."
+    def test_render_screen_table_basic(self) -> None:
+        """Test basic screen table rendering."""
+        test_df = pd.DataFrame(
+            {
+                "symbol": ["AAPL"],
+                "company_name": ["Apple Inc"],
+                "dividend_yield": [1.5],
+                "payout": [25.0],
+                "dividend_cagr": [5.0],
+                "score": [8.5],
+            }
         )
 
-    import dgi.cli_helpers
+        # This should not raise an exception
+        with contextlib.suppress(ImportError):
+            render_screen_table(test_df)
 
-    monkeypatch.setattr(
-        dgi.cli_helpers, "render_screen_table", mock_render_screen_table
-    )
 
-    df = pd.DataFrame(
-        {
-            "symbol": ["A"],
-            "name": ["Apple"],
-            "dividend_yield": [1.0],
-            "payout": [10.0],
-            "dividend_cagr": [5.0],
-            "fcf_yield": [2.0],
-            "score": [0.5],
-        }
-    )
-    dgi.cli_helpers.render_screen_table(df)
-    out = capsys.readouterr().out
-    assert "The 'rich' package is required" in out
+if __name__ == "__main__":
+    unittest.main()

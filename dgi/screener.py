@@ -1,14 +1,17 @@
 # screener.py
 
+import logging
+from typing import Any, Protocol
+
 import pandas as pd
 from pandas import DataFrame
-import logging
-from typing import Any, Optional, List, Protocol
+
+from dgi.filtering import DefaultFilter, FilterStrategy
 from dgi.models import CompanyData
-from dgi.validation import DgiRowValidator, PydanticRowValidation
 from dgi.repositories.base import CompanyDataRepository
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import ScoringStrategy
+from dgi.validation import DgiRowValidator, PydanticRowValidation
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +19,7 @@ logger = logging.getLogger(__name__)
 class CompanyFilter(Protocol):
     """Protocol for company filtering strategies."""
 
-    def filter(self, companies: List[CompanyData]) -> List[CompanyData]: ...
+    def filter(self, companies: list[CompanyData]) -> list[CompanyData]: ...
 
 
 class Screener:
@@ -25,12 +28,14 @@ class Screener:
     def __init__(
         self,
         repository: CompanyDataRepository,
-        filters: Optional[list[CompanyFilter]] = None,
-        scoring_strategy: Optional[ScoringStrategy] = None,
+        filters: list[CompanyFilter] | None = None,
+        scoring_strategy: ScoringStrategy | None = None,
+        filter_strategy: FilterStrategy | None = None,
     ) -> None:
         self._repository = repository
         self._filters = filters or []
         self._scoring_strategy = scoring_strategy
+        self._filter_strategy = filter_strategy or DefaultFilter()
 
     def default_score(self, company: CompanyData) -> float:
         """Calculate a default score for a company."""
@@ -44,11 +49,11 @@ class Screener:
         return float(yield_score + growth_score + payout_penalty)
 
     @staticmethod
-    def rows_to_dataframe(rows: List[CompanyData]) -> DataFrame:
+    def rows_to_dataframe(rows: list[CompanyData]) -> DataFrame:
         # Convert to dict and then create mapping to use alias names
         data_for_df = []
         for row in rows:
-            row_dict = row.dict()
+            row_dict = row.model_dump()
             # Map back to alias names for DataFrame columns
             mapped_dict = {
                 "symbol": row_dict["symbol"],
@@ -62,7 +67,6 @@ class Screener:
             }
             data_for_df.append(mapped_dict)
 
-        df = pd.DataFrame(data_for_df)
         expected_columns = [
             "symbol",
             "name",
@@ -73,7 +77,12 @@ class Screener:
             "dividend_cagr",
             "fcf_yield",
         ]
-        if df.empty or any(col not in df.columns for col in expected_columns):
+        if not data_for_df:
+            # Return empty DataFrame with expected columns
+            return pd.DataFrame(columns=expected_columns)
+
+        df = pd.DataFrame(data_for_df)
+        if any(col not in df.columns for col in expected_columns):
             missing = [col for col in expected_columns if col not in df.columns]
             raise ValueError(
                 "Missing expected columns in validated data: "
@@ -81,6 +90,40 @@ class Screener:
             )
         df = df[expected_columns]
         return df
+
+    def screen(
+        self,
+        min_yield: float = 0.0,
+        max_payout: float = 100.0,
+        min_cagr: float = 0.0,
+        top_n: int = 10,
+    ) -> DataFrame:
+        """
+        Complete screening pipeline: load, filter, score, and return top stocks.
+
+        Args:
+            min_yield: Minimum dividend yield (%)
+            max_payout: Maximum payout ratio (%)
+            min_cagr: Minimum dividend CAGR (%)
+            top_n: Number of top stocks to return
+
+        Returns:
+            DataFrame with top stocks sorted by score
+        """
+        # Load universe
+        df = self.load_universe()
+
+        # Apply filters
+        filtered = self.apply_filters(df, min_yield, max_payout, min_cagr)
+
+        # Add scores
+        scored = self.add_scores(filtered)
+
+        # Return top N
+        if scored.empty:
+            return scored
+
+        return scored.sort_values("score", ascending=False).head(top_n)
 
     def load_universe(self) -> DataFrame:
         """
@@ -108,14 +151,8 @@ class Screener:
             max_payout,
             min_cagr,
         )
-        # For now, implement simple filtering logic directly
-        filtered = df[
-            (df["dividend_yield"] >= min_yield)
-            & (
-                df["payout"] <= max_payout
-            )  # Use 'payout' column name, not 'payout_ratio'
-            & (df["dividend_cagr"] >= min_cagr)  # Use 'dividend_cagr' column name
-        ]
+        # Use the filter strategy instead of hardcoded logic
+        filtered = self._filter_strategy.filter(df, min_yield, max_payout, min_cagr)
         logger.info(f"Filtered to {len(filtered)} rows from {len(df)} rows")
         return filtered
 

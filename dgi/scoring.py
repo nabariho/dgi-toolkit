@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 from dgi.models import CompanyData
 
 

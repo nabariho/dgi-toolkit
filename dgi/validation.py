@@ -1,26 +1,36 @@
 import logging
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
 from pydantic import ValidationError
-from dgi.models import CompanyData
+
+if TYPE_CHECKING:
+    from dgi.models import CompanyData
+else:
+    try:
+        from dgi.models import CompanyData
+    except ImportError:
+        CompanyData = Any  # type: ignore
+
 from dgi.exceptions import DataValidationError
+
+# Export for external use
+__all__ = ["DataValidationError", "DgiRowValidator", "PydanticRowValidation"]
 
 logger = logging.getLogger(__name__)
 
 
 class RowValidationStrategy(Protocol):
-    """
-    Interface for row validation strategies.
-    """
+    """Interface for row validation strategies."""
 
-    def validate(self, row: dict[str, Any]) -> CompanyData: ...
+    def validate(self, row: dict[str, Any]) -> "CompanyData": ...
 
 
 class PydanticRowValidation:
-    def __init__(self, model: type[CompanyData]):
+    def __init__(self, model: type["CompanyData"]) -> None:
         self.model = model
 
-    def validate(self, row: dict[str, Any]) -> CompanyData:
-        return self.model(**row)
+    def validate(self, row: dict[str, Any]) -> "CompanyData":
+        return self.model.model_validate(row)
 
 
 class DgiRowValidator:
@@ -36,7 +46,7 @@ class DgiRowValidator:
 
     def validate_rows(
         self, rows: list[dict[str, Any]]
-    ) -> list[CompanyData]:  # Fix type
+    ) -> list["CompanyData"]:  # Fix type
         valid_rows: list[CompanyData] = []
         errors: list[str] = []
         for i, row in enumerate(rows):
@@ -46,7 +56,7 @@ class DgiRowValidator:
                     col for col in self.required_columns if col not in row_str_keys
                 ]
                 if missing:
-                    error_msg = f"Row {i+2}: Missing: {', '.join(missing)}"
+                    error_msg = f"Row {i + 2}: Missing: {', '.join(missing)}"
                     logger.error(error_msg)
                     errors.append(error_msg)
                     continue
@@ -54,11 +64,11 @@ class DgiRowValidator:
                 validated = self._strategy.validate(row_str_keys)
                 valid_rows.append(validated)
             except ValidationError as e:
-                error_msg = f"Row {i+2}: {e}"
+                error_msg = f"Row {i + 2}: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)
             except Exception as e:
-                error_msg = f"Row {i+2}: Unexpected error: {e}"
+                error_msg = f"Row {i + 2}: Unexpected error: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)
         if not valid_rows:

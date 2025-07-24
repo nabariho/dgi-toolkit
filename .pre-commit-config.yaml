@@ -1,9 +1,96 @@
 repos:
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.292
+  # Python tools using Poetry environment
+  - repo: local
     hooks:
-      - id: ruff
-  - repo: https://github.com/psf/black
-    rev: 24.4.2
+      - id: ruff-lint
+        name: ruff (lint)
+        entry: poetry run ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types: [python]
+        description: "Run Ruff linter with autofix"
+        pass_filenames: false
+        args: [.]
+      - id: ruff-format
+        name: ruff (format)
+        entry: poetry run ruff format
+        language: system
+        types: [python]
+        description: "Run Ruff formatter"
+        pass_filenames: false
+        args: [.]
+      - id: black
+        name: black
+        entry: poetry run black
+        language: system
+        types: [python]
+        description: "Format Python code with Black"
+        pass_filenames: false
+        args: [.]
+      - id: mypy
+        name: mypy
+        entry:
+          poetry run mypy --config-file=mypy.ini dgi/ tests/test_filtering.py
+          tests/test_scoring.py tests/test_portfolio.py tests/test_validation.py
+        language: system
+        types: [python]
+        description: "Static type checking with MyPy"
+        # Check core business logic and main modules
+        files: ^(dgi/|tests/test_(filtering|scoring|portfolio|validation)\.py)$
+        exclude: ^(tests/test_(providers|ai_chat|cli_helpers|screener_edge|screener)\.py|ai_chat/|notebooks/)$
+        pass_filenames: false
+      - id: isort
+        name: isort
+        entry: poetry run isort --profile=black --line-length=88
+        language: system
+        types: [python]
+        description: "Sort Python imports"
+        pass_filenames: false
+        args: [.]
+      - id: bandit
+        name: bandit
+        entry: poetry run bandit -r dgi/ --skip B101,B601
+        language: system
+        types: [python]
+        description: "Security linting with Bandit"
+        files: ^dgi/.*\.py$
+        pass_filenames: false
+
+  # External tools
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
     hooks:
-      - id: black 
+      - id: prettier
+        name: prettier
+        description: "Format YAML, JSON, and Markdown files"
+        types_or: [yaml, json, markdown]
+        args: [--prose-wrap=always, --print-width=88]
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.2.0
+    hooks:
+      - id: conventional-pre-commit
+        name: conventional-commits
+        description: "Ensure commit messages follow conventional format"
+        stages: [commit-msg]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: trailing-whitespace
+        description: "Trim trailing whitespace"
+      - id: end-of-file-fixer
+        name: end-of-file-fixer
+        description: "Ensure files end with newline"
+      - id: check-yaml
+        name: check-yaml
+        description: "Validate YAML files"
+      - id: check-toml
+        name: check-toml
+        description: "Validate TOML files"
+      - id: check-merge-conflict
+        name: check-merge-conflict
+        description: "Check for merge conflict markers"
+      - id: debug-statements
+        name: debug-statements
+        description: "Check for debug statements"

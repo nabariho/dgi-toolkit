@@ -22,10 +22,12 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction --no-root
       - name: Show installed Pydantic version
-        run: poetry run python -c "import pydantic; print('Pydantic version:', pydantic.__version__)"
+        run:
+          poetry run python -c "import pydantic; print('Pydantic version:',
+          pydantic.__version__)"
       - name: Run pre-commit
         run: poetry run pre-commit run --all-files
       - name: Run mypy strict type checks
         run: poetry run mypy --config-file mypy.ini .
       - name: Run tests
-        run: poetry run pytest --cov=dgi_toolkit --cov-report=term-missing 
+        run: poetry run pytest --cov=dgi_toolkit --cov-report=term-missing

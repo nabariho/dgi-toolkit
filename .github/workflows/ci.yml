@@ -10,28 +10,59 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.12']
+        python-version: ["3.12"]
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install Poetry
-      run: pip install poetry
-    - name: Cache venv
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-    - name: Install deps
-      run: poetry install --no-interaction
-    - name: Pre-commit
-      run: poetry run pre-commit run --all-files --show-diff-on-failure
-    - name: Tests
-      run: poetry run pytest --cov=dgi --cov-report=xml
-    - name: Build Docker
-      run: docker build -t dgi-toolkit:${{ github.sha }} .
-    - name: Size guard (<150 MB)
-      run: |
-        SZ=$(docker images dgi-toolkit:${{ github.sha }} --format "{{.Size}}" | sed 's/MB//')
-        awk "BEGIN { exit ($SZ<150)?0:1 }" 
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Cache venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+      - name: Install deps
+        run: poetry install --no-interaction
+      - name: Show tool versions
+        run: |
+          python --version
+          poetry run black --version
+          poetry run ruff --version
+          poetry run pre-commit --version
+      - name: Pre-commit
+        run: poetry run pre-commit run --all-files --show-diff-on-failure
+      - name: Tests
+        run: poetry run pytest --cov=dgi --cov-report=xml
+      - name: Build Docker
+        run: docker build -t dgi-toolkit:${{ github.sha }} .
+      - name: Size guard (<150 MB)
+        run: |
+          # Get image size and convert to MB if needed
+          SIZE_RAW=$(docker images dgi-toolkit:${{ github.sha }} --format "{{.Size}}")
+          echo "Docker image size: $SIZE_RAW"
+
+          # Extract numeric value and convert to MB
+          if [[ $SIZE_RAW == *"GB"* ]]; then
+            SIZE_NUM=$(echo $SIZE_RAW | sed 's/GB//')
+            # Convert GB to MB (multiply by 1024)
+            SIZE_MB=$(python3 -c "print(int(float('$SIZE_NUM') * 1024))")
+          elif [[ $SIZE_RAW == *"MB"* ]]; then
+            SIZE_MB=$(echo $SIZE_RAW | sed 's/MB//')
+          else
+            echo "Unknown size format: $SIZE_RAW"
+            exit 1
+          fi
+
+          echo "Size in MB: $SIZE_MB"
+
+          # Check if size is less than 150MB using Python for reliable float comparison
+          EXCEEDS=$(python3 -c "print('true' if float('$SIZE_MB') > 150 else 'false')")
+
+          if [[ $EXCEEDS == "true" ]]; then
+            echo "Error: Docker image size ($SIZE_MB MB) exceeds 150MB limit"
+            exit 1
+          else
+            echo "Success: Docker image size ($SIZE_MB MB) is within 150MB limit"
+          fi
