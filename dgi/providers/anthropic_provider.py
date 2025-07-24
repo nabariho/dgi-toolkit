@@ -85,12 +85,15 @@ class AnthropicProvider(LLMProvider):
 
     def _get_pricing_tier(self) -> str:
         """Get pricing tier for the current model."""
-        if "haiku" in self.config.model:
+        model = self.config.model
+        if "haiku" in model:
             return "low-cost"
-        elif "sonnet" in self.config.model:
-            return "medium-cost"
+        elif "sonnet" in model:
+            return "standard"
+        elif "opus" in model:
+            return "premium"
         else:
-            return "high-cost"
+            return "standard"
 
     def validate_api_key(self) -> bool:
         """Validate that the API key is present and potentially valid."""

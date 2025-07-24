@@ -213,6 +213,8 @@ def test_dgirowvalidator_invalid() -> None:
 
 
 def test_screener_empty_repository() -> None:
+    import pandas as pd
+
     from dgi.repositories.base import CompanyDataRepository
 
     class EmptyRepo(CompanyDataRepository):
@@ -220,8 +222,9 @@ def test_screener_empty_repository() -> None:
             return []
 
     screener = Screener(EmptyRepo())
-    with pytest.raises(ValueError):
-        screener.load_universe()
+    result = screener.screen()
+    assert isinstance(result, pd.DataFrame)
+    assert result.empty
 
 
 def test_screener_missing_columns(tmp_path: Any) -> None:

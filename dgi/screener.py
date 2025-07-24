@@ -67,7 +67,6 @@ class Screener:
             }
             data_for_df.append(mapped_dict)
 
-        df = pd.DataFrame(data_for_df)
         expected_columns = [
             "symbol",
             "name",
@@ -78,7 +77,12 @@ class Screener:
             "dividend_cagr",
             "fcf_yield",
         ]
-        if df.empty or any(col not in df.columns for col in expected_columns):
+        if not data_for_df:
+            # Return empty DataFrame with expected columns
+            return pd.DataFrame(columns=expected_columns)
+
+        df = pd.DataFrame(data_for_df)
+        if any(col not in df.columns for col in expected_columns):
             missing = [col for col in expected_columns if col not in df.columns]
             raise ValueError(
                 "Missing expected columns in validated data: "

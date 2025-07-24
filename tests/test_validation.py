@@ -35,10 +35,9 @@ class TestDgiRowValidator(unittest.TestCase):
                 "fcf_yield": 4.2,
             },  # Valid row
         ]
-        errors = validator.validate_rows(rows)
-        self.assertIsInstance(errors, list)
-        self.assertEqual(len(errors), 1)
-        self.assertIn("Row 0", errors[0])
+        result = validator.validate_rows(rows)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].symbol, "MSFT")
 
     def test_validate_invalid_data_types(self) -> None:
         """Test validation with invalid data types."""
@@ -48,9 +47,8 @@ class TestDgiRowValidator(unittest.TestCase):
             {"invalid": "object"},
             {"another": "invalid", "object": True},
         ]
-        errors = validator.validate_rows(test_objects)  # type: ignore[arg-type]
-        self.assertIsInstance(errors, list)
-        self.assertGreater(len(errors), 0)
+        with self.assertRaises(DataValidationError):
+            validator.validate_rows(test_objects)  # type: ignore[arg-type]
 
     def test_validate_valid_rows(self) -> None:
         """Test validation with all valid rows."""
@@ -122,9 +120,8 @@ class TestDgiRowValidator(unittest.TestCase):
             {"completely": "wrong", "structure": 123},
             {"not": "a", "valid": "company", "data": "object"},
         ]
-        errors = validator.validate_rows(test_objects)  # type: ignore[arg-type]
-        self.assertIsInstance(errors, list)
-        self.assertGreater(len(errors), 0)
+        with self.assertRaises(DataValidationError):
+            validator.validate_rows(test_objects)  # type: ignore[arg-type]
 
 
 class TestPydanticRowValidation(unittest.TestCase):

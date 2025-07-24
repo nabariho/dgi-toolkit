@@ -79,16 +79,21 @@ class OpenAIProvider(LLMProvider):
             "gpt-3.5-turbo": 16385,
             "gpt-3.5-turbo-16k": 16385,
         }
-        return model_context_windows.get(self.config.model, 8192)
+        return model_context_windows.get(self.config.model, 4096)
 
     def _get_pricing_tier(self) -> str:
         """Get pricing tier for the current model."""
-        if "mini" in self.config.model or "3.5" in self.config.model:
+        model = self.config.model
+        if "mini" in model or "3.5" in model:
+            if model == "gpt-3.5-turbo":
+                return "standard"
             return "low-cost"
-        elif "4o" in self.config.model:
+        elif "4o" in model:
             return "medium-cost"
+        elif model in ("gpt-4-turbo", "gpt-4"):
+            return "premium"
         else:
-            return "high-cost"
+            return "premium"
 
     def validate_api_key(self) -> bool:
         """Validate that the API key is present and potentially valid."""
