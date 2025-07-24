@@ -1,61 +1,59 @@
 repos:
-  # Ruff - Fast Python linter with autofix
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+  # Python tools using Poetry environment
+  - repo: local
     hooks:
-      - id: ruff
+      - id: ruff-lint
         name: ruff (lint)
-        args: [--fix, --exit-non-zero-on-fix]
+        entry: poetry run ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types: [python]
         description: "Run Ruff linter with autofix"
+        pass_filenames: false
+        args: [.]
       - id: ruff-format
         name: ruff (format)
+        entry: poetry run ruff format
+        language: system
+        types: [python]
         description: "Run Ruff formatter"
-
-  # Black - Python code formatter (backup in case ruff format misses anything)
-  - repo: https://github.com/psf/black
-    rev: 24.4.2
-    hooks:
+        pass_filenames: false
+        args: [.]
       - id: black
         name: black
+        entry: poetry run black
+        language: system
+        types: [python]
         description: "Format Python code with Black"
-
-  # MyPy - Static type checking
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.10.0
-    hooks:
+        pass_filenames: false
+        args: [.]
       - id: mypy
         name: mypy
+        entry: poetry run mypy --config-file=mypy.ini dgi/ tests/test_filtering.py tests/test_scoring.py tests/test_portfolio.py tests/test_validation.py
+        language: system
+        types: [python]
         description: "Static type checking with MyPy"
-        args: [--config-file=mypy.ini]
-        additional_dependencies:
-          - types-requests
-          - pandas-stubs
-          - types-setuptools
-          - pytest
-        # Only check core business logic and main modules
-        files: ^(dgi/(screener|filtering|scoring|portfolio|repositories)\.py|dgi/providers/|tests/test_(filtering|scoring|portfolio)\.py)$
-        exclude: ^(tests/test_(providers|ai_chat|cli_helpers|screener_edge|screener|validation)\.py|ai_chat/|notebooks/|dgi/models/|dgi/validation\.py|dgi/cli\.py)$
-
-  # Import sorting
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
+        # Check core business logic and main modules
+        files: ^(dgi/|tests/test_(filtering|scoring|portfolio|validation)\.py)$
+        exclude: ^(tests/test_(providers|ai_chat|cli_helpers|screener_edge|screener)\.py|ai_chat/|notebooks/)$
+        pass_filenames: false
       - id: isort
         name: isort
+        entry: poetry run isort --profile=black --line-length=88
+        language: system
+        types: [python]
         description: "Sort Python imports"
-        args: [--profile=black, --line-length=88]
-
-  # Security scanning
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
-    hooks:
+        pass_filenames: false
+        args: [.]
       - id: bandit
         name: bandit
+        entry: poetry run bandit -r dgi/ --skip B101,B601
+        language: system
+        types: [python]
         description: "Security linting with Bandit"
-        args: [--recursive, --skip, "B101,B601"]
         files: ^dgi/.*\.py$
+        pass_filenames: false
 
-  # YAML formatting
+  # External tools
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
@@ -65,7 +63,6 @@ repos:
         types_or: [yaml, json, markdown]
         args: [--prose-wrap=always, --print-width=88]
 
-  # Conventional commits (optional but recommended)
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.2.0
     hooks:
@@ -74,7 +71,6 @@ repos:
         description: "Ensure commit messages follow conventional format"
         stages: [commit-msg]
 
-  # Trailing whitespace and file endings
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:

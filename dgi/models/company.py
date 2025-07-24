@@ -1,10 +1,13 @@
 from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, field_validator  # type: ignore
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CompanyData(BaseModel):
     """Model for company financial data."""
+
+    # Pydantic configuration
+    model_config = ConfigDict(populate_by_name=True)
 
     symbol: Annotated[str, Field(min_length=1, max_length=10)]
     name: Annotated[str, Field(min_length=1)]
@@ -35,7 +38,6 @@ class CompanyData(BaseModel):
         """Alias for 'dividend_growth_5y' field."""
         return self.dividend_growth_5y
 
-    @classmethod
     @field_validator(
         "dividend_yield",
         "payout_ratio",
@@ -43,6 +45,7 @@ class CompanyData(BaseModel):
         "fcf_yield",
         mode="before",
     )
+    @classmethod
     def must_be_number(cls, v: Any) -> float:
         if isinstance(v, int | float):
             return float(v)

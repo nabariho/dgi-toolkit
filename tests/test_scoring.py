@@ -15,10 +15,12 @@ class TestDefaultScoring(unittest.TestCase):
 
         test_company = CompanyData(
             symbol="TEST",
-            company_name="Test Company",
+            name="Test Company",  # Use 'name' not 'company_name'
+            sector="Technology",
+            industry="Software",
             dividend_yield=3.0,
-            payout=40.0,
-            dividend_cagr=8.0,
+            payout_ratio=40.0,  # Use 'payout_ratio' not 'payout'
+            dividend_growth_5y=8.0,  # Use 'dividend_growth_5y' not 'dividend_cagr'
             fcf_yield=5.0,
         )
 
