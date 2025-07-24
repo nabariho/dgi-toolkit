@@ -7,7 +7,7 @@ from dgi.exceptions import DataValidationError
 from dgi.models import CompanyData
 
 # Export for external use
-__all__ = ["DgiRowValidator", "PydanticRowValidation", "DataValidationError"]
+__all__ = ["DataValidationError", "DgiRowValidator", "PydanticRowValidation"]
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class RowValidationStrategy(Protocol):
 
 
 class PydanticRowValidation:
-    def __init__(self, model: type[CompanyData]):
+    def __init__(self, model: type[CompanyData]) -> None:
         self.model = model
 
     def validate(self, row: dict[str, Any]) -> CompanyData:

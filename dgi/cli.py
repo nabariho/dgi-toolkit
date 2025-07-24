@@ -56,31 +56,43 @@ def screen(
     try:
         # Just check if rich is available by trying to import it
         import rich  # noqa: F401
-    except ImportError:
+    except ImportError as e:
         typer.echo(
             "[ERROR] The 'rich' package is required for table output. Please install it.",
             err=True,
         )
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
     validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     data_path = csv_path or config.DATA_PATH  # Use provided path or default
-    repo = CsvCompanyDataRepository(data_path, validator)
-    screener = Screener(
-        repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
-    )
 
     try:
+        repo = CsvCompanyDataRepository(data_path, validator)
+        screener = Screener(
+            repo, scoring_strategy=DefaultScoring(), filter_strategy=DefaultFilter()
+        )
+
+        # Load data and apply screening pipeline
         df = screener.load_universe()
         filtered = screener.apply_filters(df, min_yield, max_payout, min_cagr)
         scored = screener.add_scores(filtered)
+
         if scored.empty:
-            typer.echo("[INFO] No stocks matched the filter criteria.")
-            raise typer.Exit(code=0)
-        scored = scored.sort_values("score", ascending=False)
-        render_screen_table(scored)
+            typer.echo("[INFO] No companies match the screening criteria.")
+            return
+
+        # Sort by score descending
+        result = scored.sort_values("score", ascending=False)
+        render_screen_table(result)
+
+    except FileNotFoundError as e:
+        typer.echo(
+            f"[ERROR] CSV file not found: {data_path}. Please check the file path.",
+            err=True,
+        )
+        raise typer.Exit(code=1) from e
     except Exception as e:
         typer.echo(f"[ERROR] {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 @app.command()

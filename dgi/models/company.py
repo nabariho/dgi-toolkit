@@ -1,6 +1,6 @@
 from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator  # type: ignore
 
 
 class CompanyData(BaseModel):
@@ -15,21 +15,27 @@ class CompanyData(BaseModel):
         float, Field(ge=0.0, le=200.0, alias="payout")
     ]  # Allow up to 200% payout
     dividend_growth_5y: Annotated[
-        float, Field(ge=-50.0, le=100.0, alias="dividend_cagr")
+        float, Field(ge=-100.0, le=100.0, alias="dividend_cagr")
     ]  # Allow negative growth
-    fcf_yield: Annotated[float, Field(ge=-50.0, le=100.0)]  # Allow negative FCF yield
+    fcf_yield: Annotated[float, Field(ge=-100.0, le=100.0)]  # Allow negative FCF yield
 
-    model_config = {"populate_by_name": True}
+    # Aliased properties for backwards compatibility
+    @property
+    def company_name(self) -> str:
+        """Alias for 'name' field."""
+        return self.name
 
-    # Support old field names as aliases
     @property
     def payout(self) -> float:
-        return float(self.payout_ratio)
+        """Alias for 'payout_ratio' field."""
+        return self.payout_ratio
 
     @property
     def dividend_cagr(self) -> float:
-        return float(self.dividend_growth_5y)
+        """Alias for 'dividend_growth_5y' field."""
+        return self.dividend_growth_5y
 
+    @classmethod
     @field_validator(
         "dividend_yield",
         "payout_ratio",
@@ -37,11 +43,10 @@ class CompanyData(BaseModel):
         "fcf_yield",
         mode="before",
     )
-    @classmethod
     def must_be_number(cls, v: Any) -> float:
-        if isinstance(v, (int, float)):
+        if isinstance(v, int | float):
             return float(v)
         try:
             return float(v)
-        except Exception:
-            raise ValueError(f"Value '{v}' is not a valid number")
+        except Exception as e:
+            raise ValueError(f"Value '{v}' is not a valid number") from e

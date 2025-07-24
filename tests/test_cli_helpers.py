@@ -1,5 +1,6 @@
 """Tests for CLI helper functions."""
 
+import contextlib
 import unittest
 
 import pandas as pd
@@ -24,11 +25,8 @@ class TestCliHelpers(unittest.TestCase):
         )
 
         # This should not raise an exception
-        try:
+        with contextlib.suppress(ImportError):
             render_screen_table(test_df)
-        except ImportError:
-            # Expected if rich is not available
-            pass
 
 
 if __name__ == "__main__":

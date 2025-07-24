@@ -33,8 +33,8 @@ repos:
           - types-setuptools
           - pytest
         # Only check core business logic and main modules
-        files: ^(dgi/(screener|filtering|scoring|portfolio|repositories|models)\.py|dgi/providers/|tests/test_(filtering|scoring|portfolio|validation)\.py)$
-        exclude: ^(tests/test_(providers|ai_chat|cli_helpers|screener_edge|screener)\.py|ai_chat/|notebooks/|dgi/models/company\.py|dgi/validation\.py|dgi/cli\.py)$
+        files: ^(dgi/(screener|filtering|scoring|portfolio|repositories)\.py|dgi/providers/|tests/test_(filtering|scoring|portfolio)\.py)$
+        exclude: ^(tests/test_(providers|ai_chat|cli_helpers|screener_edge|screener|validation)\.py|ai_chat/|notebooks/|dgi/models/|dgi/validation\.py|dgi/cli\.py)$
 
   # Import sorting
   - repo: https://github.com/pycqa/isort

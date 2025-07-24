@@ -2,7 +2,9 @@ from typing import Any
 
 import pandas as pd
 import pytest
+from pydantic import ValidationError
 
+from dgi.exceptions import DataValidationError
 from dgi.models import CompanyData
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import DefaultScoring
@@ -161,7 +163,7 @@ def test_companydata_valid() -> None:
 
 def test_companydata_invalid() -> None:
     # This test intentionally passes the wrong type to check runtime validation.
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         CompanyData(
             symbol="AAPL",
             name="Apple",
@@ -321,7 +323,7 @@ def test_dgirowvalidator_all_invalid() -> None:
             "fcf_yield": 7.0,
         },
     ]
-    with pytest.raises(Exception):
+    with pytest.raises(DataValidationError):
         validator.validate_rows(rows)
 
 
@@ -359,7 +361,7 @@ def test_dgirowvalidator_some_invalid(caplog: Any) -> None:
 
 def test_companydata_must_be_number_exception() -> None:
     """Test CompanyData must_be_number validator for exception case."""
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         CompanyData(
             symbol="TEST",
             name="Test",

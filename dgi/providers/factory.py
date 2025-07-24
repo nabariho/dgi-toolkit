@@ -63,11 +63,11 @@ def create_provider(
     if isinstance(provider_type, str):
         try:
             provider_type = ProviderType(provider_type.lower())
-        except ValueError:
+        except ValueError as e:
             supported = [p.value for p in ProviderType]
             raise ValueError(
                 f"Unsupported provider: {provider_type}. Supported: {supported}"
-            )
+            ) from e
 
     # Use default model if not specified
     if model is None:

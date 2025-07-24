@@ -3,6 +3,8 @@
 import unittest
 from typing import Any
 
+from pydantic import ValidationError
+
 from dgi.models import CompanyData
 from dgi.validation import DataValidationError, DgiRowValidator, PydanticRowValidation
 
@@ -133,7 +135,7 @@ class TestPydanticRowValidation(unittest.TestCase):
         validation = PydanticRowValidation(CompanyData)
         row = {"symbol": "AAPL"}  # Missing required fields
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValidationError):
             validation.validate(row)
 
 
