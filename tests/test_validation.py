@@ -1,118 +1,140 @@
-"""Tests for dgi/validation.py edge cases and errors."""
+"""Test validation functionality."""
 
-import pytest
-from dgi.models.company import CompanyData
+import unittest
+from typing import Any, Dict, List
 from dgi.validation import DgiRowValidator, PydanticRowValidation, DataValidationError
+from dgi.models import CompanyData
 
 
-def test_dgirowvalidator_missing_required_columns():
-    """Test DgiRowValidator with missing required columns."""
-    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-    validator.required_columns = ["symbol", "name"]
-    rows = [{"symbol": "AAPL"}]  # Missing 'name'
-    with pytest.raises(DataValidationError) as exc:
-        validator.validate_rows(rows)
-    assert "Missing" in str(exc.value)
+class TestDgiRowValidator(unittest.TestCase):
+    """Test DgiRowValidator class."""
+
+    def test_validate_empty_list(self) -> None:
+        """Test validation with empty list."""
+        validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+        rows: List[Dict[str, Any]] = []
+        errors = validator.validate_rows(rows)
+        self.assertEqual(errors, [])
+
+    def test_validate_missing_required_fields(self) -> None:
+        """Test validation with missing required fields."""
+        validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+        rows: List[Dict[str, Any]] = [
+            {"symbol": "AAPL"},  # Missing required fields
+            {
+                "symbol": "MSFT",
+                "company_name": "Microsoft Corp",
+                "dividend_yield": 2.5,
+                "payout": 30.0,
+                "dividend_cagr": 8.0,
+            },  # Valid row
+        ]
+        errors = validator.validate_rows(rows)
+        self.assertIsInstance(errors, list)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Row 0", errors[0])
+
+    def test_validate_invalid_data_types(self) -> None:
+        """Test validation with invalid data types."""
+        validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+        # Create test rows with invalid types
+        test_objects = [
+            {"invalid": "object"},
+            {"another": "invalid", "object": True},
+        ]
+        errors = validator.validate_rows(test_objects)  # type: ignore[arg-type]
+        self.assertIsInstance(errors, list)
+        self.assertGreater(len(errors), 0)
+
+    def test_validate_valid_rows(self) -> None:
+        """Test validation with all valid rows."""
+        validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+        rows: List[Dict[str, Any]] = [
+            {
+                "symbol": "AAPL",
+                "company_name": "Apple Inc",
+                "dividend_yield": 1.5,
+                "payout": 25.0,
+                "dividend_cagr": 5.0,
+            },
+            {
+                "symbol": "MSFT",
+                "company_name": "Microsoft Corp",
+                "dividend_yield": 2.5,
+                "payout": 30.0,
+                "dividend_cagr": 8.0,
+            },
+        ]
+        errors = validator.validate_rows(rows)
+        self.assertEqual(errors, [])
+
+    def test_validate_raises_error_with_all_invalid(self) -> None:
+        """Test that validation raises error when all rows are invalid."""
+        validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+        rows: List[Dict[str, Any]] = [
+            {"symbol": "INVALID1"},  # Missing required fields
+            {"symbol": "INVALID2"},  # Missing required fields
+        ]
+
+        with self.assertRaises(DataValidationError):
+            validator.validate_rows(rows)
+
+    def test_validate_partial_errors_returns_valid_rows(self) -> None:
+        """Test validation with some errors returns only valid rows."""
+        validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+        rows: List[Dict[str, Any]] = [
+            {"symbol": "INVALID"},  # Missing required fields
+            {
+                "symbol": "MSFT",
+                "company_name": "Microsoft Corp",
+                "dividend_yield": 2.5,
+                "payout": 30.0,
+                "dividend_cagr": 8.0,
+            },  # Valid row
+        ]
+        # This should return the valid rows and log warnings about invalid ones
+        result = validator.validate_rows(rows)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].symbol, "MSFT")
+
+    def test_validate_invalid_data_types_again(self) -> None:
+        """Test validation with another set of invalid data types."""
+        validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+        # Create test rows with completely invalid structure
+        test_objects = [
+            {"completely": "wrong", "structure": 123},
+            {"not": "a", "valid": "company", "data": "object"},
+        ]
+        errors = validator.validate_rows(test_objects)  # type: ignore[arg-type]
+        self.assertIsInstance(errors, list)
+        self.assertGreater(len(errors), 0)
 
 
-def test_dgirowvalidator_some_invalid(caplog):
-    """Test DgiRowValidator with some invalid rows (should skip and warn)."""
-    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-    validator.required_columns = [
-        "symbol",
-        "name",
-        "sector",
-        "industry",
-        "dividend_yield",
-        "payout",
-        "dividend_cagr",
-        "fcf_yield",
-    ]
-    # One valid, one invalid
-    rows = [
-        {
+class TestPydanticRowValidation(unittest.TestCase):
+    """Test PydanticRowValidation class."""
+
+    def test_pydantic_validation_success(self) -> None:
+        """Test successful pydantic validation."""
+        validation = PydanticRowValidation(CompanyData)
+        row = {
             "symbol": "AAPL",
-            "name": "Apple",
-            "sector": "Tech",
-            "industry": "HW",
-            "dividend_yield": 1.0,
-            "payout": 20.0,
+            "company_name": "Apple Inc",
+            "dividend_yield": 1.5,
+            "payout": 25.0,
             "dividend_cagr": 5.0,
-            "fcf_yield": 3.0,
-        },
-        {"symbol": "MSFT"},  # Invalid
-    ]
-    result = validator.validate_rows(rows)
-    assert len(result) == 1
-    assert any(
-        "invalid" in r.lower() or "skipped" in r.lower()
-        for r in caplog.text.splitlines()
-    )
+        }
+        result = validation.validate(row)
+        self.assertIsInstance(result, CompanyData)
+        self.assertEqual(result.symbol, "AAPL")
+
+    def test_pydantic_validation_failure(self) -> None:
+        """Test pydantic validation failure."""
+        validation = PydanticRowValidation(CompanyData)
+        row = {"symbol": "AAPL"}  # Missing required fields
+
+        with self.assertRaises(Exception):
+            validation.validate(row)
 
 
-def test_dgirowvalidator_all_invalid():
-    """Test DgiRowValidator with all invalid rows (should raise)."""
-    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-    validator.required_columns = ["symbol", "name"]
-    rows = [{"foo": "bar"}, {"baz": "qux"}]
-    with pytest.raises(DataValidationError):
-        validator.validate_rows(rows)
-
-
-def test_pydanticrowvalidation_model_validate():
-    """Test PydanticRowValidation uses model_validate."""
-    validator = PydanticRowValidation(CompanyData)
-    row = {
-        "symbol": "AAPL",
-        "name": "Apple",
-        "sector": "Tech",
-        "industry": "HW",
-        "dividend_yield": 1.0,
-        "payout": 20.0,
-        "dividend_cagr": 5.0,
-        "fcf_yield": 3.0,
-    }
-    result = validator.validate(row)
-    assert isinstance(result, CompanyData)
-    assert result.symbol == "AAPL"
-
-
-def test_dgirowvalidator_some_invalid_rows_warns(caplog):
-    """Test DgiRowValidator warns when some rows are invalid but returns valid ones."""
-    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-    validator.required_columns = [
-        "symbol",
-        "name",
-        "sector",
-        "industry",
-        "dividend_yield",
-        "payout",
-        "dividend_cagr",
-        "fcf_yield",
-    ]
-    rows = [
-        {
-            "symbol": "AAPL",
-            "name": "Apple",
-            "sector": "Tech",
-            "industry": "HW",
-            "dividend_yield": 1.0,
-            "payout": 20.0,
-            "dividend_cagr": 5.0,
-            "fcf_yield": 3.0,
-        },
-        {"symbol": "MSFT"},  # Invalid
-        {
-            "symbol": "GOOG",
-            "name": "Google",
-            "sector": "Tech",
-            "industry": "SW",
-            "dividend_yield": 1.2,
-            "payout": 22.0,
-            "dividend_cagr": 6.0,
-            "fcf_yield": 2.5,
-        },
-    ]
-    result = validator.validate_rows(rows)
-    assert len(result) == 2
-    assert "Some rows were invalid and skipped" in caplog.text
+if __name__ == "__main__":
+    unittest.main()

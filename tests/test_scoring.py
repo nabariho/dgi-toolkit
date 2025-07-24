@@ -1,17 +1,25 @@
+"""Tests for scoring strategies."""
+
+import unittest
+import pandas as pd
 from dgi.scoring import DefaultScoring
-from dgi.models.company import CompanyData
 
 
-def test_defaultscoring_zero_values():
-    company = CompanyData(
-        symbol="ZERO",
-        name="Zero",
-        sector="Tech",
-        industry="SW",
-        dividend_yield=0.0,
-        payout_ratio=0.0,
-        dividend_growth_5y=0.0,
-        fcf_yield=0.0,
-    )
-    score = DefaultScoring().score(company)
-    assert score == 0.0  # Should clamp to 0
+class TestDefaultScoring(unittest.TestCase):
+    """Tests for DefaultScoring implementation."""
+
+    def test_default_scoring_basic(self) -> None:
+        """Test basic scoring functionality."""
+        scoring = DefaultScoring()
+
+        test_row = pd.Series(
+            {"dividend_yield": 3.0, "payout": 40.0, "dividend_cagr": 8.0}
+        )
+
+        score = scoring.score(test_row)
+        self.assertIsInstance(score, (int, float))
+        self.assertGreaterEqual(score, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

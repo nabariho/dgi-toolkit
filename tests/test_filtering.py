@@ -8,7 +8,7 @@ from dgi.filtering import FilterStrategy, DefaultFilter
 class TestDefaultFilter(unittest.TestCase):
     """Tests for DefaultFilter implementation."""
 
-    def test_default_filter_all_pass(self):
+    def test_default_filter_all_pass(self) -> None:
         """Test DefaultFilter when all rows pass filters."""
         filter_strategy = DefaultFilter()
 
@@ -27,7 +27,7 @@ class TestDefaultFilter(unittest.TestCase):
         self.assertEqual(len(result), 3)
         pd.testing.assert_frame_equal(result, test_df)
 
-    def test_default_filter_all_fail(self):
+    def test_default_filter_all_fail(self) -> None:
         """Test DefaultFilter when no rows pass filters."""
         filter_strategy = DefaultFilter()
 
@@ -48,7 +48,7 @@ class TestDefaultFilter(unittest.TestCase):
             list(result.columns), ["dividend_yield", "payout", "dividend_cagr"]
         )
 
-    def test_default_filter_partial_pass(self):
+    def test_default_filter_partial_pass(self) -> None:
         """Test DefaultFilter when some rows pass filters."""
         filter_strategy = DefaultFilter()
 
@@ -72,7 +72,7 @@ class TestDefaultFilter(unittest.TestCase):
         self.assertEqual(result.iloc[0]["dividend_cagr"], 6.0)
         self.assertEqual(result.iloc[0]["symbol"], "C")
 
-    def test_default_filter_edge_values(self):
+    def test_default_filter_edge_values(self) -> None:
         """Test DefaultFilter with edge case values."""
         filter_strategy = DefaultFilter()
 
@@ -91,7 +91,7 @@ class TestDefaultFilter(unittest.TestCase):
         # Both rows should pass (inclusive bounds)
         self.assertEqual(len(result), 2)
 
-    def test_default_filter_empty_dataframe(self):
+    def test_default_filter_empty_dataframe(self) -> None:
         """Test DefaultFilter with empty input DataFrame."""
         filter_strategy = DefaultFilter()
 
@@ -108,7 +108,7 @@ class TestDefaultFilter(unittest.TestCase):
             list(result.columns), ["dividend_yield", "payout", "dividend_cagr"]
         )
 
-    def test_default_filter_zero_thresholds(self):
+    def test_default_filter_zero_thresholds(self) -> None:
         """Test DefaultFilter with zero thresholds."""
         filter_strategy = DefaultFilter()
 
@@ -131,19 +131,25 @@ class TestDefaultFilter(unittest.TestCase):
 class TestFilterStrategyInterface(unittest.TestCase):
     """Tests for FilterStrategy interface."""
 
-    def test_filter_strategy_is_abstract(self):
+    def test_filter_strategy_is_abstract(self) -> None:
         """Test that FilterStrategy cannot be instantiated directly."""
         with self.assertRaises(TypeError):
-            FilterStrategy()
+            FilterStrategy()  # type: ignore
 
-    def test_custom_filter_implementation(self):
+    def test_custom_filter_implementation(self) -> None:
         """Test custom filter strategy implementation."""
 
         class SectorFilter(FilterStrategy):
-            def __init__(self, allowed_sectors):
+            def __init__(self, allowed_sectors: list[str]) -> None:
                 self.allowed_sectors = allowed_sectors
 
-            def filter(self, df, min_yield, max_payout, min_cagr):
+            def filter(
+                self,
+                df: pd.DataFrame,
+                min_yield: float,
+                max_payout: float,
+                min_cagr: float,
+            ) -> pd.DataFrame:
                 # First apply base filters
                 base_filtered = df[
                     (df["dividend_yield"] >= min_yield)
@@ -175,14 +181,20 @@ class TestFilterStrategyInterface(unittest.TestCase):
         self.assertEqual(len(result), 2)
         self.assertTrue(all(result["sector"] == "Tech"))
 
-    def test_composite_filter_implementation(self):
+    def test_composite_filter_implementation(self) -> None:
         """Test composite filter that combines multiple strategies."""
 
         class CompositeFilter(FilterStrategy):
-            def __init__(self, *filters):
+            def __init__(self, *filters: FilterStrategy) -> None:
                 self.filters = filters
 
-            def filter(self, df, min_yield, max_payout, min_cagr):
+            def filter(
+                self,
+                df: pd.DataFrame,
+                min_yield: float,
+                max_payout: float,
+                min_cagr: float,
+            ) -> pd.DataFrame:
                 result = df
                 for filter_strategy in self.filters:
                     result = filter_strategy.filter(
@@ -191,7 +203,13 @@ class TestFilterStrategyInterface(unittest.TestCase):
                 return result
 
         class MinimumRowsFilter(FilterStrategy):
-            def filter(self, df, min_yield, max_payout, min_cagr):
+            def filter(
+                self,
+                df: pd.DataFrame,
+                min_yield: float,
+                max_payout: float,
+                min_cagr: float,
+            ) -> pd.DataFrame:
                 # Return at most 2 rows
                 return df.head(2)
 

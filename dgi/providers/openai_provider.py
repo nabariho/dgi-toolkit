@@ -12,7 +12,7 @@ from .base import LLMProvider, LLMConfig, ProviderType
 class OpenAIProvider(LLMProvider):
     """OpenAI LLM provider implementation."""
 
-    def __init__(self, config: LLMConfig):
+    def __init__(self, config: LLMConfig) -> None:
         if config.provider != ProviderType.OPENAI:
             raise ValueError(f"Invalid provider type: {config.provider}")
         super().__init__(config)
@@ -27,7 +27,8 @@ class OpenAIProvider(LLMProvider):
                 "or provide api_key in config."
             )
 
-        client_kwargs = {
+        # Build client kwargs with proper types
+        client_kwargs: Dict[str, Any] = {
             "model": self.config.model,
             "temperature": self.config.temperature,
             "timeout": self.config.timeout,
@@ -40,13 +41,14 @@ class OpenAIProvider(LLMProvider):
             client_kwargs["max_tokens"] = self.config.max_tokens
 
         # Add any extra parameters
-        client_kwargs.update(self.config.extra_params)
+        if self.config.extra_params:
+            client_kwargs.update(self.config.extra_params)
 
         return ChatOpenAI(**client_kwargs)
 
-    def create_agent(self, tools: List[BaseTool], **kwargs) -> Any:
+    def create_agent(self, tools: List[BaseTool], **kwargs: Any) -> Any:
         """Create a LangChain agent with OpenAI."""
-        default_kwargs = {
+        default_kwargs: Dict[str, Any] = {
             "agent": AgentType.OPENAI_FUNCTIONS,
             "verbose": True,
             "handle_parsing_errors": True,
@@ -57,37 +59,15 @@ class OpenAIProvider(LLMProvider):
         return initialize_agent(tools=tools, llm=self.client, **default_kwargs)
 
     def validate_api_key(self) -> bool:
-        """Validate that the OpenAI API key is present."""
+        """Validate that the API key is present and potentially valid."""
         api_key = self.config.api_key or os.getenv("OPENAI_API_KEY")
-        return api_key is not None and len(api_key.strip()) > 0
+        return api_key is not None and len(api_key) > 0
 
     def get_model_info(self) -> Dict[str, Any]:
-        """Get information about the OpenAI model."""
+        """Get information about the current model."""
         return {
-            "provider": "OpenAI",
+            "provider": self.config.provider.value,
             "model": self.config.model,
-            "supports_functions": True,
-            "supports_streaming": True,
-            "context_window": self._get_context_window(),
-            "pricing_tier": self._get_pricing_tier(),
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
         }
-
-    def _get_context_window(self) -> int:
-        """Get context window size for the model."""
-        context_windows = {
-            "gpt-4o": 128000,
-            "gpt-4o-mini": 128000,
-            "gpt-4": 8192,
-            "gpt-4-turbo": 128000,
-            "gpt-3.5-turbo": 16385,
-        }
-        return context_windows.get(self.config.model, 4096)
-
-    def _get_pricing_tier(self) -> str:
-        """Get pricing tier for the model."""
-        if "mini" in self.config.model.lower():
-            return "low-cost"
-        elif "gpt-4" in self.config.model.lower():
-            return "premium"
-        else:
-            return "standard"

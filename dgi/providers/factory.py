@@ -25,7 +25,7 @@ def create_provider(
     provider_type: str | ProviderType,
     model: Optional[str] = None,
     api_key: Optional[str] = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> LLMProvider:
     """Create an LLM provider instance.
 
@@ -89,7 +89,7 @@ def create_provider(
 def create_provider_from_env(
     provider_env_var: str = "DGI_LLM_PROVIDER",
     model_env_var: str = "DGI_LLM_MODEL",
-    **kwargs,
+    **kwargs: Any,
 ) -> LLMProvider:
     """Create provider from environment variables.
 

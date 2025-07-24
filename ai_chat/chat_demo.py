@@ -1,162 +1,181 @@
-"""Chat demo script for DGI toolkit with configurable LLM providers.
-
-This script demonstrates how to use different LLM providers (OpenAI, Anthropic)
-with the DGI screener tool to answer natural language questions about dividend growth investing.
-"""
+"""Interactive chat demo with DGI Toolkit LLM providers."""
 
 import os
 import sys
-from typing import List
-from dgi.providers import create_provider_from_env, get_available_providers
-from ai_chat.screener_tool import screen_dividends
+from typing import Any, List
+
+# Add the parent directory to Python path to import dgi modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.prompt import Prompt
+    from rich.table import Table
+except ImportError:
+    print("Please install rich: pip install rich")
+    sys.exit(1)
+
+try:
+    from dgi.providers.factory import create_provider_from_env, get_available_providers
+except ImportError as e:
+    print(f"Error importing DGI modules: {e}")
+    print("Make sure you're running from the project root directory")
+    sys.exit(1)
+
+console = Console()
 
 
-def create_dgi_agent() -> any:
-    """Create a LangChain agent with DGI screening capabilities."""
+def show_welcome() -> None:
+    """Display welcome message and instructions."""
+    welcome_text = """
+    🤖 Welcome to DGI Toolkit AI Chat Demo!
+    
+    This demo showcases the LLM provider integration capabilities.
+    You can chat with different AI models and ask about dividend growth investing.
+    
+    Commands:
+    • Type your questions naturally
+    • Type 'quit' or 'exit' to end the session
+    • Type 'help' for more information
+    • Type 'info' to see current provider details
+    """
+
+    console.print(
+        Panel(welcome_text, title="🎯 DGI Toolkit Chat Demo", border_style="cyan")
+    )
+
+
+def show_provider_info(provider: Any) -> None:
+    """Display information about the current provider."""
+    try:
+        config_summary = provider.get_config_summary()
+        model_info = provider.get_model_info()
+
+        table = Table(title="Current Provider Configuration")
+        table.add_column("Setting", style="cyan")
+        table.add_column("Value", style="green")
+
+        # Add config information
+        for key, value in config_summary.items():
+            table.add_row(str(key).replace("_", " ").title(), str(value))
+
+        # Add model information
+        for key, value in model_info.items():
+            if key not in config_summary:  # Avoid duplicates
+                table.add_row(str(key).replace("_", " ").title(), str(value))
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Error getting provider info: {e}[/red]")
+
+
+def run_chat_demo() -> None:
+    """Run the interactive chat demonstration."""
+    show_welcome()
 
     try:
-        # Create provider from environment configuration
-        provider = create_provider_from_env(
-            temperature=0.1,  # Low temperature for consistent financial analysis
-            timeout=30,  # Keep timeouts low for CI efficiency
-            max_retries=2,
+        # Create provider from environment variables
+        provider = create_provider_from_env()
+        console.print(
+            f"[green]✅ Successfully initialized {provider.config.provider.value} provider[/green]"
         )
 
         # Validate API key
         if not provider.validate_api_key():
-            available = get_available_providers()
-            provider_info = available[provider.config.provider.value]
-            api_key_env = provider_info["api_key_env"]
+            console.print(
+                "[red]❌ Invalid or missing API key. Please check your environment variables.[/red]"
+            )
+            console.print("\nRequired environment variables:")
+            for provider_type, env_var in [
+                ("OpenAI", "OPENAI_API_KEY"),
+                ("Anthropic", "ANTHROPIC_API_KEY"),
+            ]:
+                console.print(f"  • {env_var} (for {provider_type})")
+            return
 
-            print(f"❌ ERROR: {api_key_env} environment variable is required")
-            print(f"Please set your {provider.config.provider.value} API key:")
-            print(f"export {api_key_env}='your-api-key-here'")
-            sys.exit(1)
+        console.print("[green]✅ API key validated successfully[/green]")
 
-        # Display provider information
-        model_info = provider.get_model_info()
-        print(f"🔧 Using {model_info['provider']} - {model_info['model']}")
-        print(
-            f"   Context: {model_info['context_window']:,} tokens | Tier: {model_info['pricing_tier']}"
+        # Show initial provider info
+        show_provider_info(provider)
+
+        # Create a simple agent (you might want to add actual tools here)
+        tools: List[Any] = []  # Empty for now, can be extended with DGI-specific tools
+
+        try:
+            agent = provider.create_agent(tools, verbose=True)
+            console.print("[green]✅ Agent created successfully[/green]")
+        except Exception as e:
+            console.print(f"[red]❌ Error creating agent: {e}[/red]")
+            return
+
+        console.print(
+            "\n[cyan]💬 Chat session started! Type your questions below:[/cyan]"
         )
 
-        # Create agent with DGI screening tool
-        tools = [screen_dividends]
-
-        agent = provider.create_agent(tools)
-
-        return agent, provider
-
-    except Exception as e:
-        print(f"❌ Failed to create provider: {e}")
-        print("\n💡 Available providers:")
-        available = get_available_providers()
-        for name, info in available.items():
-            print(f"   {name}: {info['api_key_env']} required")
-        sys.exit(1)
-
-
-def show_provider_info():
-    """Display information about available providers and current configuration."""
-    print("🔧 Provider Configuration")
-    print("-" * 30)
-
-    # Show current environment settings
-    current_provider = os.getenv("DGI_LLM_PROVIDER", "openai")
-    current_model = os.getenv("DGI_LLM_MODEL", "default")
-
-    print(f"Current Provider: {current_provider}")
-    print(f"Current Model: {current_model}")
-    print()
-
-    # Show available options
-    available = get_available_providers()
-    print("📋 Available Providers:")
-    for name, info in available.items():
-        status = "✅" if os.getenv(info["api_key_env"]) else "❌"
-        print(f"  {status} {name.upper()}")
-        print(f"     Default: {info['default_model']}")
-        print(f"     API Key: {info['api_key_env']}")
-        print(f"     Models: {', '.join(info['supported_models'][:3])}...")
-        print()
-
-    print("⚙️  To switch providers:")
-    print("export DGI_LLM_PROVIDER=anthropic")
-    print("export DGI_LLM_MODEL=claude-3-5-haiku-20241022")
-    print()
-
-
-def demo_queries() -> List[str]:
-    """Get demonstration queries for the DGI agent."""
-    return [
-        "Show me technology stocks with at least 5% five-year dividend CAGR",
-        "Find the top 5 dividend stocks with yield above 3% and payout ratio below 60%",
-        "What are the best dividend growth stocks in the current data?",
-        "Screen for conservative dividend stocks with low payout ratios under 50%",
-    ]
-
-
-def run_chat_demo():
-    """Run the interactive chat demo."""
-    print("🚀 DGI Toolkit AI Chat Demo")
-    print("=" * 50)
-
-    # Show provider configuration
-    show_provider_info()
-
-    print("Initializing AI agent with DGI screening capabilities...")
-
-    try:
-        agent, provider = create_dgi_agent()
-        print("✅ Agent initialized successfully!")
-        print()
-
-        # Show available demo queries
-        queries = demo_queries()
-        print("💡 Try these example queries:")
-        for i, query in enumerate(queries, 1):
-            print(f"  {i}. {query}")
-        print()
-
-        # Interactive loop
         while True:
-            print("-" * 50)
-            user_input = input(
-                "🤖 Ask about dividend stocks (or 'quit' to exit): "
-            ).strip()
+            try:
+                # Get user input
+                user_input = Prompt.ask("\n[bold blue]You[/bold blue]")
 
-            if user_input.lower() in ["quit", "exit", "q"]:
-                print("👋 Thanks for using DGI Toolkit AI Chat!")
+                if user_input.lower() in ["quit", "exit", "bye"]:
+                    console.print("[yellow]👋 Goodbye![/yellow]")
+                    break
+                elif user_input.lower() == "help":
+                    console.print(
+                        """
+[cyan]Available commands:[/cyan]
+• Ask any question about dividend growth investing
+• 'info' - Show current provider configuration
+• 'quit'/'exit' - End the chat session
+
+[cyan]Example questions:[/cyan]
+• "What makes a good dividend growth stock?"
+• "How do I calculate dividend yield?"
+• "What's the difference between dividend yield and dividend growth?"
+                    """
+                    )
+                    continue
+                elif user_input.lower() == "info":
+                    show_provider_info(provider)
+                    continue
+
+                # Process the query with the agent
+                console.print("[yellow]🤔 Thinking...[/yellow]")
+
+                try:
+                    # Use the agent to process the query
+                    response = agent.run(user_input)
+
+                    # Display the response
+                    console.print(
+                        Panel(response, title="🤖 AI Response", border_style="green")
+                    )
+
+                except Exception as e:
+                    console.print(f"[red]❌ Error processing query: {e}[/red]")
+                    console.print(
+                        "[yellow]💡 Try rephrasing your question or check your API limits.[/yellow]"
+                    )
+
+            except KeyboardInterrupt:
+                console.print("\n[yellow]👋 Chat interrupted. Goodbye![/yellow]")
+                break
+            except Exception as e:
+                console.print(f"[red]❌ Unexpected error: {e}[/red]")
                 break
 
-            if user_input.lower() in ["config", "providers"]:
-                show_provider_info()
-                continue
-
-            if not user_input:
-                continue
-
-            try:
-                print(f"\n🔍 Processing: {user_input}")
-                print("🧠 AI Reasoning:")
-
-                # Run the agent
-                response = agent.run(user_input)
-
-                print("\n📊 Final Answer:")
-                print(response)
-                print()
-
-            except Exception as e:
-                print(f"\n❌ Error processing query: {e}")
-                print("Please try rephrasing your question or check your API key.")
-                print()
-
-    except KeyboardInterrupt:
-        print("\n\n👋 Demo interrupted by user. Goodbye!")
     except Exception as e:
-        print(f"\n❌ Failed to initialize agent: {e}")
-        sys.exit(1)
+        console.print(f"[red]❌ Failed to initialize provider: {e}[/red]")
+        console.print(
+            "\n[yellow]💡 Make sure you have set the required environment variables:[/yellow]"
+        )
+
+        # Show available providers and their requirements
+        available = get_available_providers()
+        for provider_name, info in available.items():
+            console.print(f"  • {provider_name.upper()}: Set {info['api_key_env']}")
 
 
 if __name__ == "__main__":

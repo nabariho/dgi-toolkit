@@ -1,9 +1,9 @@
-"""Base classes for LLM provider abstraction."""
+"""Base classes for LLM providers."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ProviderType(Enum):
@@ -11,10 +11,6 @@ class ProviderType(Enum):
 
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
-    # Future providers can be added here
-    # AZURE_OPENAI = "azure_openai"
-    # GOOGLE_PALM = "google_palm"
-    # COHERE = "cohere"
 
 
 @dataclass
@@ -29,9 +25,9 @@ class LLMConfig:
     timeout: int = 30
     max_retries: int = 2
     # Provider-specific settings
-    extra_params: Dict[str, Any] = None
+    extra_params: Optional[Dict[str, Any]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.extra_params is None:
             self.extra_params = {}
 
@@ -39,9 +35,9 @@ class LLMConfig:
 class LLMProvider(ABC):
     """Abstract base class for LLM providers."""
 
-    def __init__(self, config: LLMConfig):
+    def __init__(self, config: LLMConfig) -> None:
         self.config = config
-        self._client = None
+        self._client: Optional[Any] = None
 
     @abstractmethod
     def _initialize_client(self) -> Any:
@@ -56,7 +52,7 @@ class LLMProvider(ABC):
         return self._client
 
     @abstractmethod
-    def create_agent(self, tools: List[Any], **kwargs) -> Any:
+    def create_agent(self, tools: List[Any], **kwargs: Any) -> Any:
         """Create an agent with the specified tools."""
         pass
 
