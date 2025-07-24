@@ -4,6 +4,9 @@ from pydantic import ValidationError
 from dgi.models import CompanyData
 from dgi.exceptions import DataValidationError
 
+# Export for external use
+__all__ = ["DgiRowValidator", "PydanticRowValidation", "DataValidationError"]
+
 logger = logging.getLogger(__name__)
 
 

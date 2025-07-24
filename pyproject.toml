@@ -45,4 +45,8 @@ line-length = 120
 
 [tool.mypy]
 python_version = "3.12"
-strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
