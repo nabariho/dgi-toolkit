@@ -28,7 +28,9 @@ repos:
         args: [.]
       - id: mypy
         name: mypy
-        entry: poetry run mypy --config-file=mypy.ini dgi/ tests/test_filtering.py tests/test_scoring.py tests/test_portfolio.py tests/test_validation.py
+        entry:
+          poetry run mypy --config-file=mypy.ini dgi/ tests/test_filtering.py
+          tests/test_scoring.py tests/test_portfolio.py tests/test_validation.py
         language: system
         types: [python]
         description: "Static type checking with MyPy"
