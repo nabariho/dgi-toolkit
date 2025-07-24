@@ -25,6 +25,12 @@ jobs:
           key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
       - name: Install deps
         run: poetry install --no-interaction
+      - name: Show tool versions
+        run: |
+          python --version
+          poetry run black --version
+          poetry run ruff --version
+          poetry run pre-commit --version
       - name: Pre-commit
         run: poetry run pre-commit run --all-files --show-diff-on-failure
       - name: Tests
