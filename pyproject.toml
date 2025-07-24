@@ -10,7 +10,7 @@ packages = [{include = "dgi", from = "."}]
 dgi = "dgi.cli:app"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.13"
 pandas = "^2.3.1"
 typer = {extras = ["all"], version = "^0.16.0"}
 rich = "^14.0.0"
@@ -30,8 +30,8 @@ notebook = "^7.4.4"
 pre-commit = "^4.2.0"
 mypy = "^1.17.0"
 pandas-stubs = "^2.3.0.250703"
-black = "^25.1.0"
-ruff = "^0.12.4"
+black = {extras = ["jupyter"], version = "^25.1.0"}
+ruff = "^0.4.4"
 isort = "^6.0.1"
 bandit = "^1.8.6"
 
@@ -41,14 +41,12 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
+target-version = ['py313']
 
 [tool.ruff]
-# Same as Black
 line-length = 88
 indent-width = 4
-
-# Assume Python 3.12
-target-version = "py312"
+target-version = "py313"
 
 # Exclude notebooks and other non-standard Python files
 exclude = [
@@ -135,5 +133,5 @@ skips = ["B101", "B601"]  # Skip assert and shell injection tests
 skips = ["**/test_*.py", "**/tests/**"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = true
