@@ -1,48 +1,35 @@
 # syntax=docker/dockerfile:1
-FROM --platform=linux/amd64 python:3.12-slim AS builder
+FROM --platform=linux/amd64 python:3.12-alpine AS runtime
 
 WORKDIR /app
 
-# Install only essential build dependencies and clean up aggressively
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-# Install Poetry
-ENV POETRY_VERSION=1.8.2
-RUN curl -sSL https://install.python-poetry.org | python3 - \
-    && ln -s /root/.local/bin/poetry /usr/local/bin/poetry
-
-# Copy only requirements to cache dependencies
-COPY pyproject.toml poetry.lock* ./
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-root --only main --no-dev \
-    && pip uninstall -y poetry \
+# Install only essential runtime dependencies (no LangChain bloat)
+RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev \
+    && pip install --no-cache-dir \
+        pandas==2.3.1 \
+        typer==0.16.0 \
+        rich==14.0.0 \
+        pydantic==2.11.2 \
+        matplotlib==3.10.3 \
+    && apk del .build-deps \
     && rm -rf /root/.cache /tmp/* \
     && find /usr/local/lib/python3.12/site-packages -name "*.pyc" -delete \
-    && find /usr/local/lib/python3.12/site-packages -name "__pycache__" -exec rm -rf {} + || true
+    && find /usr/local/lib/python3.12/site-packages -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true \
+    && find /usr/local/lib/python3.12/site-packages -name "*.pyo" -delete
 
-# Copy source (minimal necessary files)
+# Copy only core application files (exclude ai_chat to avoid LangChain)
 COPY dgi/ ./dgi/
-COPY ai_chat/ ./ai_chat/
-COPY data/ ./data/
 
-# Final runtime image
-FROM --platform=linux/amd64 python:3.12-slim AS runtime
-WORKDIR /app
+# Create minimal data directory
+RUN mkdir -p ./data
+COPY data/fundamentals_small.csv ./data/
 
-# Copy only the necessary Python packages and source
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /app/dgi ./dgi
-COPY --from=builder /app/ai_chat ./ai_chat
-COPY --from=builder /app/data ./data
+# Create non-root user and final cleanup
+RUN adduser -D -s /bin/sh appuser \
+    && chown -R appuser:appuser /app \
+    && rm -rf /tmp/* /var/tmp/* /root/.cache
 
-# Clean up any remaining cache
-RUN rm -rf /tmp/* /var/tmp/* /root/.cache \
-    && find . -name "*.pyc" -delete \
-    && find . -name "__pycache__" -exec rm -rf {} + || true
+USER appuser
 
-CMD ["python3"]
+# Test that core functionality works
+CMD ["python3", "-c", "import dgi.screener; import dgi.portfolio; print('DGI Toolkit core ready')"]
