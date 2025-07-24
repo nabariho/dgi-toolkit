@@ -10,7 +10,7 @@ packages = [{include = "dgi", from = "."}]
 dgi = "dgi.cli:app"
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.12"
 pandas = "^2.3.1"
 typer = {extras = ["all"], version = "^0.16.0"}
 rich = "^14.0.0"
