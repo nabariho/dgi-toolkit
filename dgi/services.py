@@ -9,6 +9,11 @@ from typing import Any
 
 from pandas import DataFrame
 
+from dgi.exceptions import (
+    DataValidationError,
+    PortfolioError,
+    ScreeningError,
+)
 from dgi.models import CompanyData
 from dgi.scoring_config import get_scoring_config
 
@@ -76,13 +81,25 @@ class ScreeningService:
     ) -> None:
         """Validate screening parameters according to business rules."""
         if min_yield < 0:
-            raise ValueError("Minimum yield must be non-negative")
+            raise DataValidationError(
+                "Minimum yield must be non-negative", field="min_yield", value=min_yield
+            )
         if max_payout < 0 or max_payout > 200:
-            raise ValueError("Maximum payout ratio must be between 0 and 200")
+            raise DataValidationError(
+                "Maximum payout ratio must be between 0 and 200",
+                field="max_payout",
+                value=max_payout,
+            )
         if min_cagr < -100 or min_cagr > 100:
-            raise ValueError("Minimum CAGR must be between -100 and 100")
+            raise DataValidationError(
+                "Minimum CAGR must be between -100 and 100",
+                field="min_cagr",
+                value=min_cagr,
+            )
         if top_n < 1:
-            raise ValueError("Top N must be at least 1")
+            raise DataValidationError(
+                "Top N must be at least 1", field="top_n", value=top_n
+            )
 
     @staticmethod
     def apply_dgi_criteria(
@@ -148,7 +165,9 @@ class ScreeningService:
     def validate_screening_results(df: DataFrame) -> None:
         """Validate screening results according to business rules."""
         if not isinstance(df, DataFrame):
-            raise ValueError("Screening results must be a DataFrame")
+            raise ScreeningError(
+                "Screening results must be a DataFrame", operation="validation"
+            )
 
         # For empty results, that's valid
         if df.empty:
@@ -157,7 +176,9 @@ class ScreeningService:
         required_columns = ["symbol", "dividend_yield", "payout", "dividend_cagr"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            raise ValueError(f"Missing required columns: {missing_columns}")
+            raise ScreeningError(
+                f"Missing required columns: {missing_columns}", operation="validation"
+            )
 
     @staticmethod
     def calculate_screening_metrics(df: DataFrame) -> dict[str, Any]:
@@ -207,6 +228,64 @@ class ScreeningService:
 
         return metrics
 
+    @staticmethod
+    def rows_to_dataframe(rows: list[dict[str, Any]]) -> DataFrame:
+        """Convert list of row dictionaries to DataFrame.
+
+        This is pure business logic for data transformation.
+        """
+        if not rows:
+            return DataFrame()
+
+        return DataFrame(rows)
+
+    @staticmethod
+    def apply_screening_criteria(
+        df: DataFrame, min_yield: float, max_payout: float, min_cagr: float
+    ) -> DataFrame:
+        """Apply screening criteria to DataFrame.
+
+        This is pure business logic for filtering stocks.
+        """
+        if df.empty:
+            return df
+
+        filtered_df = df.copy()
+
+        # Apply yield filter
+        if "dividend_yield" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["dividend_yield"] >= min_yield]
+
+        # Apply payout filter
+        if "payout" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["payout"] <= max_payout]
+
+        # Apply CAGR filter
+        if "dividend_cagr" in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df["dividend_cagr"] >= min_cagr]
+
+        return filtered_df
+
+    @staticmethod
+    def convert_to_response_format(df: DataFrame) -> list[dict[str, Any]]:
+        """Convert DataFrame to response format.
+
+        This is pure business logic for data transformation.
+        """
+        if df.empty:
+            return []
+
+        # Convert DataFrame to list of dictionaries
+        records = df.to_dict("records")
+
+        # Ensure all numeric values are properly formatted
+        for record in records:
+            for key, value in record.items():
+                if isinstance(value, (int, float)):
+                    record[key] = float(value)
+
+        return records
+
 
 class PortfolioService:
     """Service for portfolio construction business logic."""
@@ -239,12 +318,12 @@ class PortfolioService:
     def validate_portfolio_weights(df: DataFrame) -> None:
         """Validate portfolio weights according to business rules."""
         if "weight" not in df.columns:
-            raise ValueError("Portfolio must have weight column")
+            raise PortfolioError("Portfolio must have weight column")
 
         if len(df) > 0:
             total_weight = df["weight"].sum()
             if abs(total_weight - 1.0) > 0.001:  # Allow small floating point errors
-                raise ValueError(
+                raise PortfolioError(
                     f"Portfolio weights must sum to 1.0, got {total_weight}"
                 )
 
@@ -292,19 +371,37 @@ class ValidationService:
     def validate_company_data(company: CompanyData) -> None:
         """Validate company data according to business rules."""
         if company.dividend_yield < 0:
-            raise ValueError("Dividend yield cannot be negative")
+            raise DataValidationError(
+                "Dividend yield cannot be negative",
+                field="dividend_yield",
+                value=company.dividend_yield,
+            )
         if company.payout_ratio < 0 or company.payout_ratio > 200:
-            raise ValueError("Payout ratio must be between 0 and 200")
+            raise DataValidationError(
+                "Payout ratio must be between 0 and 200",
+                field="payout_ratio",
+                value=company.payout_ratio,
+            )
         if company.dividend_growth_5y < -100 or company.dividend_growth_5y > 100:
-            raise ValueError("Dividend growth must be between -100 and 100")
+            raise DataValidationError(
+                "Dividend growth must be between -100 and 100",
+                field="dividend_growth_5y",
+                value=company.dividend_growth_5y,
+            )
         if company.fcf_yield < -100 or company.fcf_yield > 100:
-            raise ValueError("FCF yield must be between -100 and 100")
+            raise DataValidationError(
+                "FCF yield must be between -100 and 100",
+                field="fcf_yield",
+                value=company.fcf_yield,
+            )
 
     @staticmethod
     def validate_screening_results(df: DataFrame) -> None:
         """Validate screening results according to business rules."""
         if not isinstance(df, DataFrame):
-            raise ValueError("Screening results must be a DataFrame")
+            raise ScreeningError(
+                "Screening results must be a DataFrame", operation="validation"
+            )
 
         # For empty results, that's valid
         if df.empty:
@@ -313,7 +410,9 @@ class ValidationService:
         required_columns = ["symbol", "dividend_yield", "payout", "dividend_cagr"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            raise ValueError(f"Missing required columns: {missing_columns}")
+            raise ScreeningError(
+                f"Missing required columns: {missing_columns}", operation="validation"
+            )
 
     @staticmethod
     def sanitize_company_name(name: str) -> str:

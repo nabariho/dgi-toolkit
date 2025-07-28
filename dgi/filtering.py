@@ -1,68 +1,23 @@
+"""Filtering strategies for DGI Toolkit.
+
+This module implements the Strategy pattern for different filtering approaches
+used in stock screening. All filters inherit from BaseFilter and can be
+composed together for complex filtering logic.
+"""
+
 from abc import ABC, abstractmethod
-from typing import Protocol
 
 from pandas import DataFrame
 
 
 class BaseFilter(ABC):
-    """Base interface for all filter operations."""
+    """Abstract base class for all filter strategies."""
 
     @abstractmethod
     def filter(
         self, df: DataFrame, min_yield: float, max_payout: float, min_cagr: float
     ) -> DataFrame:
         """Apply filter to DataFrame."""
-
-
-class YieldFilter(Protocol):
-    """Protocol for yield-based filtering."""
-
-    def filter_by_yield(self, df: DataFrame, min_yield: float) -> DataFrame:
-        """Filter by minimum dividend yield."""
-        ...
-
-
-class PayoutFilter(Protocol):
-    """Protocol for payout-based filtering."""
-
-    def filter_by_payout(self, df: DataFrame, max_payout: float) -> DataFrame:
-        """Filter by maximum payout ratio."""
-        ...
-
-
-class GrowthFilter(Protocol):
-    """Protocol for growth-based filtering."""
-
-    def filter_by_growth(self, df: DataFrame, min_cagr: float) -> DataFrame:
-        """Filter by minimum dividend growth."""
-        ...
-
-
-class SectorFilter(Protocol):
-    """Protocol for sector-based filtering."""
-
-    def filter_by_sector(self, df: DataFrame, allowed_sectors: list[str]) -> DataFrame:
-        """Filter by allowed sectors."""
-        ...
-
-
-class CompositeFilter(Protocol):
-    """Protocol for composite filtering."""
-
-    def add_filter(self, filter_strategy: BaseFilter) -> None:
-        """Add a filter to the composite."""
-        ...
-
-
-class RankingFilter(Protocol):
-    """Protocol for ranking-based filtering."""
-
-    def filter_by_rank(self, df: DataFrame, top_n: int, sort_column: str) -> DataFrame:
-        """Filter by ranking criteria."""
-        ...
-
-
-# Specific filter interfaces that implement only what they need
 
 
 class YieldOnlyFilter(BaseFilter):
@@ -202,57 +157,26 @@ class TopNFilter(BaseFilter):
         return df.head(self.top_n)
 
 
-# Legacy implementations for backward compatibility
+class RankingFilter(BaseFilter):
+    """Filter that ranks results by a specific column and returns top N."""
 
+    def __init__(self, top_n: int, sort_column: str, ascending: bool = False):
+        self.top_n = top_n
+        self.sort_column = sort_column
+        self.ascending = ascending
 
-class YieldFilterImpl:
-    """Implementation of yield filter only."""
-
-    def filter_by_yield(self, df: DataFrame, min_yield: float) -> DataFrame:
-        """Filter by minimum dividend yield."""
-        if df.empty or "dividend_yield" not in df.columns:
+    def filter(
+        self, df: DataFrame, min_yield: float, max_payout: float, min_cagr: float
+    ) -> DataFrame:
+        # Handle empty DataFrame gracefully
+        if df.empty:
             return df
-        return df[df["dividend_yield"] >= min_yield]
 
+        # Check if sort column exists
+        if self.sort_column not in df.columns:
+            return df.head(self.top_n)
 
-class PayoutFilterImpl:
-    """Implementation of payout filter only."""
-
-    def filter_by_payout(self, df: DataFrame, max_payout: float) -> DataFrame:
-        """Filter by maximum payout ratio."""
-        if df.empty or "payout" not in df.columns:
-            return df
-        return df[df["payout"] <= max_payout]
-
-
-class GrowthFilterImpl:
-    """Implementation of growth filter only."""
-
-    def filter_by_growth(self, df: DataFrame, min_cagr: float) -> DataFrame:
-        """Filter by minimum dividend growth."""
-        if df.empty or "dividend_cagr" not in df.columns:
-            return df
-        return df[df["dividend_cagr"] >= min_cagr]
-
-
-class SectorFilterImpl:
-    """Implementation of sector filter only."""
-
-    def __init__(self, allowed_sectors: list[str]):
-        self.allowed_sectors = allowed_sectors
-
-    def filter_by_sector(self, df: DataFrame, allowed_sectors: list[str]) -> DataFrame:
-        """Filter by allowed sectors."""
-        if df.empty or "sector" not in df.columns:
-            return df
-        return df[df["sector"].isin(allowed_sectors)]
-
-
-class RankingFilterImpl:
-    """Implementation of ranking filter only."""
-
-    def filter_by_rank(self, df: DataFrame, top_n: int, sort_column: str) -> DataFrame:
-        """Filter by ranking criteria."""
-        if df.empty or sort_column not in df.columns:
-            return df
-        return df.nlargest(top_n, sort_column)
+        # Sort and return top N
+        return df.sort_values(self.sort_column, ascending=self.ascending).head(
+            self.top_n
+        )

@@ -3,10 +3,14 @@
 import pandas as pd
 import pytest
 
-from dgi.validation_utils import (
+from dgi.exceptions import (
+    DataFrameValidationError,
+    DataValidationError,
     PathValidationError,
     SecurityValidationError,
-    ValidationError,
+    URLValidationError,
+)
+from dgi.validation_utils import (
     sanitize_for_logging,
     sanitize_string,
     validate_cagr,
@@ -128,27 +132,27 @@ class TestValidateNumericBounds:
 
     def test_value_below_minimum(self):
         """Test value below minimum bound."""
-        with pytest.raises(ValidationError, match="must be at least"):
+        with pytest.raises(DataValidationError, match="must be at least"):
             validate_numeric_bounds(-1, 0, 10, "test_field")
 
     def test_value_above_maximum(self):
         """Test value above maximum bound."""
-        with pytest.raises(ValidationError, match="must be at most"):
+        with pytest.raises(DataValidationError, match="must be at most"):
             validate_numeric_bounds(11, 0, 10, "test_field")
 
     def test_non_numeric_value(self):
         """Test handling of non-numeric value."""
-        with pytest.raises(ValidationError, match="must be numeric"):
+        with pytest.raises(DataValidationError, match="must be numeric"):
             validate_numeric_bounds("not a number", 0, 10, "test_field")
 
     def test_nan_value(self):
         """Test handling of NaN values."""
-        with pytest.raises(ValidationError, match="cannot be NaN"):
+        with pytest.raises(DataValidationError, match="cannot be NaN"):
             validate_numeric_bounds(float("nan"), 0, 10, "test_field")
 
     def test_infinite_value(self):
         """Test handling of infinite values."""
-        with pytest.raises(ValidationError, match="cannot be NaN or infinite"):
+        with pytest.raises(DataValidationError, match="cannot be NaN or infinite"):
             validate_numeric_bounds(float("inf"), 0, 10, "test_field")
 
 
@@ -167,12 +171,12 @@ class TestValidatePercentage:
 
     def test_negative_percentage(self):
         """Test rejection of negative percentage."""
-        with pytest.raises(ValidationError, match="must be at least"):
+        with pytest.raises(DataValidationError, match="must be at least"):
             validate_percentage(-1.0, "test_field")
 
     def test_percentage_above_100(self):
         """Test rejection of percentage above 100."""
-        with pytest.raises(ValidationError, match="must be at most"):
+        with pytest.raises(DataValidationError, match="must be at most"):
             validate_percentage(101.0, "test_field")
 
 
@@ -191,7 +195,7 @@ class TestValidateYieldRate:
 
     def test_negative_yield_rate(self):
         """Test rejection of negative yield rate."""
-        with pytest.raises(ValidationError, match="must be at least"):
+        with pytest.raises(DataValidationError, match="must be at least"):
             validate_yield_rate(-1.0, "test_field")
 
 
@@ -210,12 +214,12 @@ class TestValidateCagr:
 
     def test_cagr_below_minimum(self):
         """Test rejection of CAGR below minimum."""
-        with pytest.raises(ValidationError, match="must be at least"):
+        with pytest.raises(DataValidationError, match="must be at least"):
             validate_cagr(-51.0, "test_field")
 
     def test_cagr_above_maximum(self):
         """Test rejection of CAGR above maximum."""
-        with pytest.raises(ValidationError, match="must be at most"):
+        with pytest.raises(DataValidationError, match="must be at most"):
             validate_cagr(101.0, "test_field")
 
 
@@ -234,12 +238,12 @@ class TestValidatePortfolioSize:
 
     def test_portfolio_size_below_minimum(self):
         """Test rejection of portfolio size below minimum."""
-        with pytest.raises(ValidationError, match="must be at least"):
+        with pytest.raises(DataValidationError, match="must be at least"):
             validate_portfolio_size(0, "test_field")
 
     def test_portfolio_size_above_maximum(self):
         """Test rejection of portfolio size above maximum."""
-        with pytest.raises(ValidationError, match="must be at most"):
+        with pytest.raises(DataValidationError, match="must be at most"):
             validate_portfolio_size(101, "test_field")
 
 
@@ -260,12 +264,12 @@ class TestValidateWeightingMethod:
 
     def test_invalid_weighting_method(self):
         """Test rejection of invalid weighting method."""
-        with pytest.raises(ValidationError, match="must be one of"):
+        with pytest.raises(DataValidationError, match="must be one of"):
             validate_weighting_method("invalid", "test_field")
 
     def test_non_string_weighting_method(self):
         """Test handling of non-string weighting method."""
-        with pytest.raises(ValidationError, match="must be a string"):
+        with pytest.raises(DataValidationError, match="must be a string"):
             validate_weighting_method(123, "test_field")
 
 
@@ -317,22 +321,22 @@ class TestValidateUrl:
 
     def test_url_without_scheme(self):
         """Test rejection of URL without scheme."""
-        with pytest.raises(ValidationError, match="must include a scheme"):
+        with pytest.raises(URLValidationError, match="must include a scheme"):
             validate_url("example.com")
 
     def test_disallowed_scheme(self):
         """Test rejection of disallowed URL scheme."""
-        with pytest.raises(ValidationError, match="not allowed"):
+        with pytest.raises(URLValidationError, match="not allowed"):
             validate_url("ftp://example.com", allowed_schemes=["http", "https"])
 
     def test_non_string_url(self):
         """Test handling of non-string URL."""
-        with pytest.raises(ValidationError, match="Expected string URL"):
+        with pytest.raises(URLValidationError, match="Expected string URL"):
             validate_url(123)
 
     def test_invalid_url_format(self):
         """Test handling of invalid URL format."""
-        with pytest.raises(ValidationError, match="must include a scheme"):
+        with pytest.raises(URLValidationError, match="must include a scheme"):
             validate_url("not a url")
 
 
@@ -348,30 +352,30 @@ class TestValidateCsvData:
     def test_empty_dataframe(self):
         """Test rejection of empty DataFrame."""
         df = pd.DataFrame()
-        with pytest.raises(ValidationError, match="DataFrame is empty"):
+        with pytest.raises(DataFrameValidationError, match="DataFrame is empty"):
             validate_csv_data(df)
 
     def test_too_many_rows(self):
         """Test rejection of DataFrame with too many rows."""
         df = pd.DataFrame({"col1": range(10001)})
-        with pytest.raises(ValidationError, match="too many rows"):
+        with pytest.raises(DataFrameValidationError, match="too many rows"):
             validate_csv_data(df, max_rows=10000)
 
     def test_missing_required_columns(self):
         """Test rejection of DataFrame missing required columns."""
         df = pd.DataFrame({"col1": [1, 2]})
-        with pytest.raises(ValidationError, match="Missing required columns"):
+        with pytest.raises(DataFrameValidationError, match="Missing required columns"):
             validate_csv_data(df, required_columns=["col1", "col2"])
 
     def test_non_dataframe_input(self):
         """Test handling of non-DataFrame input."""
-        with pytest.raises(ValidationError, match="Expected DataFrame"):
+        with pytest.raises(DataFrameValidationError, match="Expected DataFrame"):
             validate_csv_data("not a dataframe")
 
     def test_suspicious_column_names(self):
         """Test rejection of suspicious column names."""
         df = pd.DataFrame({"<script>": [1, 2]})
-        with pytest.raises(ValidationError, match="invalid characters"):
+        with pytest.raises(DataFrameValidationError, match="invalid characters"):
             validate_csv_data(df)
 
 
@@ -387,13 +391,13 @@ class TestValidateUuidFormat:
     def test_invalid_uuid_format(self):
         """Test invalid UUID format."""
         invalid_uuid = "not-a-uuid"
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(DataValidationError) as exc_info:
             validate_uuid_format(invalid_uuid)
         assert "must be a valid UUID format" in str(exc_info.value)
 
     def test_non_string_uuid(self):
         """Test non-string UUID input."""
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(DataValidationError) as exc_info:
             validate_uuid_format(123)
         assert "must be a string" in str(exc_info.value)
 
@@ -418,13 +422,13 @@ class TestValidateUserId:
         """Test user ID with invalid characters."""
         invalid_ids = ["user@123", "user#123", "user 123", "user.123"]
         for user_id in invalid_ids:
-            with pytest.raises(ValidationError) as exc_info:
+            with pytest.raises(DataValidationError) as exc_info:
                 validate_user_id(user_id)
             assert "must contain only alphanumeric characters" in str(exc_info.value)
 
     def test_non_string_user_id(self):
         """Test non-string user ID input."""
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(DataValidationError) as exc_info:
             validate_user_id(123)
         assert "must be a string" in str(exc_info.value)
 

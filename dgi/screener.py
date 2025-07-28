@@ -192,7 +192,7 @@ def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
     try:
         validated_path = validate_file_path(csv_path, allowed_extensions=[".csv"])
     except PathValidationError as e:
-        raise ValueError(f"Invalid CSV file path: {e.message}")
+        raise ValueError(f"Invalid CSV file path: {e.message}") from e
 
     repo = CsvCompanyDataRepository(validated_path, _default_validator)
     screener = Screener(repo)
@@ -208,7 +208,7 @@ async def load_universe_async(
     try:
         validated_path = validate_file_path(csv_path, allowed_extensions=[".csv"])
     except PathValidationError as e:
-        raise ValueError(f"Invalid CSV file path: {e.message}")
+        raise ValueError(f"Invalid CSV file path: {e.message}") from e
 
     repo = CsvCompanyDataRepository(validated_path, _default_validator)
     screener = Screener(repo)

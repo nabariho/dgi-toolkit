@@ -17,10 +17,11 @@ class TestHealthEndpoint:
         response = test_client.get("/healthz")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "up"
+        assert data["status"] == "healthy"
         assert "version" in data
-        assert "environment" in data
         assert "timestamp" in data
+        assert "dependencies" in data
+        assert "metrics" in data
 
     def test_health_endpoint_content_type(self, test_client: TestClient) -> None:
         """Test that /healthz returns correct content type."""
@@ -297,12 +298,13 @@ class TestRootEndpoint:
         response = test_client.get("/")
         assert response.status_code == 200
         data = response.json()
-        assert "message" in data
+        assert "name" in data
         assert "version" in data
-        assert "docs_url" in data
-        assert "health_url" in data
+        assert "description" in data
+        assert "documentation_url" in data
+        assert "features" in data
+        assert "rate_limits" in data
         assert "endpoints" in data
-        assert "timestamp" in data
 
 
 class TestSecurityHeaders:

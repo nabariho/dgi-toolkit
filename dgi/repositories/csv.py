@@ -4,6 +4,8 @@ import logging
 import weakref
 from collections.abc import Generator
 from contextlib import contextmanager
+from types import TracebackType
+from typing import Any
 
 import pandas as pd
 
@@ -21,7 +23,7 @@ class CsvCompanyDataRepository(CompanyDataRepository):
         try:
             self.csv_path = validate_file_path(csv_path, allowed_extensions=[".csv"])
         except PathValidationError as e:
-            raise ValueError(f"Invalid CSV file path: {e.message}")
+            raise ValueError(f"Invalid CSV file path: {e.message}") from e
 
         self.validator = validator
         self._data_cache = None
@@ -47,18 +49,26 @@ class CsvCompanyDataRepository(CompanyDataRepository):
         try:
             # Use context manager for file handling
             with self._get_csv_file() as df:
+                if df.empty:
+                    logger.warning(f"CSV file is empty: {self.csv_path}")
+                    return []
+
+                # Convert DataFrame to list of dictionaries for validation
+                rows = df.to_dict("records")
+
                 # Validate and convert to CompanyData objects
-                rows = self.validator.validate_rows(df.to_dict("records"))
+                validated_rows = self.validator.validate_rows(rows)
+
                 logger.info(
-                    f"Successfully loaded {len(rows)} valid rows from {self.csv_path}"
+                    f"Successfully loaded {len(validated_rows)} valid rows from {self.csv_path}"
                 )
 
                 # Monitor resource usage
                 self._resource_monitor.record_data_load(
-                    len(rows), df.memory_usage(deep=True).sum()
+                    len(validated_rows), df.memory_usage(deep=True).sum()
                 )
 
-                return rows
+                return validated_rows
         except Exception as e:
             logger.error(f"Failed to load CSV data from {self.csv_path}: {e}")
             raise
@@ -89,22 +99,8 @@ class CsvCompanyDataRepository(CompanyDataRepository):
                 if old_name in df.columns and new_name not in df.columns:
                     df = df.rename(columns={old_name: new_name})
 
-            # Convert numeric columns with error handling
-            numeric_columns = [
-                "dividend_yield",
-                "payout_ratio",
-                "dividend_growth_5y",
-                "fcf_yield",
-            ]
-            for col in numeric_columns:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors="coerce")
-
-            # Clean up any remaining NaN values for required columns
-            required_columns = ["symbol", "dividend_yield", "payout_ratio"]
-            available_columns = [col for col in required_columns if col in df.columns]
-            if available_columns:
-                df = df.dropna(subset=available_columns)
+            # Don't do numeric conversion here - let the validator handle it
+            # This allows the validator to properly raise DataValidationError for invalid data
 
             yield df
 
@@ -136,15 +132,20 @@ class CsvCompanyDataRepository(CompanyDataRepository):
             gc.collect()
             logger.info("Data cache cleared")
 
-    def __enter__(self):
+    def __enter__(self) -> "CsvCompanyDataRepository":
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Context manager exit with proper cleanup."""
         self.cleanup()
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Destructor to ensure cleanup."""
         self.cleanup()
 
@@ -165,7 +166,7 @@ class CsvCompanyDataRepository(CompanyDataRepository):
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
 
-    def get_resource_stats(self) -> dict:
+    def get_resource_stats(self) -> dict[str, Any]:
         """Get resource usage statistics."""
         return self._resource_monitor.get_stats()
 
@@ -173,12 +174,12 @@ class CsvCompanyDataRepository(CompanyDataRepository):
 class ResourceMonitor:
     """Monitor resource usage and memory consumption."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.data_loads = 0
         self.total_rows_loaded = 0
         self.total_memory_used = 0
         self.max_memory_used = 0
-        self._weak_refs = weakref.WeakSet()
+        self._weak_refs: weakref.WeakSet[Any] = weakref.WeakSet()
 
     def record_data_load(self, rows_count: int, memory_bytes: int) -> None:
         """Record a data load operation."""
@@ -187,11 +188,11 @@ class ResourceMonitor:
         self.total_memory_used += memory_bytes
         self.max_memory_used = max(self.max_memory_used, memory_bytes)
 
-    def register_object(self, obj) -> None:
+    def register_object(self, obj: Any) -> None:
         """Register an object for weak reference tracking."""
         self._weak_refs.add(obj)
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         """Get current resource statistics."""
         return {
             "data_loads": self.data_loads,

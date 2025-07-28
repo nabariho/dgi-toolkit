@@ -3,6 +3,7 @@
 import os
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 import psutil
 from fastapi import (
@@ -280,15 +281,27 @@ async def health_check(request: Request) -> HealthResponse:
         logger.warning(f"Could not check data file status: {e}")
         data_file_status = "error"
 
+    # Create dependencies status
+    dependencies = {
+        "data_file": data_file_status or "unknown",
+        "system_metrics": "healthy" if memory_usage_mb is not None else "unavailable",
+    }
+
+    # Create metrics
+    metrics = {
+        "memory_usage_mb": memory_usage_mb,
+        "cpu_usage_percent": cpu_usage_percent,
+        "data_file_size_mb": data_file_size_mb,
+        "environment": "development" if get_settings().debug else "production",
+    }
+
     return HealthResponse(
-        status="up",
+        status="healthy",
+        timestamp=datetime.now(),
         version=get_settings().api_version,
-        environment="development" if get_settings().debug else "production",
-        uptime_seconds=uptime_seconds,
-        memory_usage_mb=memory_usage_mb,
-        cpu_usage_percent=cpu_usage_percent,
-        data_file_status=data_file_status,
-        data_file_size_mb=data_file_size_mb,
+        uptime_seconds=uptime_seconds or 0.0,
+        dependencies=dependencies,
+        metrics=metrics,
     )
 
 
@@ -621,18 +634,27 @@ async def screen_stocks(
 async def root() -> APIInfoResponse:
     """Root endpoint with API information."""
     return APIInfoResponse(
-        message="DGI Toolkit API",
+        name="DGI Toolkit API",
         version=get_settings().api_version,
-        docs_url="/docs",
-        health_url="/healthz",
-        endpoints=[
-            "/api/v1/screen",
-            "/api/v1/health",
-            "/api/v1/cache/stats",
-            "/healthz",
-            "/docs",
-            "/redoc",
+        description="Dividend Growth Investing stock screening and analysis API",
+        documentation_url="/docs",
+        features=[
+            "Stock screening with DGI criteria",
+            "Real-time financial data",
+            "Portfolio analysis",
+            "Async processing",
         ],
+        rate_limits={
+            "requests_per_minute": get_settings().rate_limit_requests,
+            "burst_limit": 10,
+        },
+        endpoints={
+            "screening": "/api/v1/screen",
+            "async_screening": "/api/v1/screen/async",
+            "health": "/api/v1/health",
+            "cache_stats": "/api/v1/cache/stats",
+            "metrics": "/metrics",
+        },
     )
 
 
@@ -736,15 +758,27 @@ async def health_check_v1(request: Request) -> HealthResponse:
         logger.warning(f"Could not check data file status: {e}")
         data_file_status = "error"
 
+    # Create dependencies status
+    dependencies = {
+        "data_file": data_file_status or "unknown",
+        "system_metrics": "healthy" if memory_usage_mb is not None else "unavailable",
+    }
+
+    # Create metrics
+    metrics = {
+        "memory_usage_mb": memory_usage_mb,
+        "cpu_usage_percent": cpu_usage_percent,
+        "data_file_size_mb": data_file_size_mb,
+        "environment": "development" if get_settings().debug else "production",
+    }
+
     return HealthResponse(
-        status="up",
+        status="healthy",
+        timestamp=datetime.now(),
         version=get_settings().api_version,
-        environment="development" if get_settings().debug else "production",
-        uptime_seconds=uptime_seconds,
-        memory_usage_mb=memory_usage_mb,
-        cpu_usage_percent=cpu_usage_percent,
-        data_file_status=data_file_status,
-        data_file_size_mb=data_file_size_mb,
+        uptime_seconds=uptime_seconds or 0.0,
+        dependencies=dependencies,
+        metrics=metrics,
     )
 
 
@@ -798,11 +832,27 @@ async def health_check_v1(request: Request) -> HealthResponse:
 async def root_v1() -> APIInfoResponse:
     """Versioned root endpoint with API information."""
     return APIInfoResponse(
-        message="DGI Toolkit API v1",
+        name="DGI Toolkit API v1",
         version=get_settings().api_version,
-        docs_url="/docs",
-        health_url="/api/v1/health",
-        endpoints=["/api/v1/screen", "/api/v1/health", "/docs", "/redoc"],
+        description="Dividend Growth Investing stock screening and analysis API (v1)",
+        documentation_url="/docs",
+        features=[
+            "Stock screening with DGI criteria",
+            "Real-time financial data",
+            "Portfolio analysis",
+            "Async processing",
+        ],
+        rate_limits={
+            "requests_per_minute": get_settings().rate_limit_requests,
+            "burst_limit": 10,
+        },
+        endpoints={
+            "screening": "/api/v1/screen",
+            "async_screening": "/api/v1/screen/async",
+            "health": "/api/v1/health",
+            "cache_stats": "/api/v1/cache/stats",
+            "metrics": "/metrics",
+        },
     )
 
 

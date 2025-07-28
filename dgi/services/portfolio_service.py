@@ -54,6 +54,34 @@ class PortfolioService:
     }
 
     @staticmethod
+    def calculate_equal_weights(df: DataFrame) -> DataFrame:
+        """Calculate equal weights for all stocks in DataFrame."""
+        if df.empty:
+            return df
+
+        df = df.copy()
+        n = len(df)
+        df["weight"] = 1.0 / n
+        return df
+
+    @staticmethod
+    def calculate_score_weights(df: DataFrame) -> DataFrame:
+        """Calculate score-based weights for all stocks in DataFrame."""
+        if df.empty:
+            return df
+
+        df = df.copy()
+        total_score = df["score"].sum()
+
+        if total_score == 0:
+            # Fallback to equal weighting if no scores
+            df["weight"] = 1.0 / len(df)
+        else:
+            df["weight"] = df["score"] / total_score
+
+        return df
+
+    @staticmethod
     def validate_portfolio_parameters(
         df: DataFrame, top_n: int, weighting: str, ticker_col: str | None = None
     ) -> str:

@@ -15,23 +15,40 @@ from urllib.parse import urlparse
 
 import pandas as pd
 
+from .exceptions import (
+    DataFrameValidationError,
+    DataValidationError,
+    PathValidationError,
+    SecurityValidationError,
+    URLValidationError,
+)
 
-class ValidationError(Exception):
-    """Base exception for validation errors."""
-
-    def __init__(self, message: str, field: str | None = None, value: Any = None):
-        self.message = message
-        self.field = field
-        self.value = value
-        super().__init__(self.message)
-
-
-class SecurityValidationError(ValidationError):
-    """Exception for security-related validation failures."""
-
-
-class PathValidationError(ValidationError):
-    """Exception for path validation failures."""
+__all__ = [
+    "sanitize_string",
+    "validate_file_path",
+    "validate_numeric_bounds",
+    "validate_percentage",
+    "validate_yield_rate",
+    "validate_cagr",
+    "validate_portfolio_size",
+    "validate_weighting_method",
+    "validate_financial_value",
+    "validate_dividend_yield",
+    "validate_payout_ratio",
+    "validate_dividend_growth",
+    "validate_fcf_yield",
+    "validate_company_data_comprehensive",
+    "sanitize_for_logging",
+    "validate_url",
+    "validate_uuid_format",
+    "validate_user_id",
+    "validate_csv_data",
+    "PathValidationError",
+    "SecurityValidationError",
+    "URLValidationError",
+    "DataFrameValidationError",
+    "DataValidationError",
+]
 
 
 def sanitize_string(value: str, max_length: int = 1000) -> str:
@@ -164,23 +181,23 @@ def validate_numeric_bounds(
         ValidationError: If the value is outside the allowed range
     """
     if not isinstance(value, (int, float)):
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} must be numeric", field=field_name, value=value
         )
 
     # Check for NaN or infinity
     if isinstance(value, float) and (pd.isna(value) or not math.isfinite(value)):
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} cannot be NaN or infinite", field=field_name, value=value
         )
 
     if min_val is not None and value < min_val:
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} must be at least {min_val}", field=field_name, value=value
         )
 
     if max_val is not None and value > max_val:
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} must be at most {max_val}", field=field_name, value=value
         )
 
@@ -248,7 +265,8 @@ def validate_portfolio_size(value: int, field_name: str = "portfolio_size") -> i
     Raises:
         ValidationError: If the value is not a valid portfolio size
     """
-    return validate_numeric_bounds(value, 1, 100, field_name)
+    result = validate_numeric_bounds(value, 1, 100, field_name)
+    return int(result)
 
 
 def validate_weighting_method(value: str, field_name: str = "weighting_method") -> str:
@@ -265,7 +283,7 @@ def validate_weighting_method(value: str, field_name: str = "weighting_method") 
         ValidationError: If the value is not a valid weighting method
     """
     if not isinstance(value, str):
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} must be a string", field=field_name, value=value
         )
 
@@ -273,13 +291,247 @@ def validate_weighting_method(value: str, field_name: str = "weighting_method") 
     allowed_methods = ["equal", "score", "market_cap", "dividend_weight"]
 
     if sanitized.lower() not in allowed_methods:
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} must be one of: {allowed_methods}",
             field=field_name,
             value=value,
         )
 
     return sanitized.lower()
+
+
+def validate_financial_value(
+    value: float, field_name: str = "financial_value"
+) -> float:
+    """Validate financial values for common edge cases.
+
+    This function handles infinity, NaN, and other problematic values
+    that can occur in financial data processing.
+
+    Args:
+        value: The financial value to validate
+        field_name: Name of the field for error messages
+
+    Returns:
+        The validated financial value
+
+    Raises:
+        DataValidationError: If the value contains problematic financial data
+    """
+    if not isinstance(value, (int, float)):
+        raise DataValidationError(
+            f"{field_name} must be a number", field=field_name, value=value
+        )
+
+    # Check for NaN
+    if pd.isna(value):
+        raise DataValidationError(
+            f"{field_name} cannot be NaN", field=field_name, value=value
+        )
+
+    # Check for infinity
+    if not math.isfinite(value):
+        raise DataValidationError(
+            f"{field_name} cannot be infinite", field=field_name, value=value
+        )
+
+    return float(value)
+
+
+def validate_dividend_yield(value: float, field_name: str = "dividend_yield") -> float:
+    """Validate dividend yield with financial data edge case handling.
+
+    Dividend yield should be positive and reasonable (typically 0-50%).
+
+    Args:
+        value: The dividend yield to validate
+        field_name: Name of the field for error messages
+
+    Returns:
+        The validated dividend yield
+
+    Raises:
+        DataValidationError: If the value is not a valid dividend yield
+    """
+    # First validate for financial edge cases
+    validated_value = validate_financial_value(value, field_name)
+
+    # Then apply dividend yield specific rules
+    if validated_value < 0:
+        raise DataValidationError(
+            f"{field_name} cannot be negative", field=field_name, value=validated_value
+        )
+
+    if validated_value > 50:  # Unrealistic dividend yield > 50%
+        raise DataValidationError(
+            f"{field_name} cannot exceed 50% (unrealistic)",
+            field=field_name,
+            value=validated_value,
+        )
+
+    return validated_value
+
+
+def validate_payout_ratio(value: float, field_name: str = "payout_ratio") -> float:
+    """Validate payout ratio with financial data edge case handling.
+
+    Payout ratio should be positive and reasonable (typically 0-200%).
+
+    Args:
+        value: The payout ratio to validate
+        field_name: Name of the field for error messages
+
+    Returns:
+        The validated payout ratio
+
+    Raises:
+        DataValidationError: If the value is not a valid payout ratio
+    """
+    # First validate for financial edge cases
+    validated_value = validate_financial_value(value, field_name)
+
+    # Then apply payout ratio specific rules
+    if validated_value < 0:
+        raise DataValidationError(
+            f"{field_name} cannot be negative", field=field_name, value=validated_value
+        )
+
+    if validated_value > 200:  # Unrealistic payout ratio > 200%
+        raise DataValidationError(
+            f"{field_name} cannot exceed 200% (unrealistic)",
+            field=field_name,
+            value=validated_value,
+        )
+
+    return validated_value
+
+
+def validate_dividend_growth(
+    value: float, field_name: str = "dividend_growth"
+) -> float:
+    """Validate dividend growth with financial data edge case handling.
+
+    Dividend growth can be negative or positive but should be reasonable.
+
+    Args:
+        value: The dividend growth to validate
+        field_name: Name of the field for error messages
+
+    Returns:
+        The validated dividend growth
+
+    Raises:
+        DataValidationError: If the value is not a valid dividend growth
+    """
+    # First validate for financial edge cases
+    validated_value = validate_financial_value(value, field_name)
+
+    # Then apply dividend growth specific rules
+    if validated_value < -100:  # Cannot lose more than 100%
+        raise DataValidationError(
+            f"{field_name} cannot be less than -100%",
+            field=field_name,
+            value=validated_value,
+        )
+
+    if validated_value > 100:  # Unrealistic growth > 100%
+        raise DataValidationError(
+            f"{field_name} cannot exceed 100% (unrealistic)",
+            field=field_name,
+            value=validated_value,
+        )
+
+    return validated_value
+
+
+def validate_fcf_yield(value: float, field_name: str = "fcf_yield") -> float:
+    """Validate free cash flow yield with financial data edge case handling.
+
+    FCF yield can be negative or positive but should be reasonable.
+
+    Args:
+        value: The FCF yield to validate
+        field_name: Name of the field for error messages
+
+    Returns:
+        The validated FCF yield
+
+    Raises:
+        DataValidationError: If the value is not a valid FCF yield
+    """
+    # First validate for financial edge cases
+    validated_value = validate_financial_value(value, field_name)
+
+    # Then apply FCF yield specific rules
+    if validated_value < -50:  # Unrealistic negative FCF yield
+        raise DataValidationError(
+            f"{field_name} cannot be less than -50% (unrealistic)",
+            field=field_name,
+            value=validated_value,
+        )
+
+    if validated_value > 50:  # Unrealistic positive FCF yield
+        raise DataValidationError(
+            f"{field_name} cannot exceed 50% (unrealistic)",
+            field=field_name,
+            value=validated_value,
+        )
+
+    return validated_value
+
+
+def validate_company_data_comprehensive(data: dict[str, Any]) -> dict[str, Any]:
+    """Validate company data comprehensively with all financial edge cases.
+
+    This function validates all financial fields in company data with
+    appropriate business rules and edge case handling.
+
+    Args:
+        data: Dictionary containing company data
+
+    Returns:
+        Validated company data dictionary
+
+    Raises:
+        DataValidationError: If any field fails validation
+    """
+    validated_data: dict[str, Any] = {}
+
+    # Validate required financial fields
+    if "dividend_yield" in data:
+        validated_data["dividend_yield"] = validate_dividend_yield(
+            data["dividend_yield"], "dividend_yield"
+        )
+
+    if "payout_ratio" in data:
+        validated_data["payout_ratio"] = validate_payout_ratio(
+            data["payout_ratio"], "payout_ratio"
+        )
+
+    if "dividend_growth_5y" in data:
+        validated_data["dividend_growth_5y"] = validate_dividend_growth(
+            data["dividend_growth_5y"], "dividend_growth_5y"
+        )
+
+    if "fcf_yield" in data:
+        validated_data["fcf_yield"] = validate_fcf_yield(data["fcf_yield"], "fcf_yield")
+
+    # Validate non-financial fields
+    if "symbol" in data:
+        validated_data["symbol"] = sanitize_string(str(data["symbol"]), max_length=10)
+
+    if "name" in data:
+        validated_data["name"] = sanitize_string(str(data["name"]), max_length=100)
+
+    if "sector" in data:
+        validated_data["sector"] = sanitize_string(str(data["sector"]), max_length=50)
+
+    if "industry" in data:
+        validated_data["industry"] = sanitize_string(
+            str(data["industry"]), max_length=50
+        )
+
+    return validated_data
 
 
 def sanitize_for_logging(value: Any, max_length: int = 200) -> str:
@@ -325,20 +577,20 @@ def validate_url(url: str, allowed_schemes: list[str] | None = None) -> str:
         ValidationError: If the URL is invalid or uses disallowed schemes
     """
     if not isinstance(url, str):
-        raise ValidationError(f"Expected string URL, got {type(url).__name__}")
+        raise URLValidationError(f"Expected string URL, got {type(url).__name__}")
 
     sanitized_url = sanitize_string(url, max_length=500)
 
     try:
         parsed = urlparse(sanitized_url)
     except Exception as e:
-        raise ValidationError(f"Invalid URL format: {e}")
+        raise URLValidationError(f"Invalid URL format: {e}")
 
     if not parsed.scheme:
-        raise ValidationError("URL must include a scheme (e.g., http://, https://)")
+        raise URLValidationError("URL must include a scheme (e.g., http://, https://)")
 
     if allowed_schemes and parsed.scheme.lower() not in allowed_schemes:
-        raise ValidationError(
+        raise URLValidationError(
             f"URL scheme '{parsed.scheme}' not allowed. Allowed: {allowed_schemes}"
         )
 
@@ -359,7 +611,7 @@ def validate_uuid_format(value: str, field_name: str = "uuid") -> str:
         ValidationError: If the value is not a valid UUID format
     """
     if not isinstance(value, str):
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} must be a string", field=field_name, value=value
         )
 
@@ -369,7 +621,7 @@ def validate_uuid_format(value: str, field_name: str = "uuid") -> str:
         uuid.UUID(sanitized)
         return sanitized
     except ValueError:
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} must be a valid UUID format", field=field_name, value=value
         )
 
@@ -388,7 +640,7 @@ def validate_user_id(value: str, field_name: str = "user_id") -> str:
         ValidationError: If the value is not a valid user ID format
     """
     if not isinstance(value, str):
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} must be a string", field=field_name, value=value
         )
 
@@ -396,7 +648,7 @@ def validate_user_id(value: str, field_name: str = "user_id") -> str:
 
     # Check for valid user ID pattern (alphanumeric, underscore, hyphen)
     if not re.match(r"^[a-zA-Z0-9_-]+$", sanitized):
-        raise ValidationError(
+        raise DataValidationError(
             f"{field_name} must contain only alphanumeric characters, underscores, and hyphens",
             field=field_name,
             value=value,
@@ -424,31 +676,37 @@ def validate_csv_data(
         ValidationError: If the data is invalid
     """
     if not isinstance(df, pd.DataFrame):
-        raise ValidationError(f"Expected DataFrame, got {type(df).__name__}")
+        raise DataFrameValidationError(f"Expected DataFrame, got {type(df).__name__}")
 
     if df.empty:
-        raise ValidationError("DataFrame is empty")
+        raise DataFrameValidationError("DataFrame is empty")
 
     if len(df) > max_rows:
-        raise ValidationError(f"DataFrame has too many rows (max {max_rows})")
+        raise DataFrameValidationError(f"DataFrame has too many rows (max {max_rows})")
 
     if required_columns:
         missing_columns = set(required_columns) - set(df.columns)
         if missing_columns:
-            raise ValidationError(f"Missing required columns: {missing_columns}")
+            raise DataFrameValidationError(
+                f"Missing required columns: {missing_columns}"
+            )
 
     # Check for suspicious column names
     for col in df.columns:
         if not isinstance(col, str):
-            raise ValidationError(
+            raise DataFrameValidationError(
                 f"Column names must be strings, got {type(col).__name__}"
             )
 
         try:
             sanitized_col = sanitize_string(col, max_length=100)
             if sanitized_col != col:
-                raise ValidationError(f"Column name contains invalid characters: {col}")
+                raise DataFrameValidationError(
+                    f"Column name contains invalid characters: {col}"
+                )
         except SecurityValidationError:
-            raise ValidationError(f"Column name contains invalid characters: {col}")
+            raise DataFrameValidationError(
+                f"Column name contains invalid characters: {col}"
+            )
 
     return df

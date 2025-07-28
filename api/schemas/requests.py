@@ -19,7 +19,7 @@ class ScreenRequest(BaseModel):
         ge=0.0,
         le=1.0,
         description="Minimum dividend yield as a decimal (e.g., 0.02 for 2%)",
-        example=0.025,
+        json_schema_extra={"example": 0.025},
         title="Minimum Dividend Yield",
     )
 
@@ -28,7 +28,7 @@ class ScreenRequest(BaseModel):
         ge=0.0,
         le=200.0,
         description="Maximum payout ratio as a percentage (e.g., 80.0 for 80%)",
-        example=75.0,
+        json_schema_extra={"example": 75.0},
         title="Maximum Payout Ratio",
     )
 
@@ -37,7 +37,7 @@ class ScreenRequest(BaseModel):
         ge=-100.0,
         le=100.0,
         description="Minimum 5-year dividend compound annual growth rate as a decimal (e.g., 0.05 for 5%)",
-        example=0.08,
+        json_schema_extra={"example": 0.08},
         title="Minimum Dividend CAGR",
     )
 
@@ -46,7 +46,7 @@ class ScreenRequest(BaseModel):
         ge=1,
         le=100,
         description="Number of top stocks to return in the results",
-        example=15,
+        json_schema_extra={"example": 15},
         title="Top N Results",
     )
 
@@ -83,7 +83,7 @@ class AsyncScreenRequest(ScreenRequest):
     priority: str = Field(
         default="normal",
         description="Job priority level for background processing",
-        example="high",
+        json_schema_extra={"example": "high"},
         title="Job Priority",
         pattern=r"^(low|normal|high|urgent)$",
     )
@@ -91,7 +91,7 @@ class AsyncScreenRequest(ScreenRequest):
     user_id: str | None = Field(
         default=None,
         description="User ID for job tracking and monitoring",
-        example="user123",
+        json_schema_extra={"example": "user123"},
         title="User ID",
         max_length=100,
         pattern=r"^[a-zA-Z0-9_-]+$",
@@ -130,7 +130,7 @@ class JobStatusRequest(BaseModel):
 
     job_id: str = Field(
         description="Unique job identifier (UUID format)",
-        example="550e8400-e29b-41d4-a716-446655440000",
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440000"},
         title="Job ID",
         pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     )
@@ -160,7 +160,7 @@ class JobListRequest(BaseModel):
     status: str | None = Field(
         default=None,
         description="Filter jobs by status",
-        example="completed",
+        json_schema_extra={"example": "completed"},
         title="Job Status Filter",
         pattern=r"^(pending|running|completed|failed|cancelled)$",
     )
@@ -168,7 +168,7 @@ class JobListRequest(BaseModel):
     user_id: str | None = Field(
         default=None,
         description="Filter jobs by user ID",
-        example="user123",
+        json_schema_extra={"example": "user123"},
         title="User ID Filter",
         max_length=100,
         pattern=r"^[a-zA-Z0-9_-]+$",
@@ -179,7 +179,7 @@ class JobListRequest(BaseModel):
         ge=1,
         le=100,
         description="Maximum number of jobs to return",
-        example=25,
+        json_schema_extra={"example": 25},
         title="Result Limit",
     )
 
@@ -214,7 +214,7 @@ class CacheStatsRequest(BaseModel):
     include_details: bool = Field(
         default=False,
         description="Include detailed cache statistics",
-        example=True,
+        json_schema_extra={"example": True},
         title="Include Details",
     )
 

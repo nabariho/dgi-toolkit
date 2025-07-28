@@ -52,7 +52,7 @@ def test_load_universe_invalid_all_rows(tmp_path: Any) -> None:
     )
     screener = make_screener(str(csv))
     with pytest.raises(
-        ValueError,
+        DataValidationError,
         match="(Validation errors:|Missing expected columns|No valid rows found)",
     ):
         screener.load_universe()
@@ -208,7 +208,7 @@ def test_dgirowvalidator_invalid() -> None:
             "fcf_yield": 5.0,
         }
     ]
-    with pytest.raises(ValueError):
+    with pytest.raises(DataValidationError):
         validator.validate_rows(rows)
 
 
@@ -233,7 +233,7 @@ def test_screener_missing_columns(tmp_path: Any) -> None:
     validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     repo = CsvCompanyDataRepository(str(csv), validator)
     screener = Screener(repo)
-    with pytest.raises(ValueError):
+    with pytest.raises(DataValidationError):
         screener.load_universe()
 
 

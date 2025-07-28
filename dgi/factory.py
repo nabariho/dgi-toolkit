@@ -7,6 +7,7 @@ following the Abstract Factory pattern and Dependency Inversion Principle.
 from abc import ABC, abstractmethod
 from typing import Protocol
 
+from dgi.exceptions import FactoryError
 from dgi.filtering import BaseFilter, DefaultFilter
 from dgi.models.company import CompanyData
 from dgi.repositories.base import CompanyDataRepository
@@ -239,13 +240,15 @@ class FactoryRegistry:
         """Get a factory by name."""
         factory_name = name or self._current_factory
         if factory_name not in self._factories:
-            raise ValueError(f"Factory '{factory_name}' not found")
+            raise FactoryError(
+                f"Factory '{factory_name}' not found", factory_name=factory_name
+            )
         return self._factories[factory_name]
 
     def set_current_factory(self, name: str) -> None:
         """Set the current factory."""
         if name not in self._factories:
-            raise ValueError(f"Factory '{name}' not found")
+            raise FactoryError(f"Factory '{name}' not found", factory_name=name)
         self._current_factory = name
 
     def get_current_factory(self) -> DependencyFactory:
