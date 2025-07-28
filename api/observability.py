@@ -19,7 +19,6 @@ from typing import Any
 try:
     from opentelemetry import trace
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
@@ -37,9 +36,7 @@ if TYPE_CHECKING:
 
 # Try to import Prometheus dependencies
 try:
-    from prometheus_client import Counter as PrometheusCounter
-    from prometheus_client import Histogram as PrometheusHistogram
-    from prometheus_client import Info, generate_latest
+    from prometheus_client import generate_latest
 
     PROMETHEUS_AVAILABLE = True
 except ImportError:

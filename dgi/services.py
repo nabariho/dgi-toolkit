@@ -9,11 +9,7 @@ from typing import Any
 
 from pandas import DataFrame
 
-from dgi.exceptions import (
-    DataValidationError,
-    PortfolioError,
-    ScreeningError,
-)
+from dgi.exceptions import DataValidationError, PortfolioError, ScreeningError
 from dgi.models import CompanyData
 from dgi.scoring_config import get_scoring_config
 
@@ -281,7 +277,7 @@ class ScreeningService:
         # Ensure all numeric values are properly formatted
         for record in records:
             for key, value in record.items():
-                if isinstance(value, (int, float)):
+                if isinstance(value, int | float):
                     record[key] = float(value)
 
         return records

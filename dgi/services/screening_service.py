@@ -155,25 +155,26 @@ class ScreeningService:
             return DataFrame()
 
         # Check if we're dealing with CompanyData objects or dictionaries
+        data: list[dict[str, Any]] = []
         if isinstance(rows[0], CompanyData):
             # Convert CompanyData objects to dictionaries with the correct column names
-            data = []
             for row in rows:
-                data.append(
-                    {
-                        "symbol": row.symbol,
-                        "name": row.name,
-                        "sector": row.sector,
-                        "industry": row.industry,
-                        "dividend_yield": row.dividend_yield,
-                        "payout": row.payout,  # Use the alias property
-                        "dividend_cagr": row.dividend_cagr,  # Use the alias property
-                        "fcf_yield": row.fcf_yield,
-                    }
-                )
+                if isinstance(row, CompanyData):  # Type guard for mypy
+                    data.append(
+                        {
+                            "symbol": row.symbol,
+                            "name": row.name,
+                            "sector": row.sector,
+                            "industry": row.industry,
+                            "dividend_yield": row.dividend_yield,
+                            "payout": row.payout,  # Use the alias property
+                            "dividend_cagr": row.dividend_cagr,  # Use the alias property
+                            "fcf_yield": row.fcf_yield,
+                        }
+                    )
         else:
             # Handle dictionaries directly
-            data = rows
+            data = [dict(row) for row in rows]
 
         return DataFrame(data)
 
@@ -208,12 +209,17 @@ class ScreeningService:
             return []
 
         # Convert DataFrame to list of dictionaries
-        records = df.to_dict("records")
+        raw_records = df.to_dict("records")
+        records: list[dict[str, Any]] = []
 
         # Ensure all numeric values are properly formatted
-        for record in records:
+        for record in raw_records:
+            formatted_record: dict[str, Any] = {}
             for key, value in record.items():
-                if isinstance(value, (int, float)):
-                    record[key] = float(value)
+                if isinstance(value, int | float):
+                    formatted_record[str(key)] = float(value)
+                else:
+                    formatted_record[str(key)] = value
+            records.append(formatted_record)
 
         return records

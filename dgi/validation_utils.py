@@ -145,7 +145,7 @@ def validate_file_path(
             if not full_path.startswith(base_dir_abs):
                 raise PathValidationError("Path outside of allowed base directory")
         except (OSError, ValueError) as e:
-            raise PathValidationError(f"Invalid path: {e}")
+            raise PathValidationError(f"Invalid path: {e}") from e
     else:
         full_path = normalized_path
 
@@ -180,7 +180,7 @@ def validate_numeric_bounds(
     Raises:
         ValidationError: If the value is outside the allowed range
     """
-    if not isinstance(value, (int, float)):
+    if not isinstance(value, int | float):
         raise DataValidationError(
             f"{field_name} must be numeric", field=field_name, value=value
         )
@@ -318,7 +318,7 @@ def validate_financial_value(
     Raises:
         DataValidationError: If the value contains problematic financial data
     """
-    if not isinstance(value, (int, float)):
+    if not isinstance(value, int | float):
         raise DataValidationError(
             f"{field_name} must be a number", field=field_name, value=value
         )
@@ -584,7 +584,7 @@ def validate_url(url: str, allowed_schemes: list[str] | None = None) -> str:
     try:
         parsed = urlparse(sanitized_url)
     except Exception as e:
-        raise URLValidationError(f"Invalid URL format: {e}")
+        raise URLValidationError(f"Invalid URL format: {e}") from e
 
     if not parsed.scheme:
         raise URLValidationError("URL must include a scheme (e.g., http://, https://)")
@@ -620,10 +620,10 @@ def validate_uuid_format(value: str, field_name: str = "uuid") -> str:
     try:
         uuid.UUID(sanitized)
         return sanitized
-    except ValueError:
+    except ValueError as e:
         raise DataValidationError(
             f"{field_name} must be a valid UUID format", field=field_name, value=value
-        )
+        ) from e
 
 
 def validate_user_id(value: str, field_name: str = "user_id") -> str:
@@ -704,9 +704,9 @@ def validate_csv_data(
                 raise DataFrameValidationError(
                     f"Column name contains invalid characters: {col}"
                 )
-        except SecurityValidationError:
+        except SecurityValidationError as e:
             raise DataFrameValidationError(
                 f"Column name contains invalid characters: {col}"
-            )
+            ) from e
 
     return df

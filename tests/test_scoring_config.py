@@ -329,13 +329,13 @@ class TestGlobalConfig:
         config = get_scoring_config()
 
         # Test that weights are frozen
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # Pydantic ValidationError or AttributeError
             config.weights.yield_weight = 2.0
 
         # Test that thresholds are frozen
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # Pydantic ValidationError or AttributeError
             config.thresholds.max_total_score = 200.0
 
         # Test that the main config is frozen
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # Pydantic ValidationError or AttributeError
             config.preferred_sectors = ["New Sector"]

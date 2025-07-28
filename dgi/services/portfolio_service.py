@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, ClassVar
 
 from pandas import DataFrame
 
@@ -48,7 +48,7 @@ class ScoreWeighting(WeightingStrategy):
 class PortfolioService:
     """Service class for portfolio business logic."""
 
-    _strategies = {
+    _strategies: ClassVar[dict[str, WeightingStrategy]] = {
         "equal": EqualWeighting(),
         "score": ScoreWeighting(),
     }
@@ -121,7 +121,7 @@ class PortfolioService:
 
         # Apply weighting strategy
         strategy = PortfolioService._strategies[weighting]
-        weighted = strategy.compute_weights(top)
+        weighted: DataFrame = strategy.compute_weights(top)
 
         # Return standardized format
         return weighted[[ticker_col, "weight", "score"]].rename(

@@ -1133,7 +1133,9 @@ async def get_job_status(
     try:
         validate_uuid_format(job_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid job ID format: {e}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid job ID format: {e}"
+        ) from e
 
     queue = await get_job_queue()
     job = await queue.get_job_status(job_id)
@@ -1220,7 +1222,9 @@ async def cancel_job(
     try:
         validate_uuid_format(job_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid job ID format: {e}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid job ID format: {e}"
+        ) from e
 
     queue = await get_job_queue()
     cancelled = await queue.cancel_job(job_id)

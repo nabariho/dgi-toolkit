@@ -8,6 +8,7 @@ This module provides async processing capabilities for handling large datasets:
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 import uuid
@@ -96,10 +97,8 @@ class JobQueue:
         """Async context manager exit with proper cleanup."""
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         # Cancel all running jobs
         for task in self.running_jobs.values():

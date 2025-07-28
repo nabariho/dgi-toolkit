@@ -4,6 +4,8 @@ This module contains Pydantic models for API request validation with comprehensi
 documentation, field constraints, and examples for all endpoints.
 """
 
+from typing import ClassVar
+
 from pydantic import BaseModel, Field
 
 
@@ -53,7 +55,7 @@ class ScreenRequest(BaseModel):
     class Config:
         """Pydantic configuration for the request model."""
 
-        json_schema_extra = {
+        json_schema_extra: ClassVar[dict] = {
             "example": {
                 "min_yield": 0.025,
                 "max_payout": 75.0,
@@ -100,7 +102,7 @@ class AsyncScreenRequest(ScreenRequest):
     class Config:
         """Pydantic configuration for the async request model."""
 
-        json_schema_extra = {
+        json_schema_extra: ClassVar[dict] = {
             "example": {
                 "min_yield": 0.025,
                 "max_payout": 75.0,
@@ -138,7 +140,7 @@ class JobStatusRequest(BaseModel):
     class Config:
         """Pydantic configuration for the job status request model."""
 
-        json_schema_extra = {
+        json_schema_extra: ClassVar[dict] = {
             "example": {
                 "job_id": "550e8400-e29b-41d4-a716-446655440000",
             },
@@ -186,7 +188,7 @@ class JobListRequest(BaseModel):
     class Config:
         """Pydantic configuration for the job list request model."""
 
-        json_schema_extra = {
+        json_schema_extra: ClassVar[dict] = {
             "example": {
                 "status": "completed",
                 "user_id": "user123",
@@ -221,7 +223,7 @@ class CacheStatsRequest(BaseModel):
     class Config:
         """Pydantic configuration for the cache stats request model."""
 
-        json_schema_extra = {
+        json_schema_extra: ClassVar[dict] = {
             "example": {
                 "include_details": True,
             },
