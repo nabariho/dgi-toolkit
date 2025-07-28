@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 # Note: We don't import app directly anymore - it's provided by the test_client fixture
 
 
+@pytest.mark.api
 class TestHealthEndpoint:
     """Test the health check endpoint."""
 
@@ -29,6 +30,7 @@ class TestHealthEndpoint:
         assert response.headers["content-type"] == "application/json"
 
 
+@pytest.mark.api
 class TestScreenEndpoint:
     """Test the screening endpoint."""
 
@@ -238,6 +240,7 @@ class TestScreenEndpoint:
         assert data["processing_time_ms"] >= 0
 
 
+@pytest.mark.api
 class TestOpenAPIDocumentation:
     """Test that OpenAPI documentation is available."""
 
@@ -262,6 +265,7 @@ class TestOpenAPIDocumentation:
         assert "text/html" in response.headers["content-type"]
 
 
+@pytest.mark.api
 class TestErrorHandling:
     """Test error handling and edge cases."""
 
@@ -290,6 +294,7 @@ class TestErrorHandling:
         assert response.status_code in [200, 422]
 
 
+@pytest.mark.api
 class TestRootEndpoint:
     """Test the root endpoint."""
 
@@ -307,6 +312,7 @@ class TestRootEndpoint:
         assert "endpoints" in data
 
 
+@pytest.mark.api
 class TestSecurityHeaders:
     """Test that security headers are present."""
 
@@ -331,6 +337,7 @@ class TestSecurityHeaders:
         assert correlation_id.startswith("req-")
 
 
+@pytest.mark.api
 class TestRateLimiting:
     """Test rate limiting functionality."""
 
@@ -345,6 +352,7 @@ class TestRateLimiting:
         assert response.status_code == 200
 
 
+@pytest.mark.api
 class TestEnvironmentIsolation:
     """Test that the test environment is properly isolated."""
 
@@ -367,6 +375,7 @@ class TestEnvironmentIsolation:
         assert "test_fundamentals.csv" in str(test_csv_file)
 
 
+@pytest.mark.api
 class TestRateLimitingIntegration:
     """Test rate limiting functionality comprehensively."""
 
@@ -408,6 +417,7 @@ class TestRateLimitingIntegration:
         assert all(status == 200 for status in responses)
 
 
+@pytest.mark.api
 class TestSecurityHeadersIntegration:
     """Test security headers comprehensively."""
 
@@ -459,6 +469,7 @@ class TestSecurityHeadersIntegration:
             assert "X-XSS-Protection" in response.headers
 
 
+@pytest.mark.api
 class TestCorrelationIDIntegration:
     """Test correlation ID tracking comprehensively."""
 
@@ -503,6 +514,7 @@ class TestCorrelationIDIntegration:
         assert response.headers["X-Correlation-ID"] is not None
 
 
+@pytest.mark.api
 class TestErrorHandlingIntegration:
     """Test error handling scenarios comprehensively."""
 
@@ -559,6 +571,7 @@ class TestErrorHandlingIntegration:
         assert response.status_code == 404  # Not Found
 
 
+@pytest.mark.api
 class TestPerformanceIntegration:
     """Test performance aspects of the API."""
 
@@ -625,6 +638,7 @@ class TestPerformanceIntegration:
         assert all(status == 200 for status in results)
 
 
+@pytest.mark.api
 class TestCacheIntegration:
     """Test caching functionality."""
 

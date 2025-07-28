@@ -1,4 +1,4 @@
-"""Tests for async processing module."""
+"""Tests for async processing functionality."""
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -16,6 +16,7 @@ from api.async_processing import (
 )
 
 
+@pytest.mark.integration
 class TestScreeningJob:
     """Test ScreeningJob model."""
 
@@ -66,6 +67,7 @@ class TestScreeningJob:
         assert job.correlation_id == "corr123"
 
 
+@pytest.mark.integration
 class TestJobQueue:
     """Test JobQueue functionality."""
 
@@ -270,6 +272,7 @@ class TestJobQueue:
         assert "recent" in job_queue.jobs
 
 
+@pytest.mark.integration
 class TestAsyncScreenStocks:
     """Test async_screen_stocks function."""
 
@@ -318,6 +321,7 @@ class TestAsyncScreenStocks:
         )
 
 
+@pytest.mark.integration
 class TestSubmitBackgroundScreening:
     """Test submit_background_screening function."""
 
@@ -352,6 +356,7 @@ class TestSubmitBackgroundScreening:
             )
 
 
+@pytest.mark.integration
 class TestGetJobQueue:
     """Test get_job_queue function."""
 
@@ -365,6 +370,7 @@ class TestGetJobQueue:
         assert isinstance(queue1, JobQueue)
 
 
+@pytest.mark.integration
 class TestJobStatus:
     """Test JobStatus enumeration."""
 
@@ -377,6 +383,7 @@ class TestJobStatus:
         assert JobStatus.CANCELLED == "cancelled"
 
 
+@pytest.mark.integration
 class TestJobPriority:
     """Test JobPriority enumeration."""
 
@@ -388,6 +395,7 @@ class TestJobPriority:
         assert JobPriority.URGENT == "urgent"
 
 
+@pytest.mark.integration
 class TestJobQueueIntegration:
     """Integration tests for JobQueue."""
 

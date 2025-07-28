@@ -18,6 +18,7 @@ def make_screener(csv_path: str) -> Screener:
     return Screener(repo)
 
 
+@pytest.mark.unit
 def test_load_universe_valid(tmp_path: Any) -> None:
     csv = tmp_path / "fundamentals.csv"
     csv.write_text(
@@ -43,6 +44,7 @@ def test_load_universe_valid(tmp_path: Any) -> None:
         assert df[col].dtype == float
 
 
+@pytest.mark.unit
 def test_load_universe_invalid_all_rows(tmp_path: Any) -> None:
     csv = tmp_path / "invalid.csv"
     csv.write_text(
@@ -58,6 +60,7 @@ def test_load_universe_invalid_all_rows(tmp_path: Any) -> None:
         screener.load_universe()
 
 
+@pytest.mark.unit
 def test_load_universe_mixed_valid_invalid(tmp_path: Any) -> None:
     csv = tmp_path / "mixed.csv"
     csv.write_text(
@@ -71,6 +74,7 @@ def test_load_universe_mixed_valid_invalid(tmp_path: Any) -> None:
     assert df.iloc[0]["symbol"] == "GOOG"
 
 
+@pytest.mark.unit
 def test_apply_filters() -> None:
     df = pd.DataFrame(
         {
@@ -94,6 +98,7 @@ def test_apply_filters() -> None:
     assert filtered.iloc[0]["symbol"] == "A"
 
 
+@pytest.mark.unit
 def test_score() -> None:
     row = pd.Series(
         {
@@ -117,6 +122,7 @@ def test_score() -> None:
     assert abs(s - 0.16666666666666666) < 1e-6  # (0.5 + 0.5 - 0.5) / 3
 
 
+@pytest.mark.unit
 def test_load_universe_invalid_types(tmp_path: Any) -> None:
     csv = tmp_path / "bad_types.csv"
     csv.write_text(
@@ -131,6 +137,7 @@ def test_load_universe_invalid_types(tmp_path: Any) -> None:
     assert df.iloc[0]["symbol"] == "GOOG"
 
 
+@pytest.mark.unit
 def test_csv_repository_and_screener(tmp_path: Any) -> None:
     csv = tmp_path / "repo_test.csv"
     csv.write_text(
@@ -146,6 +153,7 @@ def test_csv_repository_and_screener(tmp_path: Any) -> None:
     assert set(df["symbol"]) == {"AAPL", "MSFT"}
 
 
+@pytest.mark.unit
 def test_companydata_valid() -> None:
     row = CompanyData(
         symbol="AAPL",
@@ -161,6 +169,7 @@ def test_companydata_valid() -> None:
     assert row.dividend_yield == 0.6
 
 
+@pytest.mark.unit
 def test_companydata_invalid() -> None:
     # This test intentionally passes the wrong type to check runtime validation.
     with pytest.raises(ValidationError):
@@ -176,6 +185,7 @@ def test_companydata_invalid() -> None:
         )
 
 
+@pytest.mark.unit
 def test_dgirowvalidator_valid() -> None:
     validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     rows = [
@@ -194,6 +204,7 @@ def test_dgirowvalidator_valid() -> None:
     assert valid[0].symbol == "AAPL"
 
 
+@pytest.mark.unit
 def test_dgirowvalidator_invalid() -> None:
     validator = DgiRowValidator(CompanyData)
     rows = [
@@ -212,6 +223,7 @@ def test_dgirowvalidator_invalid() -> None:
         validator.validate_rows(rows)
 
 
+@pytest.mark.unit
 def test_screener_empty_repository() -> None:
     import pandas as pd
 
@@ -227,6 +239,7 @@ def test_screener_empty_repository() -> None:
     assert result.empty
 
 
+@pytest.mark.unit
 def test_screener_missing_columns(tmp_path: Any) -> None:
     csv = tmp_path / "missing_cols.csv"
     csv.write_text("symbol,name,sector\nAAPL,Apple,Tech\n")
@@ -237,6 +250,7 @@ def test_screener_missing_columns(tmp_path: Any) -> None:
         screener.load_universe()
 
 
+@pytest.mark.unit
 def test_screener_score_edge_cases() -> None:
     scoring = DefaultScoring()
 
@@ -302,6 +316,7 @@ def test_screener_score_edge_cases() -> None:
     assert scoring.score(company_str) == expected_str
 
 
+@pytest.mark.unit
 def test_dgirowvalidator_all_invalid() -> None:
     validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     rows = [
@@ -330,6 +345,7 @@ def test_dgirowvalidator_all_invalid() -> None:
         validator.validate_rows(rows)
 
 
+@pytest.mark.unit
 def test_dgirowvalidator_some_invalid(caplog: Any) -> None:
     validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     rows = [
@@ -362,6 +378,7 @@ def test_dgirowvalidator_some_invalid(caplog: Any) -> None:
     )
 
 
+@pytest.mark.unit
 def test_companydata_must_be_number_exception() -> None:
     """Test CompanyData must_be_number validator for exception case."""
     with pytest.raises(ValidationError):
@@ -377,6 +394,7 @@ def test_companydata_must_be_number_exception() -> None:
         )
 
 
+@pytest.mark.unit
 def test_notebook_pipeline_matches_csv(tmp_path: Any) -> None:
     from dgi.repositories.csv import CsvCompanyDataRepository
     from dgi.scoring import DefaultScoring
@@ -404,6 +422,7 @@ def test_notebook_pipeline_matches_csv(tmp_path: Any) -> None:
     ), f"Expected 5 rows after filtering, got {filtered.shape[0]}\n{filtered}"
 
 
+@pytest.mark.unit
 def test_screener_with_default_filter():
     """Test screener uses DefaultFilter by default."""
     from unittest.mock import Mock
@@ -420,6 +439,7 @@ def test_screener_with_default_filter():
     assert isinstance(screener._filter_strategy, DefaultFilter)
 
 
+@pytest.mark.unit
 def test_screener_with_custom_filter():
     """Test screener accepts custom filter strategy."""
     from unittest.mock import Mock
@@ -440,6 +460,7 @@ def test_screener_with_custom_filter():
     assert screener._filter_strategy is custom_filter
 
 
+@pytest.mark.unit
 def test_apply_filters_uses_strategy():
     """Test that apply_filters delegates to the filter strategy."""
     from unittest.mock import Mock
@@ -477,6 +498,7 @@ def test_apply_filters_uses_strategy():
     pd.testing.assert_frame_equal(result, expected_result)
 
 
+@pytest.mark.unit
 def test_default_filter_behavior():
     """Test that DefaultFilter works correctly."""
     from dgi.filtering import DefaultFilter
