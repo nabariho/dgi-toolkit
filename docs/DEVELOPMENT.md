@@ -148,6 +148,122 @@ type(scope): description
 
 ---
 
+## ✅ **Before Committing Checklist**
+
+**⚠️ MANDATORY: Complete this checklist before every commit!**
+
+### **🧪 Testing & Isolation (CRITICAL)**
+
+- [ ] **Run tests with isolation**: `make test` or `./scripts/run-tests.sh`
+- [ ] **Verify test environment**: `echo $DGI_ENVIRONMENT` should be "test"
+- [ ] **Check test data usage**: All tests use `TEST*` symbols (no real company data)
+- [ ] **Confirm API keys cleared**: `echo $OPENAI_API_KEY` should be empty
+- [ ] **Test coverage**: Run `make test-coverage` for new features
+- [ ] **Test isolation validation**: Verify tests don't access production data
+
+```bash
+# Quick isolation check
+make test
+echo "Environment: $DGI_ENVIRONMENT"
+echo "Data path: $DGI_DATA_PATH"
+echo "API keys: ${OPENAI_API_KEY:-'CLEARED'}"
+```
+
+### **🔍 Code Quality & Standards**
+
+- [ ] **Run quality checks**: `make quality` or `./scripts/check-quality.sh`
+- [ ] **Format code**: `poetry run ruff format .` (auto-fixes formatting)
+- [ ] **Lint code**: `poetry run ruff check .` (no errors)
+- [ ] **Type checking**: `poetry run mypy dgi/` (core business logic only)
+- [ ] **Security scan**: `poetry run bandit -r dgi/` (no high/critical issues)
+- [ ] **Import sorting**: `poetry run isort .` (imports properly organized)
+
+### **📝 Documentation & Commit**
+
+- [ ] **Update documentation**: README, docstrings, or relevant docs
+- [ ] **Conventional commit**: Use proper format (`feat:`, `fix:`, `docs:`, etc.)
+- [ ] **Clear commit message**: Descriptive and concise
+- [ ] **No debug code**: Remove `print()`, `debugger`, or temporary code
+- [ ] **No sensitive data**: No API keys, passwords, or secrets in code
+
+### **🏗️ Architecture & Best Practices**
+
+- [ ] **SOLID principles**: Code follows single responsibility, dependency injection
+- [ ] **Error handling**: Proper exception handling and logging
+- [ ] **Type safety**: Type hints for new functions and classes
+- [ ] **Test coverage**: New code has adequate test coverage
+- [ ] **No hardcoded values**: Use configuration or environment variables
+
+### **🚨 Security & Safety**
+
+- [ ] **No production data**: Tests use only test data with `TEST*` symbols
+- [ ] **No API keys in code**: Use environment variables for sensitive data
+- [ ] **No secrets in commits**: Check for accidental credential commits
+- [ ] **Input validation**: Validate all user inputs and API parameters
+- [ ] **Error messages**: Don't expose sensitive information in error messages
+
+### **🔄 Pre-commit Validation**
+
+```bash
+# Complete pre-commit checklist
+echo "=== PRE-COMMIT CHECKLIST ==="
+
+# 1. Test isolation
+echo "1. Running tests with isolation..."
+make test
+
+# 2. Quality checks
+echo "2. Running quality checks..."
+make quality
+
+# 3. Environment validation
+echo "3. Validating environment..."
+echo "DGI_ENVIRONMENT: $DGI_ENVIRONMENT"
+echo "DGI_DATA_PATH: $DGI_DATA_PATH"
+echo "API Keys cleared: ${OPENAI_API_KEY:-'YES'}"
+
+# 4. Test data validation
+echo "4. Validating test data..."
+if grep -r "TEST[0-9]" tests/ > /dev/null; then
+    echo "✅ Test data uses TEST* symbols"
+else
+    echo "❌ WARNING: No TEST* symbols found in tests!"
+fi
+
+echo "=== CHECKLIST COMPLETE ==="
+```
+
+### **🚨 Common Mistakes to Avoid**
+
+- ❌ **Using production data in tests** (use `TEST*` symbols only)
+- ❌ **Committing API keys or secrets** (use environment variables)
+- ❌ **Skipping quality checks** (always run `make quality`)
+- ❌ **Incomplete test coverage** (aim for ≥ 85% coverage)
+- ❌ **Non-conventional commit messages** (use `feat:`, `fix:`, etc.)
+- ❌ **Debug code in commits** (remove `print()`, `debugger`)
+- ❌ **Hardcoded configuration** (use environment variables)
+- ❌ **Breaking existing functionality** (ensure backward compatibility)
+
+### **🆘 Quick Fixes**
+
+```bash
+# If tests fail
+make test  # Check for isolation issues
+
+# If quality checks fail
+make quality  # Auto-fixes most issues
+
+# If environment issues
+make clean
+./scripts/run-tests.sh --help
+
+# If commit fails pre-commit hooks
+git add .  # Re-add files after auto-fixes
+git commit -m "feat: your message"
+```
+
+---
+
 ## 🧪 **Testing Best Practices & Environment Isolation**
 
 ### **CRITICAL: Test Environment Isolation**
