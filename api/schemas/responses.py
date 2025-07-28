@@ -7,21 +7,39 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class HealthResponse(BaseModel):
-    """Response model for health check endpoint."""
+    """Response model for health check endpoint.
 
-    status: str = Field(default="up", description="Service status")
+    Provides comprehensive system health information including service status,
+    system metrics, and data file accessibility for monitoring and alerting purposes.
+    """
+
+    status: str = Field(
+        default="up",
+        description="Service status - 'up' for healthy, 'down' for unhealthy",
+    )
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC), description="Response timestamp"
+        default_factory=lambda: datetime.now(UTC),
+        description="ISO 8601 formatted response timestamp",
     )
-    version: str = Field(description="API version")
-    environment: str = Field(description="Environment (development, production, etc.)")
-    uptime_seconds: float | None = Field(None, description="Service uptime in seconds")
-    memory_usage_mb: float | None = Field(None, description="Memory usage in MB")
-    cpu_usage_percent: float | None = Field(None, description="CPU usage percentage")
+    version: str = Field(description="Current API version (e.g., '1.0.0')")
+    environment: str = Field(
+        description="Deployment environment (e.g., 'development', 'production', 'staging')"
+    )
+    uptime_seconds: float | None = Field(
+        None, description="Service uptime in seconds since last restart"
+    )
+    memory_usage_mb: float | None = Field(
+        None, description="Current memory usage in megabytes (MB)"
+    )
+    cpu_usage_percent: float | None = Field(
+        None, description="Current CPU usage as a percentage (0-100)"
+    )
     data_file_status: str | None = Field(
-        None, description="Data file accessibility status"
+        None, description="Data file status: 'accessible', 'not_found', or 'error'"
     )
-    data_file_size_mb: float | None = Field(None, description="Data file size in MB")
+    data_file_size_mb: float | None = Field(
+        None, description="Data file size in megabytes (MB)"
+    )
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value: datetime) -> str:
@@ -30,21 +48,37 @@ class HealthResponse(BaseModel):
 
 
 class StockResponse(BaseModel):
-    """Response model for stock data."""
+    """Response model for stock data.
 
-    symbol: str = Field(description="Stock symbol/ticker")
-    name: str = Field(description="Company name")
-    sector: str = Field(description="Business sector")
-    industry: str = Field(description="Industry classification")
+    Represents a single stock with comprehensive dividend growth investing metrics
+    including yield, payout ratio, growth rate, and composite scoring.
+    """
+
+    symbol: str = Field(description="Stock symbol/ticker (e.g., 'AAPL', 'JNJ', 'PG')")
+    name: str = Field(
+        description="Full company name (e.g., 'Apple Inc.', 'Johnson & Johnson')"
+    )
+    sector: str = Field(
+        description="Business sector classification (e.g., 'Technology', 'Healthcare')"
+    )
+    industry: str = Field(
+        description="Specific industry classification (e.g., 'Consumer Electronics', 'Drug Manufacturers')"
+    )
     dividend_yield: float = Field(
-        description="Dividend yield as decimal (e.g., 0.025 for 2.5%)"
+        description="Annual dividend yield as decimal (e.g., 0.025 for 2.5%)"
     )
-    payout: float = Field(description="Payout ratio as percentage (e.g., 30.0 for 30%)")
+    payout: float = Field(
+        description="Dividend payout ratio as percentage (e.g., 30.0 for 30%)"
+    )
     dividend_cagr: float = Field(
-        description="5-year dividend CAGR as decimal (e.g., 0.08 for 8%)"
+        description="5-year compound annual growth rate as decimal (e.g., 0.08 for 8%)"
     )
-    fcf_yield: float = Field(description="Free cash flow yield as percentage")
-    score: float = Field(description="Composite DGI score (0.0 to 1.0)")
+    fcf_yield: float = Field(
+        description="Free cash flow yield as percentage (e.g., 5.2 for 5.2%)"
+    )
+    score: float = Field(
+        description="Composite DGI score from 0.0 to 1.0 (higher is better)"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -102,13 +136,24 @@ class ErrorResponse(BaseModel):
 
 
 class ScreenResponse(BaseModel):
-    """Response model for stock screening endpoint."""
+    """Response model for stock screening endpoint.
 
-    stocks: list[StockResponse] = Field(description="List of screened stocks")
-    total_count: int = Field(description="Total number of stocks returned")
-    filters_applied: dict[str, Any] = Field(description="Filters that were applied")
+    Contains the results of a stock screening operation including the filtered stocks,
+    applied filters, and performance metrics for monitoring and analysis.
+    """
+
+    stocks: list[StockResponse] = Field(
+        description="List of screened stocks ranked by composite score"
+    )
+    total_count: int = Field(
+        description="Total number of stocks returned in the response"
+    )
+    filters_applied: dict[str, Any] = Field(
+        description="Dictionary of filters that were applied to the screening"
+    )
     processing_time_ms: float | None = Field(
-        None, description="Request processing time in milliseconds"
+        None,
+        description="Request processing time in milliseconds for performance monitoring",
     )
 
     model_config = ConfigDict(
