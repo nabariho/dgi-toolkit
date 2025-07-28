@@ -1,7 +1,6 @@
 import asyncio
 import gc
 import logging
-import weakref
 from collections.abc import Generator
 from contextlib import contextmanager
 from types import TracebackType
@@ -11,8 +10,11 @@ import pandas as pd
 
 from dgi.models import CompanyData
 from dgi.repositories.base import CompanyDataRepository
-from dgi.validation import DgiRowValidator
-from dgi.validation_utils import PathValidationError, validate_file_path
+from dgi.validation_utils import (
+    DgiRowValidator,
+    PathValidationError,
+    validate_file_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +70,13 @@ class CsvCompanyDataRepository(CompanyDataRepository):
                 )
 
                 # Monitor resource usage
+                memory_usage = df.memory_usage(deep=True).sum()
                 self._resource_monitor.record_data_load(
-                    len(validated_rows), df.memory_usage(deep=True).sum()
+                    len(validated_rows), memory_usage
                 )
+
+                # Register DataFrame for memory leak tracking
+                self._resource_monitor.register_object(df)
 
                 return validated_rows
         except Exception as e:
@@ -164,6 +170,10 @@ class CsvCompanyDataRepository(CompanyDataRepository):
                 self._file_handle.close()
                 self._file_handle = None
 
+            # Check for memory leaks
+            if self._resource_monitor.check_memory_leaks():
+                logger.warning("Potential memory leak detected during cleanup")
+
             # Log resource usage
             self._resource_monitor.log_usage()
 
@@ -183,7 +193,7 @@ class ResourceMonitor:
         self.total_rows_loaded = 0
         self.total_memory_used = 0
         self.max_memory_used = 0
-        self._weak_refs: weakref.WeakSet[Any] = weakref.WeakSet()
+        self._tracked_objects = 0
 
     def record_data_load(self, rows_count: int, memory_bytes: int) -> None:
         """Record a data load operation."""
@@ -193,17 +203,26 @@ class ResourceMonitor:
         self.max_memory_used = max(self.max_memory_used, memory_bytes)
 
     def register_object(self, obj: Any) -> None:
-        """Register an object for weak reference tracking."""
-        self._weak_refs.add(obj)
+        """Register an object for tracking."""
+        self._tracked_objects += 1
 
     def get_stats(self) -> dict[str, Any]:
         """Get current resource statistics."""
+        try:
+            import psutil  # type: ignore[import-untyped]
+
+            process = psutil.Process()
+            current_memory = process.memory_info().rss
+        except (ImportError, AttributeError):
+            current_memory = 0
+
         return {
             "data_loads": self.data_loads,
             "total_rows_loaded": self.total_rows_loaded,
             "total_memory_used_bytes": self.total_memory_used,
             "max_memory_used_bytes": self.max_memory_used,
-            "tracked_objects": len(self._weak_refs),
+            "current_memory_bytes": current_memory,
+            "tracked_objects": self._tracked_objects,
         }
 
     def log_usage(self) -> None:
@@ -217,11 +236,17 @@ class ResourceMonitor:
         collected = gc.collect()
 
         # Check if we have too many tracked objects
-        if len(self._weak_refs) > 1000:  # Arbitrary threshold
+        if self._tracked_objects > 1000:  # Arbitrary threshold
             logger.warning(
-                f"Potential memory leak detected: {len(self._weak_refs)} tracked objects"
+                f"Potential memory leak detected: {self._tracked_objects} tracked objects"
             )
             return True
+
+        # Check memory usage patterns
+        if self.max_memory_used > 100 * 1024 * 1024:  # 100MB threshold
+            logger.warning(
+                f"High memory usage detected: {self.max_memory_used / (1024*1024):.2f}MB"
+            )
 
         if collected > 0:
             logger.info(f"Garbage collection freed {collected} objects")

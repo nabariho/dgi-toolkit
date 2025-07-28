@@ -13,7 +13,7 @@ from dgi.repositories.base import CompanyDataRepository
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import ScoringStrategy
 from dgi.services.screening_service import ScreeningService
-from dgi.validation import DgiRowValidator, PydanticRowValidation
+from dgi.validation_utils import DgiRowValidator, PydanticRowValidation
 
 # Get configuration for default values
 config = get_config()

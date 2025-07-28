@@ -9,7 +9,7 @@ from dgi.models import CompanyData
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import DefaultScoring
 from dgi.screener import Screener
-from dgi.validation import DgiRowValidator, PydanticRowValidation
+from dgi.validation_utils import DgiRowValidator, PydanticRowValidation
 
 
 def make_screener(csv_path: str) -> Screener:
@@ -381,7 +381,7 @@ def test_notebook_pipeline_matches_csv(tmp_path: Any) -> None:
     from dgi.repositories.csv import CsvCompanyDataRepository
     from dgi.scoring import DefaultScoring
     from dgi.screener import Screener
-    from dgi.validation import DgiRowValidator
+    from dgi.validation_utils import DgiRowValidator
 
     # Use the real CSV file
     csv_path = "data/fundamentals_small.csv"

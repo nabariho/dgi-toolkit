@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from api.main import app
 from dgi.repositories.csv import CsvCompanyDataRepository
-from dgi.validation import DgiRowValidator, PydanticRowValidation
+from dgi.validation_utils import DgiRowValidator, PydanticRowValidation
 
 
 @pytest.fixture(scope="session")

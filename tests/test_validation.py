@@ -6,7 +6,11 @@ from typing import Any
 from pydantic import ValidationError
 
 from dgi.models import CompanyData
-from dgi.validation import DataValidationError, DgiRowValidator, PydanticRowValidation
+from dgi.validation_utils import (
+    DataValidationError,
+    DgiRowValidator,
+    PydanticRowValidation,
+)
 
 
 class TestDgiRowValidator(unittest.TestCase):

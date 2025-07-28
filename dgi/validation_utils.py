@@ -5,15 +5,17 @@ following security best practices to prevent common vulnerabilities like
 directory traversal, injection attacks, and data corruption.
 """
 
+import logging
 import math
 import os
 import re
 import unicodedata
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any, Protocol
 from urllib.parse import urlparse
 
 import pandas as pd
+from pydantic import ValidationError
 
 from .exceptions import (
     DataFrameValidationError,
@@ -22,6 +24,11 @@ from .exceptions import (
     SecurityValidationError,
     URLValidationError,
 )
+
+if TYPE_CHECKING:
+    from .models import CompanyData
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "sanitize_string",
@@ -48,6 +55,9 @@ __all__ = [
     "URLValidationError",
     "DataFrameValidationError",
     "DataValidationError",
+    "RowValidationStrategy",
+    "PydanticRowValidation",
+    "DgiRowValidator",
 ]
 
 
@@ -710,3 +720,62 @@ def validate_csv_data(
             ) from e
 
     return df
+
+
+# Row validation classes moved from validation.py
+class RowValidationStrategy(Protocol):
+    """Interface for row validation strategies."""
+
+    def validate(self, row: dict[str, Any]) -> "CompanyData": ...
+
+
+class PydanticRowValidation:
+    """Pydantic-based row validation strategy."""
+
+    def __init__(self, model: type["CompanyData"]) -> None:
+        self.model = model
+
+    def validate(self, row: dict[str, Any]) -> "CompanyData":
+        return self.model.model_validate(row)
+
+
+class DgiRowValidator:
+    """Validates CSV rows for DGI analysis."""
+
+    def __init__(self, strategy: RowValidationStrategy) -> None:
+        self._strategy = strategy
+        self.required_columns = (
+            None  # This attribute is no longer used, but kept for compatibility
+        )
+
+    def validate_rows(self, rows: list[dict[str, Any]]) -> list["CompanyData"]:
+        valid_rows: list[CompanyData] = []
+        errors: list[str] = []
+        for i, row in enumerate(rows):
+            row_str_keys = {str(k): v for k, v in row.items()}
+            if self.required_columns:
+                missing = [
+                    col for col in self.required_columns if col not in row_str_keys
+                ]
+                if missing:
+                    error_msg = f"Row {i + 2}: Missing: {', '.join(missing)}"
+                    logger.error(error_msg)
+                    errors.append(error_msg)
+                    continue
+            try:
+                validated = self._strategy.validate(row_str_keys)
+                valid_rows.append(validated)
+            except ValidationError as e:
+                error_msg = f"Row {i + 2}: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+            except Exception as e:
+                error_msg = f"Row {i + 2}: Unexpected error: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+        if not valid_rows:
+            logger.error("Validation errors:\n%s", "\n".join(errors))
+            raise DataValidationError("Validation errors:\n" + "\n".join(errors))
+        if errors:
+            logger.warning("Some rows were invalid and skipped:\n%s", "\n".join(errors))
+        return valid_rows
