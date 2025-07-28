@@ -32,7 +32,9 @@ def test_build_score_weight() -> None:
     expected_weights = [20 / total_score, 30 / total_score]
     assert all(
         abs(w - ew) < 1e-8
-        for w, ew in zip(sorted(result["weight"]), sorted(expected_weights))
+        for w, ew in zip(
+            sorted(result["weight"]), sorted(expected_weights), strict=False
+        )
     )
     assert set(result["ticker"]) == {"B", "C"}
 
