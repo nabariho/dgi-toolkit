@@ -298,11 +298,19 @@ def create_screener(
     repository: CompanyDataRepository,
     scoring_strategy: ScoringStrategy | None = None,
     filter_strategy: BaseFilter | None = None,
+    screening_service=None,
     factory_name: str | None = None,
 ) -> Screener:
     """Create a screener using the specified factory."""
-    factory = get_dependency_factory(factory_name)
-    return factory.create_screener(repository, scoring_strategy, filter_strategy)
+    from dgi.screener import Screener
+
+    # Create screener directly with dependency injection
+    return Screener(
+        repository=repository,
+        scoring_strategy=scoring_strategy,
+        filter_strategy=filter_strategy,
+        screening_service=screening_service,
+    )
 
 
 def create_validator(factory_name: str | None = None) -> DgiRowValidator:

@@ -33,7 +33,8 @@ class TestScreeningService:
 
     def test_validate_screening_parameters_valid(self):
         """Test valid screening parameters."""
-        ScreeningService.validate_screening_parameters(
+        service = ScreeningService()
+        service.validate_screening_parameters(
             min_yield=0.02, max_payout=80.0, min_cagr=0.05, top_n=10
         )
         # Should not raise any exception
@@ -43,7 +44,8 @@ class TestScreeningService:
         with pytest.raises(
             DataValidationError, match="Minimum yield must be non-negative"
         ):
-            ScreeningService.validate_screening_parameters(
+            service = ScreeningService()
+            service.validate_screening_parameters(
                 min_yield=-0.01, max_payout=80.0, min_cagr=0.05, top_n=10
             )
 
@@ -52,14 +54,16 @@ class TestScreeningService:
         with pytest.raises(
             DataValidationError, match="Maximum payout ratio must be between 0 and 200"
         ):
-            ScreeningService.validate_screening_parameters(
+            service = ScreeningService()
+            service.validate_screening_parameters(
                 min_yield=0.02, max_payout=250.0, min_cagr=0.05, top_n=10
             )
 
     def test_apply_dgi_criteria_empty_dataframe(self):
         """Test applying criteria to empty DataFrame."""
         df = pd.DataFrame()
-        result = ScreeningService.apply_dgi_criteria(df, 0.02, 80.0, 0.05)
+        service = ScreeningService()
+        result = service.apply_dgi_criteria(df, 0.02, 80.0, 0.05)
 
         assert result.empty
         assert isinstance(result, pd.DataFrame)
@@ -75,7 +79,8 @@ class TestScreeningService:
             }
         )
 
-        result = ScreeningService.apply_dgi_criteria(df, 0.02, 80.0, 0.05)
+        service = ScreeningService()
+        result = service.apply_dgi_criteria(df, 0.02, 80.0, 0.05)
 
         assert len(result) == 2  # Only A and C should pass
         assert "A" in result["symbol"].values
@@ -85,7 +90,8 @@ class TestScreeningService:
     def test_score_dataframe_empty(self):
         """Test scoring empty DataFrame."""
         df = pd.DataFrame()
-        result = ScreeningService.score_dataframe(df)
+        service = ScreeningService()
+        result = service.score_dataframe(df)
 
         assert result.empty
         assert "score" not in result.columns
@@ -104,7 +110,8 @@ class TestScreeningService:
             }
         )
 
-        result = ScreeningService.score_dataframe(df)
+        service = ScreeningService()
+        result = service.score_dataframe(df)
 
         assert "score" in result.columns
         assert all(0.0 <= score <= 1.0 for score in result["score"])

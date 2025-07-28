@@ -1,4 +1,4 @@
-# screener.py
+"""DGI Screener with modern service architecture using dependency injection."""
 
 import asyncio
 import logging
@@ -28,7 +28,7 @@ class CompanyFilter(Protocol):
 
 
 class Screener:
-    """Screen companies based on DGI criteria."""
+    """Screen companies based on DGI criteria using modern service architecture."""
 
     def __init__(
         self,
@@ -36,18 +36,30 @@ class Screener:
         filters: list[CompanyFilter] | None = None,
         scoring_strategy: ScoringStrategy | None = None,
         filter_strategy: BaseFilter | None = None,
+        screening_service: ScreeningService | None = None,
     ) -> None:
+        """Initialize screener with dependency injection.
+
+        Args:
+            repository: Data repository for loading company data
+            filters: Optional list of company filters
+            scoring_strategy: Optional scoring strategy
+            filter_strategy: Optional filter strategy
+            screening_service: Injected screening service (creates default if None)
+        """
         self._repository = repository
         self._filters = filters or []
         self._scoring_strategy = scoring_strategy
         self._filter_strategy = filter_strategy or DefaultFilter()
 
+        # Use dependency injection for screening service
+        self._screening_service = screening_service or ScreeningService()
+
     def default_score(self, company: CompanyData) -> float:
         """Calculate a default score for a company using the service layer."""
         return ScreeningService.calculate_composite_score(company)
 
-    @staticmethod
-    def rows_to_dataframe(rows: list[CompanyData]) -> DataFrame:
+    def rows_to_dataframe(self, rows: list[CompanyData]) -> DataFrame:
         """Convert CompanyData objects to DataFrame using service layer."""
         return ScreeningService.rows_to_dataframe(rows)
 
@@ -67,19 +79,21 @@ class Screener:
             top_n,
         )
 
-        # Validate parameters using service layer
-        ScreeningService.validate_screening_parameters(
+        # Validate parameters using injected service
+        self._screening_service.validate_screening_parameters(
             min_yield, max_payout, min_cagr, top_n
         )
 
         # Load universe
         df = self.load_universe()
 
-        # Apply filters
-        filtered = self.apply_filters(df, min_yield, max_payout, min_cagr)
+        # Apply filters using injected service
+        filtered = self._screening_service.apply_dgi_criteria(
+            df, min_yield, max_payout, min_cagr
+        )
 
-        # Add scores
-        scored = self.add_scores(filtered)
+        # Add scores using injected service
+        scored = self._screening_service.score_dataframe(filtered)
 
         # Return top N using service layer
         return ScreeningService.get_top_stocks(scored, top_n)
@@ -100,8 +114,8 @@ class Screener:
             top_n,
         )
 
-        # Validate parameters using service layer
-        ScreeningService.validate_screening_parameters(
+        # Validate parameters using injected service
+        self._screening_service.validate_screening_parameters(
             min_yield, max_payout, min_cagr, top_n
         )
 
@@ -112,11 +126,18 @@ class Screener:
             # Apply filters (this is CPU-bound, so we run it in thread pool)
             loop = asyncio.get_event_loop()
             filtered = await loop.run_in_executor(
-                None, self.apply_filters, df, min_yield, max_payout, min_cagr
+                None,
+                self._screening_service.apply_dgi_criteria,
+                df,
+                min_yield,
+                max_payout,
+                min_cagr,
             )
 
             # Add scores (this is CPU-bound, so we run it in thread pool)
-            scored = await loop.run_in_executor(None, self.add_scores, filtered)
+            scored = await loop.run_in_executor(
+                None, self._screening_service.score_dataframe, filtered
+            )
 
             # Return top N using service layer
             return await loop.run_in_executor(
@@ -160,6 +181,7 @@ class Screener:
         max_payout: float = config.DEFAULT_SCREEN_MAX_PAYOUT,
         min_cagr: float = config.DEFAULT_SCREEN_MIN_CAGR,
     ) -> DataFrame:
+        """Apply filters using the configured filter strategy."""
         logger.info(
             "Applying filters: min_yield=%s, max_payout=%s, min_cagr=%s",
             min_yield,
@@ -172,9 +194,9 @@ class Screener:
         return filtered
 
     def add_scores(self, df: DataFrame) -> DataFrame:
-        """Add scores to DataFrame using service layer."""
+        """Add scores to DataFrame using injected service."""
         logger.info("Scoring DataFrame rows")
-        return ScreeningService.score_dataframe(df)
+        return self._screening_service.score_dataframe(df)
 
 
 # For backward compatibility, provide functional API using CSV repository
@@ -186,6 +208,7 @@ _default_screener = Screener(_default_repo)
 
 
 def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
+    """Load universe from CSV file with validation."""
     # Validate the CSV path before creating the repository
     from dgi.validation_utils import PathValidationError, validate_file_path
 
@@ -202,6 +225,7 @@ def load_universe(csv_path: str = "data/fundamentals_small.csv") -> DataFrame:
 async def load_universe_async(
     csv_path: str = "data/fundamentals_small.csv",
 ) -> DataFrame:
+    """Load universe from CSV file asynchronously with validation."""
     # Validate the CSV path before creating the repository
     from dgi.validation_utils import PathValidationError, validate_file_path
 

@@ -65,16 +65,16 @@ class TestScreenerEdgeCases(unittest.TestCase):
         test_data = pd.DataFrame(
             {
                 "symbol": ["AAPL", "MSFT"],
-                "dividend_yield": [0.5, 0.8],  # Below threshold
+                "dividend_yield": [0.005, 0.008],  # Below threshold (0.5%, 0.8%)
                 "payout": [90.0, 95.0],  # Above threshold
-                "dividend_cagr": [1.0, 2.0],  # Below threshold
+                "dividend_cagr": [0.01, 0.02],  # Below threshold (1%, 2%)
             }
         )
 
         mock_repo = self._create_mock_repo(test_data)
 
         screener = Screener(mock_repo)
-        result = screener.screen(min_yield=2.0, max_payout=60.0, min_cagr=5.0)
+        result = screener.screen(min_yield=0.02, max_payout=60.0, min_cagr=0.05)
 
         self.assertTrue(result.empty)
 
@@ -83,16 +83,16 @@ class TestScreenerEdgeCases(unittest.TestCase):
         test_data = pd.DataFrame(
             {
                 "symbol": ["AAPL", "MSFT", "GOOGL"],
-                "dividend_yield": [1.5, 2.5, 0.0],
+                "dividend_yield": [0.015, 0.025, 0.0],  # 1.5%, 2.5%, 0%
                 "payout": [25.0, 30.0, 0.0],
-                "dividend_cagr": [5.0, 7.0, 0.0],
+                "dividend_cagr": [0.05, 0.07, 0.0],  # 5%, 7%, 0%
             }
         )
 
         mock_repo = self._create_mock_repo(test_data)
 
         screener = Screener(mock_repo)
-        result = screener.screen(min_yield=2.0, max_payout=60.0, min_cagr=5.0)
+        result = screener.screen(min_yield=0.02, max_payout=60.0, min_cagr=0.05)
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result.iloc[0]["symbol"], "MSFT")

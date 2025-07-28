@@ -49,10 +49,26 @@ class Container(containers.DeclarativeContainer):
         create_scoring_strategy,
     )
 
+    # New focused services implementing SOLID principles
+    parameter_validator = providers.Singleton(ScreeningParameterValidator)
+
+    criteria_service = providers.Singleton(DGICriteriaService)
+
+    scoring_service = providers.Singleton(DataFrameScoringService)
+
+    # Coordinating service with dependency injection
+    screening_service = providers.Factory(
+        ScreeningService,
+        parameter_validator=parameter_validator,
+        criteria_applier=criteria_service,
+        dataframe_scorer=scoring_service,
+    )
+
     # Screener with dependency injection
     screener = providers.Singleton(
         create_screener,
         repository=data_repository,
+        screening_service=screening_service,
     )
 
     # Test screener for testing environment
@@ -62,21 +78,7 @@ class Container(containers.DeclarativeContainer):
             create_repository,
             data_path=settings.provided.data_path,
         ),
-    )
-
-    # New focused services implementing SOLID principles
-    parameter_validator = providers.Singleton(ScreeningParameterValidator)
-
-    criteria_service = providers.Singleton(DGICriteriaService)
-
-    scoring_service = providers.Singleton(DataFrameScoringService)
-
-    # Coordinating service with dependency injection
-    screening_service = providers.Singleton(
-        ScreeningService,
-        parameter_validator=parameter_validator,
-        criteria_applier=criteria_service,
-        dataframe_scorer=scoring_service,
+        screening_service=screening_service,
     )
 
 
