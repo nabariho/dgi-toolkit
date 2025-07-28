@@ -16,6 +16,10 @@ class APISettings(BaseSettings):
     )
     api_version: str = "1.0.0"
     debug: bool = Field(default=False, description="Enable debug mode")
+    environment: str = Field(
+        default_factory=lambda: os.environ.get("DGI_ENVIRONMENT", "development"),
+        description="Environment (development, test, production)",
+    )
 
     # Server settings
     host: str = Field(default="0.0.0.0", description="Server host")

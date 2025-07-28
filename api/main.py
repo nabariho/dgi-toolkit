@@ -5,7 +5,7 @@ import time
 from contextlib import asynccontextmanager
 
 import psutil
-from fastapi import Depends, FastAPI, Query, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -15,13 +15,20 @@ from slowapi.util import get_remote_address
 
 from dgi.screener import Screener
 
+from .async_processing import (
+    JobPriority,
+    JobStatus,
+    ScreeningJob,
+    get_job_queue,
+    submit_background_screening,
+)
 from .caching import cache_result, get_cache_stats
 from .config import get_settings, validate_configuration
 from .dependencies import get_screener
 from .error_handlers import register_exception_handlers
-from .exceptions import APIException, ConfigurationError, DataProcessingError
+from .exceptions import APIException, ConfigurationError
 from .logging_config import RequestContextMiddleware, get_logger, setup_logging
-from .mappers import PerformanceTracker, ScreenResponseMapper, StockMapper
+from .observability import get_metrics, get_observability_manager, instrument_fastapi
 from .schemas.responses import APIInfoResponse, HealthResponse, ScreenResponse
 from .versioning import APIVersionMiddleware
 
@@ -113,6 +120,9 @@ app.add_middleware(APIVersionMiddleware)
 
 # Register exception handlers
 register_exception_handlers(app)
+
+# Instrument FastAPI with OpenTelemetry
+instrument_fastapi(app)
 
 
 @app.middleware("http")
@@ -419,121 +429,124 @@ async def screen_stocks(
     ),
     screener: Screener = Depends(get_screener),
 ) -> ScreenResponse:
-    """
-    Screen stocks using DGI criteria and return top performers.
-
-    This endpoint filters stocks based on dividend yield, payout ratio, and dividend growth rate,
-    then ranks them by a composite score and returns the top N stocks.
-
-    Args:
-        request: FastAPI request object
-        min_yield: Minimum dividend yield required
-        max_payout: Maximum payout ratio allowed
-        min_cagr: Minimum dividend growth rate required
-        top_n: Number of top stocks to return
-        screener: Injected screener dependency
-
-    Returns:
-        ScreenResponse with filtered and ranked stocks
-
-    Raises:
-        DataProcessingError: If data processing fails
-        ValidationError: If input parameters are invalid
-    """
-    # Start performance tracking
-    tracker = PerformanceTracker()
-    tracker.start()
-
-    # Get correlation ID for logging
-    correlation_id = getattr(request.state, "correlation_id", None)
-
-    logger.info(
-        f"Screening stocks with parameters: min_yield={min_yield}, max_payout={max_payout}, "
-        f"min_cagr={min_cagr}, top_n={top_n}",
-        extra={"correlation_id": correlation_id},
-    )
+    """Screen stocks using DGI criteria with observability."""
+    start_time = time.time()
+    observability_manager = get_observability_manager()
 
     try:
-        # Use cached data loading for better performance
-        df = _load_universe_cached(screener)
-
-        if df.empty:
-            logger.warning(
-                "No data loaded from repository",
-                extra={"correlation_id": correlation_id},
-            )
-            return ScreenResponseMapper.create_screen_response(
-                stocks=[],
-                filters_applied=ScreenResponseMapper.create_filters_dict(
-                    min_yield, max_payout, min_cagr, top_n
-                ),
-                processing_time_ms=tracker.end(),
-            )
-
-        # Apply filters with optimized processing
-        filtered = _apply_filters_optimized(df, min_yield, max_payout, min_cagr)
-
-        if filtered.empty:
-            logger.info(
-                "No stocks match the filtering criteria",
-                extra={"correlation_id": correlation_id},
-            )
-            return ScreenResponseMapper.create_screen_response(
-                stocks=[],
-                filters_applied=ScreenResponseMapper.create_filters_dict(
-                    min_yield, max_payout, min_cagr, top_n
-                ),
-                processing_time_ms=tracker.end(),
-            )
-
-        # Add scores with optimized processing
-        scored = _add_scores_optimized(filtered)
-
-        # Validate DataFrame structure
-        if not StockMapper.validate_dataframe_structure(scored):
-            raise DataProcessingError(
-                "Invalid data structure returned from screener",
-                operation="data_validation",
-            )
-
-        # Sort by score and take top N with optimized sorting
-        top_stocks = _get_top_stocks_optimized(scored, top_n)
-
-        # Convert to response models with optimized conversion
-        stocks = _convert_to_responses_optimized(top_stocks)
-
-        # Create filters dictionary
-        filters_applied = ScreenResponseMapper.create_filters_dict(
-            min_yield, max_payout, min_cagr, top_n
-        )
-
-        # Calculate processing time
-        processing_time_ms = tracker.end()
-
-        logger.info(
-            f"Screening completed: {len(stocks)} stocks returned in {processing_time_ms:.2f}ms",
-            extra={
-                "correlation_id": correlation_id,
-                "stocks_returned": len(stocks),
-                "processing_time_ms": processing_time_ms,
+        # Log business event
+        observability_manager.log_business_event(
+            "stock_screening_started",
+            {
+                "min_yield": min_yield,
+                "max_payout": max_payout,
+                "min_cagr": min_cagr,
+                "top_n": top_n,
             },
         )
 
-        return ScreenResponseMapper.create_screen_response(
-            stocks=stocks,
-            filters_applied=filters_applied,
-            processing_time_ms=processing_time_ms,
-        )
+        # Trace the operation
+        async with observability_manager.trace_operation(
+            "screen_stocks",
+            {
+                "min_yield": min_yield,
+                "max_payout": max_payout,
+                "min_cagr": min_cagr,
+                "top_n": top_n,
+            },
+        ):
+            # Log screening parameters
+            logger.info(
+                f"Screening stocks with parameters: min_yield={min_yield}, "
+                f"max_payout={max_payout}, min_cagr={min_cagr}, top_n={top_n}"
+            )
+
+            # Load universe data with caching
+            universe_df = _load_universe_cached(screener)
+
+            # Apply filters with optimized processing
+            filtered_df = _apply_filters_optimized(
+                universe_df, min_yield, max_payout, min_cagr
+            )
+
+            # Add scores with optimized processing
+            scored_df = _add_scores_optimized(filtered_df)
+
+            # Get top stocks with optimized sorting
+            top_stocks_df = _get_top_stocks_optimized(scored_df, top_n)
+
+            # Convert to response models with optimized processing
+            stocks = _convert_to_responses_optimized(top_stocks_df)
+
+            # Calculate processing time
+            processing_time = (
+                time.time() - start_time
+            ) * 1000  # Convert to milliseconds
+
+            # Record screening metrics
+            observability_manager.record_screening_operation(
+                len(stocks),
+                time.time() - start_time,
+                {
+                    "min_yield": min_yield,
+                    "max_payout": max_payout,
+                    "min_cagr": min_cagr,
+                    "top_n": top_n,
+                },
+            )
+
+            # Log completion
+            logger.info(
+                f"Screening completed: {len(stocks)} stocks returned in {processing_time:.2f}ms"
+            )
+
+            # Log business event
+            observability_manager.log_business_event(
+                "stock_screening_completed",
+                {
+                    "stocks_returned": len(stocks),
+                    "processing_time_ms": processing_time,
+                    "filters_applied": {
+                        "min_yield": min_yield,
+                        "max_payout": max_payout,
+                        "min_cagr": min_cagr,
+                        "top_n": top_n,
+                    },
+                },
+            )
+
+            return ScreenResponse(
+                stocks=stocks,
+                total_count=len(stocks),
+                filters_applied={
+                    "min_yield": min_yield,
+                    "max_payout": max_payout,
+                    "min_cagr": min_cagr,
+                    "top_n": top_n,
+                },
+                processing_time_ms=processing_time,
+            )
 
     except Exception as e:
-        logger.error(
-            f"Error in screen_stocks: {e!s}",
-            exc_info=True,
-            extra={"correlation_id": correlation_id},
+        # Record error metrics
+        observability_manager.record_error("screening_error", str(e), "/api/v1/screen")
+
+        # Log business event
+        observability_manager.log_business_event(
+            "stock_screening_error",
+            {
+                "error": str(e),
+                "parameters": {
+                    "min_yield": min_yield,
+                    "max_payout": max_payout,
+                    "min_cagr": min_cagr,
+                    "top_n": top_n,
+                },
+            },
         )
-        raise DataProcessingError(
-            f"Error during stock screening: {e!s}", operation="stock_screening"
-        ) from e
+
+        logger.error(f"Screening error: {e}")
+        raise
 
 
 @app.get(
@@ -807,6 +820,417 @@ async def root_v1() -> APIInfoResponse:
 async def get_cache_statistics() -> dict:
     """Get cache statistics endpoint."""
     return get_cache_stats()
+
+
+@app.get(
+    "/metrics",
+    tags=["Monitoring"],
+    summary="Get Prometheus metrics",
+    description="""
+    Get Prometheus-formatted metrics for monitoring and alerting.
+
+    This endpoint provides comprehensive metrics including:
+    - **Request Metrics**: Total requests, duration, status codes
+    - **Business Metrics**: Screening operations, cache performance
+    - **Error Metrics**: Error counts by type and endpoint
+    - **System Metrics**: Service information and health
+
+    **Use Cases:**
+    - Prometheus monitoring integration
+    - Grafana dashboard creation
+    - Alerting rule configuration
+    - Performance analysis
+
+    **Format**: Prometheus text format
+    """,
+    responses={
+        200: {
+            "description": "Prometheus metrics in text format",
+            "content": {
+                "text/plain": {
+                    "example": """
+# HELP dgi_requests_total Total number of API requests
+# TYPE dgi_requests_total counter
+dgi_requests_total{method="GET",path="/healthz",status_code="200"} 150
+
+# HELP dgi_request_duration_seconds Request duration in seconds
+# TYPE dgi_request_duration_seconds histogram
+dgi_request_duration_seconds_bucket{method="GET",path="/healthz",status_code="200",le="0.1"} 120
+dgi_request_duration_seconds_bucket{method="GET",path="/healthz",status_code="200",le="0.5"} 150
+
+# HELP dgi_screening_operations_total Total number of stock screening operations
+# TYPE dgi_screening_operations_total counter
+dgi_screening_operations_total{stocks_returned="5",filters_applied="4"} 25
+                    """
+                }
+            },
+        }
+    },
+)
+async def get_metrics_endpoint() -> str:
+    """Get Prometheus metrics endpoint."""
+    return get_metrics()
+
+
+@app.post(
+    "/api/v1/screen/async",
+    tags=["Async Screening"],
+    summary="Submit async stock screening job",
+    description="""
+    Submit a stock screening job for background processing.
+
+    This endpoint allows you to submit screening jobs that will be processed asynchronously.
+    The job will be queued and processed in the background, and you can check its status
+    using the job ID returned in the response.
+
+    **Features:**
+    - Background processing for large datasets
+    - Job queue management with priority levels
+    - Progress tracking and status monitoring
+    - Result caching for expensive operations
+
+    **Use Cases:**
+    - Processing large stock universes
+    - Batch screening operations
+    - Long-running analysis tasks
+    - Resource-intensive calculations
+
+    **Job Priorities:**
+    - **LOW**: Background processing, no urgency
+    - **NORMAL**: Standard processing (default)
+    - **HIGH**: Priority processing
+    - **URGENT**: Immediate processing
+    """,
+    responses={
+        202: {
+            "description": "Job submitted successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "status": "pending",
+                        "message": "Job submitted successfully",
+                        "estimated_completion": "2024-01-15T10:35:00Z",
+                    }
+                }
+            },
+        },
+        400: {
+            "description": "Invalid request parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": "VALIDATION_ERROR",
+                            "message": "Request validation failed",
+                            "status_code": 400,
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
+async def submit_async_screening(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    min_yield: float = Query(
+        default=0.02,
+        ge=get_min_yield_range()[0],
+        le=get_min_yield_range()[1],
+        description="Minimum dividend yield (as decimal, e.g., 0.02 for 2%)",
+    ),
+    max_payout: float = Query(
+        default=80.0,
+        ge=get_max_payout_range()[0],
+        le=get_max_payout_range()[1],
+        description="Maximum payout ratio (as percentage, e.g., 80.0 for 80%)",
+    ),
+    min_cagr: float = Query(
+        default=0.05,
+        ge=get_cagr_range()[0],
+        le=get_cagr_range()[1],
+        description="Minimum 5-year dividend CAGR (as decimal, e.g., 0.05 for 5%)",
+    ),
+    top_n: int = Query(
+        default=10,
+        ge=1,
+        le=get_max_top_n(),
+        description="Number of top stocks to return",
+    ),
+    priority: JobPriority = Query(
+        default=JobPriority.NORMAL, description="Job priority level"
+    ),
+    user_id: str | None = Query(default=None, description="User ID for job tracking"),
+) -> dict:
+    """Submit an async screening job."""
+    correlation_id = getattr(request.state, "correlation_id", None)
+
+    job_id = await submit_background_screening(
+        background_tasks=background_tasks,
+        min_yield=min_yield,
+        max_payout=max_payout,
+        min_cagr=min_cagr,
+        top_n=top_n,
+        priority=priority,
+        user_id=user_id,
+        correlation_id=correlation_id,
+    )
+
+    return {
+        "job_id": job_id,
+        "status": "pending",
+        "message": "Job submitted successfully",
+        "estimated_completion": None,  # Could be calculated based on queue length
+    }
+
+
+@app.get(
+    "/api/v1/jobs/{job_id}",
+    response_model=ScreeningJob,
+    tags=["Async Screening"],
+    summary="Get job status",
+    description="""
+    Get the current status and progress of an async screening job.
+
+    This endpoint provides detailed information about a background job including:
+    - Current status (pending, running, completed, failed, cancelled)
+    - Progress percentage and current step
+    - Job parameters and results (when completed)
+    - Error information (if failed)
+    - Timing information (created, started, completed)
+
+    **Use Cases:**
+    - Monitor job progress
+    - Retrieve completed results
+    - Debug failed jobs
+    - Track job timing
+    """,
+    responses={
+        200: {
+            "description": "Job status retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "status": "running",
+                        "priority": "normal",
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "started_at": "2024-01-15T10:30:05Z",
+                        "completed_at": None,
+                        "progress": 0.5,
+                        "total_steps": 5,
+                        "current_step": 3,
+                        "step_description": "Calculating scores",
+                        "min_yield": 0.02,
+                        "max_payout": 80.0,
+                        "min_cagr": 0.05,
+                        "top_n": 10,
+                        "result": None,
+                        "error_message": None,
+                        "user_id": "user123",
+                        "correlation_id": "req-12345",
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "Job not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": "JOB_NOT_FOUND",
+                            "message": "Job not found",
+                            "status_code": 404,
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
+async def get_job_status(job_id: str) -> ScreeningJob:
+    """Get the status of an async screening job."""
+    queue = await get_job_queue()
+    job = await queue.get_job_status(job_id)
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "error": {
+                    "code": "JOB_NOT_FOUND",
+                    "message": f"Job {job_id} not found",
+                    "status_code": 404,
+                }
+            },
+        )
+
+    return job
+
+
+@app.delete(
+    "/api/v1/jobs/{job_id}",
+    tags=["Async Screening"],
+    summary="Cancel job",
+    description="""
+    Cancel a pending or running async screening job.
+
+    This endpoint allows you to cancel a job that is still pending or currently running.
+    Completed, failed, or already cancelled jobs cannot be cancelled.
+
+    **Use Cases:**
+    - Cancel unnecessary jobs
+    - Free up queue capacity
+    - Stop long-running operations
+    - Resource management
+    """,
+    responses={
+        200: {
+            "description": "Job cancelled successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "status": "cancelled",
+                        "message": "Job cancelled successfully",
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "Job not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": "JOB_NOT_FOUND",
+                            "message": "Job not found",
+                            "status_code": 404,
+                        }
+                    }
+                }
+            },
+        },
+        400: {
+            "description": "Job cannot be cancelled",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "error": {
+                            "code": "JOB_CANNOT_CANCEL",
+                            "message": "Job is already completed and cannot be cancelled",
+                            "status_code": 400,
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
+async def cancel_job(job_id: str) -> dict:
+    """Cancel an async screening job."""
+    queue = await get_job_queue()
+    cancelled = await queue.cancel_job(job_id)
+
+    if not cancelled:
+        # Check if job exists
+        job = await queue.get_job_status(job_id)
+        if not job:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": {
+                        "code": "JOB_NOT_FOUND",
+                        "message": f"Job {job_id} not found",
+                        "status_code": 404,
+                    }
+                },
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": {
+                        "code": "JOB_CANNOT_CANCEL",
+                        "message": f"Job {job_id} is already {job.status.value} and cannot be cancelled",
+                        "status_code": 400,
+                    }
+                },
+            )
+
+    return {
+        "job_id": job_id,
+        "status": "cancelled",
+        "message": "Job cancelled successfully",
+    }
+
+
+@app.get(
+    "/api/v1/jobs",
+    tags=["Async Screening"],
+    summary="List jobs",
+    description="""
+    List async screening jobs with optional filtering.
+
+    This endpoint provides a list of jobs with optional filtering by status and user.
+    Jobs are sorted by creation time (newest first).
+
+    **Use Cases:**
+    - Monitor all jobs
+    - Filter by status
+    - User-specific job tracking
+    - Queue management
+    """,
+    responses={
+        200: {
+            "description": "Jobs retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "jobs": [
+                            {
+                                "job_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "status": "completed",
+                                "priority": "normal",
+                                "created_at": "2024-01-15T10:30:00Z",
+                                "progress": 1.0,
+                                "total_steps": 5,
+                                "current_step": 5,
+                                "step_description": "Completed",
+                            }
+                        ],
+                        "total_count": 1,
+                        "filters_applied": {
+                            "status": "completed",
+                            "user_id": "user123",
+                        },
+                    }
+                }
+            },
+        }
+    },
+)
+async def list_jobs(
+    status: JobStatus | None = Query(default=None, description="Filter by job status"),
+    user_id: str | None = Query(default=None, description="Filter by user ID"),
+    limit: int = Query(
+        default=50, ge=1, le=100, description="Maximum number of jobs to return"
+    ),
+) -> dict:
+    """List async screening jobs."""
+    queue = await get_job_queue()
+    jobs = await queue.list_jobs(status=status, user_id=user_id, limit=limit)
+
+    return {
+        "jobs": jobs,
+        "total_count": len(jobs),
+        "filters_applied": {
+            "status": status.value if status else None,
+            "user_id": user_id,
+        },
+    }
 
 
 @app.exception_handler(APIException)
