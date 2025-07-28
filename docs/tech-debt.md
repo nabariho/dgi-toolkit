@@ -26,9 +26,7 @@ guidance for junior developers.
 
 ### TD-001: API Validation System Dysfunction ✅ **COMPLETED**
 
-**Priority**: 🔴 Critical
-**Effort**: M (1-2 days)
-**Category**: Functionality
+**Priority**: 🔴 Critical **Effort**: M (1-2 days) **Category**: Functionality
 **Status**: ✅ **COMPLETED** - 2025-07-28
 
 **Problem**: All API endpoints were returning 422 validation errors instead of
@@ -85,10 +83,8 @@ functionality.
 
 ### TD-002: Inconsistent Exception Handling Architecture ✅ **COMPLETED**
 
-**Priority**: 🟡 High
-**Effort**: M (1-2 days)
-**Category**: Architecture
-**Status**: ✅ **COMPLETED** - 2024-12-19
+**Priority**: 🟡 High **Effort**: M (1-2 days) **Category**: Architecture **Status**: ✅
+**COMPLETED** - 2024-12-19
 
 **Problem**: Multiple exception handling approaches exist across the codebase without a
 unified strategy, violating the DRY principle and making error handling unpredictable.
@@ -143,9 +139,7 @@ unified strategy, violating the DRY principle and making error handling unpredic
 
 ### TD-003: Service Layer Implementation Gaps
 
-**Priority**: 🟡 High
-**Effort**: L (3-5 days)
-**Category**: Architecture
+**Priority**: 🟡 High **Effort**: L (3-5 days) **Category**: Architecture
 
 **Problem**: Service layer (`dgi/services.py`) exists but contains 173 lines of
 untested, unused code with 0% coverage. Business logic is scattered between domain
@@ -180,10 +174,8 @@ classes and service classes.
 
 ### TD-004: Strategy Pattern Implementation Violations ✅ **COMPLETED**
 
-**Priority**: 🟡 High
-**Effort**: M (1-2 days)
-**Category**: Design Patterns
-**Status**: ✅ **COMPLETED** - 2024-12-19
+**Priority**: 🟡 High **Effort**: M (1-2 days) **Category**: Design Patterns **Status**:
+✅ **COMPLETED** - 2024-12-19
 
 **Problem**: Strategy pattern is inconsistently implemented across filtering and scoring
 components, with duplicate class definitions and improper abstractions.
@@ -237,10 +229,8 @@ components, with duplicate class definitions and improper abstractions.
 
 ### TD-005: Missing Comprehensive Data Validation ✅ **COMPLETED**
 
-**Priority**: 🟡 High
-**Effort**: M (1-2 days)
-**Category**: Data Quality
-**Status**: ✅ **COMPLETED** - 2024-12-19
+**Priority**: 🟡 High **Effort**: M (1-2 days) **Category**: Data Quality **Status**: ✅
+**COMPLETED** - 2024-12-19
 
 **Problem**: Data validation is inconsistently applied across different layers and
 doesn't follow enterprise patterns for data validation pipelines.
@@ -298,9 +288,7 @@ doesn't follow enterprise patterns for data validation pipelines.
 
 ### TD-006: Dependency Injection Container Improvements
 
-**Priority**: 🟢 Medium
-**Effort**: M (1-2 days)
-**Category**: Architecture
+**Priority**: 🟢 Medium **Effort**: M (1-2 days) **Category**: Architecture
 
 **Problem**: Dependency injection is manually implemented without leveraging established
 DI frameworks, making it harder to manage dependencies in larger applications.
@@ -322,9 +310,7 @@ DI frameworks, making it harder to manage dependencies in larger applications.
 
 ### TD-007: Incomplete Type Safety Implementation
 
-**Priority**: 🟢 Medium
-**Effort**: S (3-4 hours)
-**Category**: Type Safety
+**Priority**: 🟢 Medium **Effort**: S (3-4 hours) **Category**: Type Safety
 
 **Problem**: Type hints are inconsistently applied and mypy reports 21 errors indicating
 incomplete type safety.
@@ -346,9 +332,7 @@ incomplete type safety.
 
 ### TD-008: Test Coverage and Quality Gaps
 
-**Priority**: 🟢 Medium
-**Effort**: L (3-5 days)
-**Category**: Testing
+**Priority**: 🟢 Medium **Effort**: L (3-5 days) **Category**: Testing
 
 **Problem**: Test coverage is 64% overall with several critical modules having
 insufficient coverage, particularly in error handling paths.
@@ -370,9 +354,7 @@ insufficient coverage, particularly in error handling paths.
 
 ### TD-009: Resource Management and Memory Leaks
 
-**Priority**: 🟢 Medium
-**Effort**: S (3-4 hours)
-**Category**: Performance
+**Priority**: 🟢 Medium **Effort**: S (3-4 hours) **Category**: Performance
 
 **Problem**: Resource management patterns are inconsistently applied, with potential
 memory leaks in data processing pipelines.
@@ -394,9 +376,7 @@ memory leaks in data processing pipelines.
 
 ### TD-010: Configuration Management Enhancement
 
-**Priority**: 🟢 Medium
-**Effort**: S (3-4 hours)
-**Category**: Configuration
+**Priority**: 🟢 Medium **Effort**: S (3-4 hours) **Category**: Configuration
 
 **Problem**: Configuration is spread across multiple files without a unified
 configuration strategy or environment-specific overrides.
@@ -422,9 +402,7 @@ configuration strategy or environment-specific overrides.
 
 ### TD-011: Code Organization and Module Structure
 
-**Priority**: 🔵 Low
-**Effort**: XS (1-2 hours)
-**Category**: Organization
+**Priority**: 🔵 Low **Effort**: XS (1-2 hours) **Category**: Organization
 
 **Problem**: Some modules have unclear responsibilities and could be better organized
 following domain-driven design principles.
@@ -438,9 +416,7 @@ following domain-driven design principles.
 
 ### TD-012: Performance Optimization Opportunities
 
-**Priority**: 🔵 Low
-**Effort**: M (1-2 days)
-**Category**: Performance
+**Priority**: 🔵 Low **Effort**: M (1-2 days) **Category**: Performance
 
 **Problem**: Several performance optimization opportunities exist in data processing
 pipelines.
