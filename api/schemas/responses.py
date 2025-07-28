@@ -38,55 +38,55 @@ class StockResponse(BaseModel):
         min_length=1,
         max_length=5,
         pattern=r"^[A-Z0-9]+$",
-        example="JNJ",
+        examples=["JNJ"],
     )
     name: str = Field(
         description="Company name",
         min_length=1,
         max_length=100,
-        example="Johnson & Johnson",
+        examples=["Johnson & Johnson"],
     )
     sector: str = Field(
         description="Business sector classification",
         min_length=1,
         max_length=50,
-        example="Healthcare",
+        examples=["Healthcare"],
     )
     industry: str = Field(
         description="Industry classification",
         min_length=1,
         max_length=50,
-        example="Drug Manufacturers",
+        examples=["Drug Manufacturers"],
     )
     dividend_yield: float = Field(
         description="Current dividend yield as decimal (e.g., 0.025 = 2.5%)",
         ge=0.0,
         le=1.0,
-        example=0.025,
+        examples=[0.025],
     )
     payout: float = Field(
         description="Dividend payout ratio as percentage (e.g., 45.2 = 45.2%)",
         ge=0.0,
         le=200.0,
-        example=45.2,
+        examples=[45.2],
     )
     dividend_cagr: float = Field(
         description="5-year dividend compound annual growth rate as decimal (e.g., 0.065 = 6.5%)",
         ge=-1.0,
         le=1.0,
-        example=0.065,
+        examples=[0.065],
     )
     fcf_yield: float = Field(
         description="Free cash flow yield as percentage (e.g., 4.8 = 4.8%)",
         ge=-100.0,
         le=100.0,
-        example=4.8,
+        examples=[4.8],
     )
     score: float = Field(
         description="Composite DGI score (0.0 to 1.0, higher is better)",
         ge=0.0,
         le=1.0,
-        example=0.82,
+        examples=[0.82],
     )
 
 
@@ -111,22 +111,22 @@ class FiltersApplied(BaseModel):
         description="Minimum dividend yield filter applied (as percentage, e.g., 50.0 for 50%)",
         ge=0.0,
         le=100.0,
-        example=2.0,
+        examples=[2.0],
     )
     max_payout: float = Field(
         description="Maximum payout ratio filter applied (as percentage, e.g., 80.0 for 80%)",
         ge=0.0,
         le=200.0,
-        example=80.0,
+        examples=[80.0],
     )
     min_cagr: float = Field(
         description="Minimum dividend CAGR filter applied (as percentage, e.g., 5.0 for 5%)",
         ge=-100.0,
         le=100.0,
-        example=5.0,
+        examples=[5.0],
     )
     top_n: int = Field(
-        description="Maximum number of stocks returned", ge=1, le=1000, example=10
+        description="Maximum number of stocks returned", ge=1, le=1000, examples=[10]
     )
 
 
@@ -171,7 +171,7 @@ class ScreenResponse(BaseModel):
         max_length=1000,
     )
     total_count: int = Field(
-        description="Total number of stocks returned", ge=0, example=1
+        description="Total number of stocks returned", ge=0, examples=[1]
     )
     filters_applied: FiltersApplied = Field(
         description="Exact filter parameters used in the screening process"
@@ -179,7 +179,7 @@ class ScreenResponse(BaseModel):
     processing_time_ms: float = Field(
         description="Time taken to process the screening request in milliseconds",
         ge=0.0,
-        example=15.23,
+        examples=[15.23],
     )
 
 
@@ -202,15 +202,15 @@ class ErrorDetail(BaseModel):
 
     field: str | None = Field(
         description="Field name that caused the error (if applicable)",
-        example="min_yield",
+        examples=["min_yield"],
     )
     message: str = Field(
         description="Human-readable error message",
-        example="ensure this value is greater than 0",
+        examples=["ensure this value is greater than 0"],
     )
     type: str = Field(
         description="Error type/code for programmatic handling",
-        example="value_error.number.not_gt",
+        examples=["value_error.number.not_gt"],
     )
 
 
@@ -249,11 +249,11 @@ class ErrorResponse(BaseModel):
     )
     timestamp: datetime = Field(
         description="ISO 8601 timestamp when the error occurred",
-        example="2024-01-15T10:30:00Z",
+        examples=["2024-01-15T10:30:00Z"],
     )
     correlation_id: str | None = Field(
         description="Unique correlation ID for tracking the request",
-        example="req-12345",
+        examples=["req-12345"],
     )
 
 
@@ -287,31 +287,35 @@ class HealthResponse(BaseModel):
 
     status: str = Field(
         description="Overall health status (healthy, degraded, unhealthy)",
-        example="healthy",
+        examples=["healthy"],
     )
     timestamp: datetime = Field(
         description="ISO 8601 timestamp of the health check",
-        example="2024-01-15T10:30:00Z",
+        examples=["2024-01-15T10:30:00Z"],
     )
-    version: str = Field(description="API version", example="1.0.0")
+    version: str = Field(description="API version", examples=["1.0.0"])
     uptime_seconds: float = Field(
-        description="Service uptime in seconds", ge=0.0, example=3600.0
+        description="Service uptime in seconds", ge=0.0, examples=[3600.0]
     )
     dependencies: dict[str, str] = Field(
         description="Health status of external dependencies",
-        example={
-            "database": "healthy",
-            "cache": "healthy",
-            "external_api": "healthy",
-        },
+        examples=[
+            {
+                "database": "healthy",
+                "cache": "healthy",
+                "external_api": "healthy",
+            }
+        ],
     )
     metrics: dict[str, Any] = Field(
         description="Performance and operational metrics",
-        example={
-            "total_requests": 1500,
-            "average_response_time_ms": 25.5,
-            "error_rate": 0.001,
-        },
+        examples=[
+            {
+                "total_requests": 1500,
+                "average_response_time_ms": 25.5,
+                "error_rate": 0.001,
+            }
+        ],
     )
 
 
@@ -349,19 +353,19 @@ class APIInfoResponse(BaseModel):
         }
     )
 
-    name: str = Field(description="API name", example="DGI Toolkit API")
-    version: str = Field(description="API version", example="1.0.0")
+    name: str = Field(description="API name", examples=["DGI Toolkit API"])
+    version: str = Field(description="API version", examples=["1.0.0"])
     description: str = Field(
         description="Brief description of the API",
-        example="Dividend Growth Investing stock screening and analysis API",
+        examples=["Dividend Growth Investing stock screening and analysis API"],
     )
     documentation_url: str = Field(
         description="URL to API documentation",
-        example="https://api.dgi-toolkit.com/docs",
+        examples=["https://api.dgi-toolkit.com/docs"],
     )
     features: list[str] = Field(
         description="List of available features",
-        example=[
+        examples=[
             "Stock screening with DGI criteria",
             "Real-time financial data",
             "Portfolio analysis",
@@ -370,19 +374,23 @@ class APIInfoResponse(BaseModel):
     )
     rate_limits: dict[str, Any] = Field(
         description="Rate limiting information",
-        example={
-            "requests_per_minute": 100,
-            "burst_limit": 10,
-        },
+        examples=[
+            {
+                "requests_per_minute": 100,
+                "burst_limit": 10,
+            }
+        ],
     )
     endpoints: dict[str, str] = Field(
         description="Available API endpoints",
-        example={
-            "screening": "/api/v1/screen",
-            "async_screening": "/api/v1/screen/async",
-            "health": "/api/v1/health",
-            "metrics": "/api/v1/metrics",
-        },
+        examples=[
+            {
+                "screening": "/api/v1/screen",
+                "async_screening": "/api/v1/screen/async",
+                "health": "/api/v1/health",
+                "metrics": "/api/v1/metrics",
+            }
+        ],
     )
 
 
@@ -409,27 +417,27 @@ class JobStatusResponse(BaseModel):
 
     job_id: str = Field(
         description="Unique job identifier",
-        example="550e8400-e29b-41d4-a716-446655440000",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
     status: str = Field(
         description="Job status (pending, running, completed, failed, cancelled)",
-        example="running",
+        examples=["running"],
     )
     progress: float = Field(
         description="Job progress as percentage (0.0 to 1.0)",
         ge=0.0,
         le=1.0,
-        example=0.5,
+        examples=[0.5],
     )
-    current_step: int = Field(description="Current processing step", ge=0, example=3)
+    current_step: int = Field(description="Current processing step", ge=0, examples=[3])
     total_steps: int = Field(
-        description="Total number of processing steps", ge=1, example=5
+        description="Total number of processing steps", ge=1, examples=[5]
     )
     step_description: str = Field(
-        description="Description of current step", example="Calculating scores"
+        description="Description of current step", examples=["Calculating scores"]
     )
     estimated_completion: datetime | None = Field(
-        description="Estimated completion time", example="2024-01-15T10:35:00Z"
+        description="Estimated completion time", examples=["2024-01-15T10:35:00Z"]
     )
     result: ScreenResponse | None = Field(
         description="Screening results (available when completed)", default=None
