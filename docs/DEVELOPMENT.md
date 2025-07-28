@@ -1,5 +1,149 @@
 # Development Guide
 
+## 🚀 Feature Development Process
+
+This project follows a systematic approach to feature development that ensures quality,
+maintainability, and adherence to industry best practices.
+
+### Feature Development Workflow
+
+For each feature in the backlog, we follow this 8-step process:
+
+#### 1. **Feature Selection** 🎯
+
+- Pick a feature from the Planned Features section in `docs/FEATURES.md`
+- Prioritize based on business value and technical dependencies
+- Ensure feature is well-defined with clear acceptance criteria
+
+#### 2. **Status Update** 📋
+
+- Move the feature from "📋 Planned" to "🔄 In Progress" in `docs/FEATURES.md`
+- Update the status table with current date
+- Commit the status change
+
+#### 3. **Branch Creation** 🌿
+
+- Create a new feature branch: `git checkout -b feature/DGIT-XXX-feature-name`
+- Follow naming convention: `feature/DGIT-XXX-descriptive-name`
+- Example: `feature/DGIT-301-fastapi-service-skeleton`
+
+#### 4. **Test-Driven Development (TDD)** 🧪
+
+- Write comprehensive tests first (unit, integration, edge cases)
+- Ensure tests cover all acceptance criteria
+- Use pytest with proper fixtures and mocking
+- Target ≥ 85% test coverage for new code
+
+#### 5. **Feature Implementation** 💻
+
+- Implement the feature behavior following the acceptance criteria
+- Use existing architecture patterns (Strategy, Repository, etc.)
+- Follow the technical implementation notes from FEATURES.md
+- Ensure type safety with mypy compliance
+
+#### 6. **Acceptance Criteria Validation** ✅
+
+- Verify all acceptance criteria are met
+- Run the complete test suite
+- Validate against business requirements
+- Document any deviations or improvements
+
+#### 7. **Code Quality & Best Practices** 🏗️
+
+- Follow SOLID principles (Single Responsibility, Open/Closed, etc.)
+- Write clean, readable, and maintainable code
+- Use dependency injection and loose coupling
+- Ensure proper error handling and logging
+- Follow the project's coding standards (Black, Ruff, MyPy)
+
+#### 8. **Code Review & Merge** 🔄
+
+- Push feature branch to repository
+- Create pull request with detailed description
+- Include:
+  - Feature summary and business value
+  - Technical implementation details
+  - Test coverage report
+  - Any breaking changes or migration notes
+- Address review feedback
+- Merge to main branch
+- Update feature status to "✅ Complete" in FEATURES.md
+
+### Quality Gates
+
+Each feature must pass these quality gates before merging:
+
+- ✅ **Tests**: All tests pass with ≥ 85% coverage
+- ✅ **Linting**: Ruff, Black, and MyPy checks pass
+- ✅ **Security**: Bandit security scan passes
+- ✅ **Documentation**: README and docstrings updated
+- ✅ **Acceptance Criteria**: All criteria met and validated
+
+### Branch Naming Convention
+
+```
+feature/DGIT-XXX-descriptive-name
+```
+
+Examples:
+
+- `feature/DGIT-301-fastapi-service-skeleton`
+- `feature/DGIT-401-finviz-scraper-tool`
+- `feature/DGIT-403-research-agent-orchestrator`
+
+### Commit Message Convention
+
+Follow conventional commits:
+
+```
+type(scope): description
+
+- feat: new feature
+- fix: bug fix
+- docs: documentation changes
+- test: adding or updating tests
+- refactor: code refactoring
+- chore: maintenance tasks
+```
+
+### Pull Request Template
+
+```markdown
+## Feature Summary
+
+- **Feature ID**: DGIT-XXX
+- **Title**: Brief description
+- **Business Value**: What problem does this solve?
+
+## Technical Implementation
+
+- **Files Changed**: List of key files
+- **Architecture**: How it fits into existing patterns
+- **Dependencies**: New dependencies added
+
+## Testing
+
+- **Coverage**: Test coverage percentage
+- **Test Types**: Unit, integration, etc.
+- **Edge Cases**: Special scenarios tested
+
+## Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## Breaking Changes
+
+- None / List any breaking changes
+
+## Migration Notes
+
+- Any required migration steps
+```
+
+---
+
 ## Quality Assurance Workflow
 
 This project maintains high code quality standards through automated checks and
