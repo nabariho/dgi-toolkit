@@ -1,9 +1,9 @@
 """Response schemas for DGI Toolkit API."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class HealthResponse(BaseModel):
@@ -11,15 +11,22 @@ class HealthResponse(BaseModel):
 
     status: str = Field(default="up", description="Service status")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Response timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Response timestamp"
     )
     version: str = Field(description="API version")
     environment: str = Field(description="Environment (development, production, etc.)")
+    uptime_seconds: float | None = Field(None, description="Service uptime in seconds")
+    memory_usage_mb: float | None = Field(None, description="Memory usage in MB")
+    cpu_usage_percent: float | None = Field(None, description="CPU usage percentage")
+    data_file_status: str | None = Field(
+        None, description="Data file accessibility status"
+    )
+    data_file_size_mb: float | None = Field(None, description="Data file size in MB")
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value: datetime) -> str:
+        """Serialize datetime to ISO format."""
+        return value.isoformat()
 
 
 class StockResponse(BaseModel):
@@ -39,10 +46,8 @@ class StockResponse(BaseModel):
     fcf_yield: float = Field(description="Free cash flow yield as percentage")
     score: float = Field(description="Composite DGI score (0.0 to 1.0)")
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "symbol": "AAPL",
                 "name": "Apple Inc.",
@@ -55,6 +60,7 @@ class StockResponse(BaseModel):
                 "score": 0.75,
             }
         }
+    )
 
 
 class ErrorResponse(BaseModel):
@@ -62,15 +68,17 @@ class ErrorResponse(BaseModel):
 
     error: dict[str, Any] = Field(description="Error details")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Error timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Error timestamp"
     )
     correlation_id: str | None = Field(None, description="Request correlation ID")
 
-    class Config:
-        """Pydantic configuration."""
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value: datetime) -> str:
+        """Serialize datetime to ISO format."""
+        return value.isoformat()
 
-        json_encoders = {datetime: lambda v: v.isoformat()}
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "error": {
                     "code": "VALIDATION_ERROR",
@@ -90,6 +98,7 @@ class ErrorResponse(BaseModel):
                 "correlation_id": "req-12345",
             }
         }
+    )
 
 
 class ScreenResponse(BaseModel):
@@ -102,10 +111,8 @@ class ScreenResponse(BaseModel):
         None, description="Request processing time in milliseconds"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "stocks": [
                     {
@@ -130,6 +137,7 @@ class ScreenResponse(BaseModel):
                 "processing_time_ms": 45.2,
             }
         }
+    )
 
 
 class APIInfoResponse(BaseModel):
@@ -141,14 +149,16 @@ class APIInfoResponse(BaseModel):
     health_url: str = Field(description="Health check endpoint URL")
     endpoints: list[str] = Field(description="Available API endpoints")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Response timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Response timestamp"
     )
 
-    class Config:
-        """Pydantic configuration."""
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value: datetime) -> str:
+        """Serialize datetime to ISO format."""
+        return value.isoformat()
 
-        json_encoders = {datetime: lambda v: v.isoformat()}
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "message": "DGI Toolkit API",
                 "version": "1.0.0",
@@ -158,3 +168,4 @@ class APIInfoResponse(BaseModel):
                 "timestamp": "2024-01-15T10:30:00Z",
             }
         }
+    )

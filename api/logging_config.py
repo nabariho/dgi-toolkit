@@ -109,7 +109,7 @@ def log_with_context(
     logger: logging.Logger,
     level: str,
     message: str,
-    correlation_id: str = None,
+    correlation_id: str | None = None,
     **kwargs: Any,
 ) -> None:
     """Log message with additional context.

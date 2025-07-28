@@ -62,10 +62,7 @@ async def validation_exception_handler(
     correlation_id = getattr(request.state, "correlation_id", None)
 
     # Extract validation errors
-    if isinstance(exc, RequestValidationError):
-        errors = exc.errors()
-    else:
-        errors = exc.errors()
+    errors = exc.errors() if isinstance(exc, RequestValidationError) else exc.errors()
 
     # Format validation errors
     formatted_errors = []

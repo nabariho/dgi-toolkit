@@ -1,8 +1,10 @@
 """FastAPI application for DGI Toolkit API service."""
 
+import os
 import time
 from contextlib import asynccontextmanager
 
+import psutil
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -20,6 +22,7 @@ from .exceptions import APIException, ConfigurationError, DataProcessingError
 from .logging_config import RequestContextMiddleware, get_logger, setup_logging
 from .mappers import PerformanceTracker, ScreenResponseMapper, StockMapper
 from .schemas.responses import APIInfoResponse, HealthResponse, ScreenResponse
+from .versioning import APIVersionMiddleware
 
 # Set up logging
 setup_logging()
@@ -28,11 +31,37 @@ logger = get_logger(__name__)
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
+# Global startup time for uptime calculation
+startup_time = None
+
+
+def get_min_yield_range():
+    """Get minimum yield range for Query validation."""
+    return get_settings().min_yield_range
+
+
+def get_max_payout_range():
+    """Get maximum payout range for Query validation."""
+    return get_settings().max_payout_range
+
+
+def get_cagr_range():
+    """Get CAGR range for Query validation."""
+    return get_settings().cagr_range
+
+
+def get_max_top_n():
+    """Get maximum top N for Query validation."""
+    return get_settings().max_top_n
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
+    global startup_time
+
     # Startup
+    startup_time = time.time()
     logger.info("Starting DGI Toolkit API...")
 
     try:
@@ -78,6 +107,9 @@ app.add_middleware(
 # Add request context middleware for logging
 app.add_middleware(RequestContextMiddleware)
 
+# Add API versioning middleware
+app.add_middleware(APIVersionMiddleware)
+
 # Register exception handlers
 register_exception_handlers(app)
 
@@ -118,13 +150,50 @@ async def add_process_time_header(request: Request, call_next):
     f"{get_settings().rate_limit_requests}/{get_settings().rate_limit_period}s"
 )
 async def health_check(request: Request) -> HealthResponse:
-    """Health check endpoint."""
+    """Health check endpoint with comprehensive system information."""
     logger.debug("Health check requested")
+
+    # Calculate uptime
+    uptime_seconds = None
+    if startup_time is not None:
+        uptime_seconds = time.time() - startup_time
+
+    # Get system metrics
+    memory_usage_mb = None
+    cpu_usage_percent = None
+    try:
+        process = psutil.Process()
+        memory_info = process.memory_info()
+        memory_usage_mb = memory_info.rss / 1024 / 1024  # Convert to MB
+        cpu_usage_percent = process.cpu_percent(interval=0.1)
+    except Exception as e:
+        logger.warning(f"Could not get system metrics: {e}")
+
+    # Check data file status
+    data_file_status = None
+    data_file_size_mb = None
+    try:
+        data_path = get_settings().data_path
+        if os.path.exists(data_path):
+            data_file_status = "accessible"
+            data_file_size_mb = (
+                os.path.getsize(data_path) / 1024 / 1024
+            )  # Convert to MB
+        else:
+            data_file_status = "not_found"
+    except Exception as e:
+        logger.warning(f"Could not check data file status: {e}")
+        data_file_status = "error"
 
     return HealthResponse(
         status="up",
         version=get_settings().api_version,
         environment="development" if get_settings().debug else "production",
+        uptime_seconds=uptime_seconds,
+        memory_usage_mb=memory_usage_mb,
+        cpu_usage_percent=cpu_usage_percent,
+        data_file_status=data_file_status,
+        data_file_size_mb=data_file_size_mb,
     )
 
 
@@ -142,26 +211,26 @@ async def screen_stocks(
     request: Request,
     min_yield: float = Query(
         default=0.02,
-        ge=get_settings().min_yield_range[0],
-        le=get_settings().min_yield_range[1],
+        ge=get_min_yield_range()[0],
+        le=get_min_yield_range()[1],
         description="Minimum dividend yield (as decimal, e.g., 0.02 for 2%)",
     ),
     max_payout: float = Query(
         default=80.0,
-        ge=get_settings().max_payout_range[0],
-        le=get_settings().max_payout_range[1],
+        ge=get_max_payout_range()[0],
+        le=get_max_payout_range()[1],
         description="Maximum payout ratio (as percentage, e.g., 80.0 for 80%)",
     ),
     min_cagr: float = Query(
         default=0.05,
-        ge=get_settings().cagr_range[0],
-        le=get_settings().cagr_range[1],
+        ge=get_cagr_range()[0],
+        le=get_cagr_range()[1],
         description="Minimum 5-year dividend CAGR (as decimal, e.g., 0.05 for 5%)",
     ),
     top_n: int = Query(
         default=10,
         ge=1,
-        le=get_settings().max_top_n,
+        le=get_max_top_n(),
         description="Number of top stocks to return",
     ),
     screener: Screener = Depends(get_screener),
@@ -291,7 +360,71 @@ async def root() -> APIInfoResponse:
         version=get_settings().api_version,
         docs_url="/docs",
         health_url="/healthz",
-        endpoints=["/api/v1/screen", "/healthz", "/docs", "/redoc"],
+        endpoints=["/api/v1/screen", "/api/v1/health", "/healthz", "/docs", "/redoc"],
+    )
+
+
+@app.get("/api/v1/health", response_model=HealthResponse, tags=["Health"])
+@limiter.limit(
+    f"{get_settings().rate_limit_requests}/{get_settings().rate_limit_period}s"
+)
+async def health_check_v1(request: Request) -> HealthResponse:
+    """Versioned health check endpoint with comprehensive system information."""
+    logger.debug("Versioned health check requested")
+
+    # Calculate uptime
+    uptime_seconds = None
+    if startup_time is not None:
+        uptime_seconds = time.time() - startup_time
+
+    # Get system metrics
+    memory_usage_mb = None
+    cpu_usage_percent = None
+    try:
+        process = psutil.Process()
+        memory_info = process.memory_info()
+        memory_usage_mb = memory_info.rss / 1024 / 1024  # Convert to MB
+        cpu_usage_percent = process.cpu_percent(interval=0.1)
+    except Exception as e:
+        logger.warning(f"Could not get system metrics: {e}")
+
+    # Check data file status
+    data_file_status = None
+    data_file_size_mb = None
+    try:
+        data_path = get_settings().data_path
+        if os.path.exists(data_path):
+            data_file_status = "accessible"
+            data_file_size_mb = (
+                os.path.getsize(data_path) / 1024 / 1024
+            )  # Convert to MB
+        else:
+            data_file_status = "not_found"
+    except Exception as e:
+        logger.warning(f"Could not check data file status: {e}")
+        data_file_status = "error"
+
+    return HealthResponse(
+        status="up",
+        version=get_settings().api_version,
+        environment="development" if get_settings().debug else "production",
+        uptime_seconds=uptime_seconds,
+        memory_usage_mb=memory_usage_mb,
+        cpu_usage_percent=cpu_usage_percent,
+        data_file_status=data_file_status,
+        data_file_size_mb=data_file_size_mb,
+    )
+
+
+@app.get("/api/v1/", response_model=APIInfoResponse, tags=["Root"])
+async def root_v1() -> APIInfoResponse:
+    """Versioned root endpoint with API information."""
+    return APIInfoResponse(
+        message="DGI Toolkit API v1",
+        version=get_settings().api_version,
+        docs_url="/docs",
+        health_url="/api/v1/health",
+        endpoints=["/api/v1/screen", "/api/v1/health", "/docs", "/redoc"],
     )
 
 

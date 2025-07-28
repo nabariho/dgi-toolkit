@@ -2,7 +2,7 @@
 
 import os
 
-from pydantic import Field, validator
+from pydantic import ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -78,14 +78,16 @@ class APISettings(BaseSettings):
         default=(-100.0, 100.0), description="Valid range for dividend CAGR"
     )
 
-    @validator("data_path")
+    @field_validator("data_path")
+    @classmethod
     def validate_data_path(cls, v: str) -> str:
         """Validate data path is not empty."""
         if not v or not v.strip():
             raise ValueError("data_path cannot be empty")
         return v.strip()
 
-    @validator("log_level")
+    @field_validator("log_level")
+    @classmethod
     def validate_log_level(cls, v: str) -> str:
         """Validate log level is valid."""
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -93,7 +95,8 @@ class APISettings(BaseSettings):
             raise ValueError(f"log_level must be one of {valid_levels}")
         return v.upper()
 
-    @validator("log_format")
+    @field_validator("log_format")
+    @classmethod
     def validate_log_format(cls, v: str) -> str:
         """Validate log format is valid."""
         valid_formats = ["json", "text"]
@@ -101,34 +104,36 @@ class APISettings(BaseSettings):
             raise ValueError(f"log_format must be one of {valid_formats}")
         return v.lower()
 
-    @validator("rate_limit_requests")
+    @field_validator("rate_limit_requests")
+    @classmethod
     def validate_rate_limit_requests(cls, v: int) -> int:
         """Validate rate limit requests is positive."""
         if v <= 0:
             raise ValueError("rate_limit_requests must be positive")
         return v
 
-    @validator("rate_limit_period")
+    @field_validator("rate_limit_period")
+    @classmethod
     def validate_rate_limit_period(cls, v: int) -> int:
         """Validate rate limit period is positive."""
         if v <= 0:
             raise ValueError("rate_limit_period must be positive")
         return v
 
-    @validator("max_top_n")
+    @field_validator("max_top_n")
+    @classmethod
     def validate_max_top_n(cls, v: int) -> int:
         """Validate max top N is positive."""
         if v <= 0:
             raise ValueError("max_top_n must be positive")
         return v
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        env_prefix = "DGI_API_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="DGI_API_",
+        case_sensitive=False,
+    )
 
 
 # Global settings instance

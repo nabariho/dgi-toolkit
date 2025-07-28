@@ -1,6 +1,6 @@
 """Request schemas for DGI Toolkit API."""
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ScreenRequest(BaseModel):
@@ -28,7 +28,8 @@ class ScreenRequest(BaseModel):
         default=10, ge=1, le=100, description="Number of top stocks to return"
     )
 
-    @validator("min_yield")
+    @field_validator("min_yield")
+    @classmethod
     def validate_min_yield(cls, v: float) -> float:
         """Validate minimum dividend yield."""
         if v < 0:
@@ -37,7 +38,8 @@ class ScreenRequest(BaseModel):
             raise ValueError("min_yield cannot exceed 100%")
         return v
 
-    @validator("max_payout")
+    @field_validator("max_payout")
+    @classmethod
     def validate_max_payout(cls, v: float) -> float:
         """Validate maximum payout ratio."""
         if v < 0:
@@ -46,7 +48,8 @@ class ScreenRequest(BaseModel):
             raise ValueError("max_payout cannot exceed 200%")
         return v
 
-    @validator("min_cagr")
+    @field_validator("min_cagr")
+    @classmethod
     def validate_min_cagr(cls, v: float) -> float:
         """Validate minimum CAGR."""
         if v < -100:
@@ -55,7 +58,8 @@ class ScreenRequest(BaseModel):
             raise ValueError("min_cagr cannot exceed 100%")
         return v
 
-    @validator("top_n")
+    @field_validator("top_n")
+    @classmethod
     def validate_top_n(cls, v: int) -> int:
         """Validate top_n parameter."""
         if v < 1:
@@ -64,10 +68,8 @@ class ScreenRequest(BaseModel):
             raise ValueError("top_n cannot exceed 100")
         return v
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "min_yield": 0.02,
                 "max_payout": 80.0,
@@ -75,6 +77,7 @@ class ScreenRequest(BaseModel):
                 "top_n": 10,
             }
         }
+    )
 
 
 class HealthCheckRequest(BaseModel):
@@ -84,7 +87,4 @@ class HealthCheckRequest(BaseModel):
         default=False, description="Include detailed health information"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_schema_extra = {"example": {"include_details": False}}
+    model_config = ConfigDict(json_schema_extra={"example": {"include_details": False}})
