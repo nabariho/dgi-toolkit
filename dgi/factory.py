@@ -172,7 +172,12 @@ class TestDependencyFactory(DependencyFactory):
 class MockDependencyFactory(DependencyFactory):
     """Mock factory for creating test dependencies with mocked components."""
 
-    def __init__(self, mock_repository=None, mock_scoring=None, mock_filter=None):
+    def __init__(
+        self,
+        mock_repository: CompanyDataRepository | None = None,
+        mock_scoring: ScoringStrategy | None = None,
+        mock_filter: BaseFilter | None = None,
+    ) -> None:
         """Initialize mock factory with optional mock components."""
         self.mock_repository = mock_repository
         self.mock_scoring = mock_scoring
@@ -182,19 +187,24 @@ class MockDependencyFactory(DependencyFactory):
         """Create a mock repository for testing."""
         if self.mock_repository:
             return self.mock_repository
-        return CsvCompanyDataRepository(data_path, self.create_validator())
+        repository: CompanyDataRepository = CsvCompanyDataRepository(
+            data_path, self.create_validator()
+        )
+        return repository
 
     def create_scoring_strategy(self) -> ScoringStrategy:
         """Create a mock scoring strategy for testing."""
         if self.mock_scoring:
             return self.mock_scoring
-        return DefaultScoring()
+        strategy: ScoringStrategy = DefaultScoring()
+        return strategy
 
     def create_filter_strategy(self) -> BaseFilter:
         """Create a mock filter strategy for testing."""
         if self.mock_filter:
             return self.mock_filter
-        return DefaultFilter()
+        filter_strategy: BaseFilter = DefaultFilter()
+        return filter_strategy
 
     def create_validator(self) -> DgiRowValidator:
         """Create a validator for testing."""
@@ -223,7 +233,7 @@ class MockDependencyFactory(DependencyFactory):
 class FactoryRegistry:
     """Registry for managing dependency factories."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize factory registry."""
         self._factories = {
             "production": ProductionDependencyFactory(),

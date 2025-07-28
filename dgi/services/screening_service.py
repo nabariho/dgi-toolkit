@@ -238,7 +238,7 @@ class ScreeningService:
                 "industry_distribution": {},
             }
 
-        metrics = {
+        metrics: dict[str, Any] = {
             "total_stocks": len(df),
             "average_yield": (
                 float(df["dividend_yield"].mean())

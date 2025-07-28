@@ -54,7 +54,11 @@ class CsvCompanyDataRepository(CompanyDataRepository):
                     return []
 
                 # Convert DataFrame to list of dictionaries for validation
-                rows = df.to_dict("records")
+                raw_rows = df.to_dict("records")
+                # Convert Hashable keys to str for type safety
+                rows: list[dict[str, Any]] = [
+                    {str(k): v for k, v in row.items()} for row in raw_rows
+                ]
 
                 # Validate and convert to CompanyData objects
                 validated_rows = self.validator.validate_rows(rows)
