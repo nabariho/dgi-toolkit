@@ -4,9 +4,7 @@ This module contains Pydantic models for API request validation with comprehensi
 documentation, field constraints, and examples for all endpoints.
 """
 
-from typing import ClassVar
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ScreenRequest(BaseModel):
@@ -52,10 +50,8 @@ class ScreenRequest(BaseModel):
         title="Top N Results",
     )
 
-    class Config:
-        """Pydantic configuration for the request model."""
-
-        json_schema_extra: ClassVar[dict] = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "min_yield": 0.025,
                 "max_payout": 75.0,
@@ -74,6 +70,7 @@ class ScreenRequest(BaseModel):
             All parameters have validation rules to ensure reasonable values.
             """,
         }
+    )
 
 
 class AsyncScreenRequest(ScreenRequest):
@@ -99,10 +96,8 @@ class AsyncScreenRequest(ScreenRequest):
         pattern=r"^[a-zA-Z0-9_-]+$",
     )
 
-    class Config:
-        """Pydantic configuration for the async request model."""
-
-        json_schema_extra: ClassVar[dict] = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "min_yield": 0.025,
                 "max_payout": 75.0,
@@ -122,6 +117,7 @@ class AsyncScreenRequest(ScreenRequest):
             The job will be processed asynchronously and results can be retrieved later.
             """,
         }
+    )
 
 
 class JobStatusRequest(BaseModel):
@@ -137,10 +133,8 @@ class JobStatusRequest(BaseModel):
         pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     )
 
-    class Config:
-        """Pydantic configuration for the job status request model."""
-
-        json_schema_extra: ClassVar[dict] = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "job_id": "550e8400-e29b-41d4-a716-446655440000",
             },
@@ -151,6 +145,7 @@ class JobStatusRequest(BaseModel):
             The job ID must be a valid UUID format.
             """,
         }
+    )
 
 
 class JobListRequest(BaseModel):
@@ -185,10 +180,8 @@ class JobListRequest(BaseModel):
         title="Result Limit",
     )
 
-    class Config:
-        """Pydantic configuration for the job list request model."""
-
-        json_schema_extra: ClassVar[dict] = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "status": "completed",
                 "user_id": "user123",
@@ -205,6 +198,7 @@ class JobListRequest(BaseModel):
             Jobs are sorted by creation time (newest first).
             """,
         }
+    )
 
 
 class CacheStatsRequest(BaseModel):
@@ -220,10 +214,8 @@ class CacheStatsRequest(BaseModel):
         title="Include Details",
     )
 
-    class Config:
-        """Pydantic configuration for the cache stats request model."""
-
-        json_schema_extra: ClassVar[dict] = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "include_details": True,
             },
@@ -238,3 +230,4 @@ class CacheStatsRequest(BaseModel):
             Optional detailed statistics can be included for debugging.
             """,
         }
+    )

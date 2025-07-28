@@ -35,7 +35,7 @@ from .async_processing import (
 )
 from .caching import cache_result, get_cache_stats
 from .config import get_settings, validate_configuration
-from .dependencies import get_screener
+from .container import get_screener, init_container, shutdown_container
 from .error_handlers import register_exception_handlers
 from .exceptions import APIException, ConfigurationError
 from .logging_config import RequestContextMiddleware, get_logger, setup_logging
@@ -98,6 +98,10 @@ async def lifespan(app: FastAPI):
 
     # Startup
     startup_time = time.time()
+
+    # Initialize dependency injection container
+    init_container()
+    logger.info("Dependency injection container initialized")
     logger.info("Starting DGI Toolkit API...")
 
     try:
@@ -114,6 +118,10 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down DGI Toolkit API...")
+
+    # Shutdown dependency injection container
+    shutdown_container()
+    logger.info("Dependency injection container shutdown completed")
 
 
 # Initialize FastAPI app with lifespan
