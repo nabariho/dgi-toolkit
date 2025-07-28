@@ -43,6 +43,7 @@ from .container import (
 )
 from .error_handlers import register_exception_handlers
 from .exceptions import APIException, ConfigurationError
+from .health import router as health_router
 from .logging_config import RequestContextMiddleware, get_logger, setup_logging
 from .observability import get_metrics, get_observability_manager, instrument_fastapi
 from .schemas.responses import APIInfoResponse, HealthResponse, ScreenResponse
@@ -164,6 +165,9 @@ register_exception_handlers(app)
 
 # Instrument FastAPI with OpenTelemetry
 instrument_fastapi(app)
+
+# Include routers
+app.include_router(health_router)
 
 
 @app.middleware("http")
