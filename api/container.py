@@ -13,6 +13,10 @@ from dgi.factory import (
 )
 from dgi.repositories.base import CompanyDataRepository
 from dgi.screener import Screener
+from dgi.services.dgi_criteria_service import DGICriteriaService
+from dgi.services.scoring_service import DataFrameScoringService
+from dgi.services.screening_parameter_validator import ScreeningParameterValidator
+from dgi.services.screening_service import ScreeningService
 
 from .config import get_settings
 from .logging_config import get_logger
@@ -60,6 +64,21 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
+    # New focused services implementing SOLID principles
+    parameter_validator = providers.Singleton(ScreeningParameterValidator)
+
+    criteria_service = providers.Singleton(DGICriteriaService)
+
+    scoring_service = providers.Singleton(DataFrameScoringService)
+
+    # Coordinating service with dependency injection
+    screening_service = providers.Singleton(
+        ScreeningService,
+        parameter_validator=parameter_validator,
+        criteria_applier=criteria_service,
+        dataframe_scorer=scoring_service,
+    )
+
 
 # Global container instance
 container = Container()
@@ -93,6 +112,13 @@ def init_container():
             container.validator()
             container.scoring_strategy()
             container.screener()
+
+            # Initialize new focused services
+            container.parameter_validator()
+            container.criteria_service()
+            container.scoring_service()
+            container.screening_service()
+
             _container_initialized = True
             logger.info("Container resources initialized")
 
@@ -172,6 +198,42 @@ def get_test_screener_dependency() -> Screener:
         Screener configured for testing
     """
     return container.test_screener()
+
+
+def get_parameter_validator_dependency() -> ScreeningParameterValidator:
+    """Get parameter validator dependency with injection.
+
+    Returns:
+        ScreeningParameterValidator instance
+    """
+    return container.parameter_validator()
+
+
+def get_criteria_service_dependency() -> DGICriteriaService:
+    """Get criteria service dependency with injection.
+
+    Returns:
+        DGICriteriaService instance
+    """
+    return container.criteria_service()
+
+
+def get_scoring_service_dependency() -> DataFrameScoringService:
+    """Get scoring service dependency with injection.
+
+    Returns:
+        DataFrameScoringService instance
+    """
+    return container.scoring_service()
+
+
+def get_screening_service_dependency() -> ScreeningService:
+    """Get screening service dependency with injection.
+
+    Returns:
+        ScreeningService instance with all dependencies injected
+    """
+    return container.screening_service()
 
 
 # Context manager for dependency scoping
