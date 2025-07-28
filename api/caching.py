@@ -5,6 +5,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from .config import get_settings
 from .logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -118,7 +119,7 @@ class SimpleCache:
 
 
 # Global cache instance
-_cache = SimpleCache()
+_cache: SimpleCache | None = None
 
 
 def get_cache() -> SimpleCache:
@@ -127,6 +128,10 @@ def get_cache() -> SimpleCache:
     Returns:
         SimpleCache instance
     """
+    global _cache
+    if _cache is None:
+        settings = get_settings()
+        _cache = SimpleCache(default_ttl=settings.cache_default_ttl)
     return _cache
 
 
@@ -144,17 +149,20 @@ def cache_result(ttl: int | None = None, key_prefix: str = ""):
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            # Get cache instance
+            cache = get_cache()
+
             # Create cache key from function name, args, and kwargs
             cache_key = f"{key_prefix}:{func.__name__}:{hash(str(args) + str(sorted(kwargs.items())))}"
 
             # Try to get from cache
-            cached_result = _cache.get(cache_key)
+            cached_result = cache.get(cache_key)
             if cached_result is not None:
                 return cached_result
 
             # Execute function and cache result
             result = func(*args, **kwargs)
-            _cache.set(cache_key, result, ttl)
+            cache.set(cache_key, result, ttl)
 
             return result
 

@@ -5,7 +5,15 @@ import time
 from contextlib import asynccontextmanager
 
 import psutil
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -14,6 +22,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from dgi.screener import Screener
+from dgi.services import ScreeningService, ValidationService
 
 from .async_processing import (
     JobPriority,
@@ -45,22 +54,39 @@ startup_time = None
 
 def get_min_yield_range():
     """Get minimum yield range for Query validation."""
-    return get_settings().min_yield_range
+    try:
+        return get_settings().min_yield_range
+    except Exception:
+        return (0.0, 100.0)
 
 
 def get_max_payout_range():
     """Get maximum payout range for Query validation."""
-    return get_settings().max_payout_range
+    try:
+        return get_settings().max_payout_range
+    except Exception:
+        return (0.0, 200.0)
 
 
 def get_cagr_range():
     """Get CAGR range for Query validation."""
-    return get_settings().cagr_range
+    try:
+        return get_settings().cagr_range
+    except Exception:
+        return (-100.0, 100.0)
 
 
 def get_max_top_n():
     """Get maximum top N for Query validation."""
-    return get_settings().max_top_n
+    try:
+        return get_settings().max_top_n
+    except Exception:
+        return 100
+
+
+def validate_uuid_format(job_id: str) -> str:
+    """Validate that job_id is a valid UUID format using service layer."""
+    return ValidationService.validate_uuid_format(job_id, "job_id")
 
 
 @asynccontextmanager
@@ -217,9 +243,7 @@ async def add_process_time_header(request: Request, call_next):
         },
     },
 )
-@limiter.limit(
-    f"{get_settings().rate_limit_requests}/{get_settings().rate_limit_period}s"
-)
+@limiter.limit("100/minute")
 async def health_check(request: Request) -> HealthResponse:
     """Health check endpoint with comprehensive system information."""
     logger.debug("Health check requested")
@@ -398,33 +422,31 @@ async def health_check(request: Request) -> HealthResponse:
         },
     },
 )
-@limiter.limit(
-    f"{get_settings().rate_limit_requests}/{get_settings().rate_limit_period}s"
-)
+@limiter.limit("50/minute")
 async def screen_stocks(
     request: Request,
     min_yield: float = Query(
         default=0.02,
-        ge=get_min_yield_range()[0],
-        le=get_min_yield_range()[1],
+        ge=0.0,
+        le=100.0,
         description="Minimum dividend yield (as decimal, e.g., 0.02 for 2%)",
     ),
     max_payout: float = Query(
         default=80.0,
-        ge=get_max_payout_range()[0],
-        le=get_max_payout_range()[1],
+        ge=0.0,
+        le=200.0,
         description="Maximum payout ratio (as percentage, e.g., 80.0 for 80%)",
     ),
     min_cagr: float = Query(
         default=0.05,
-        ge=get_cagr_range()[0],
-        le=get_cagr_range()[1],
+        ge=-100.0,
+        le=100.0,
         description="Minimum 5-year dividend CAGR (as decimal, e.g., 0.05 for 5%)",
     ),
     top_n: int = Query(
         default=10,
         ge=1,
-        le=get_max_top_n(),
+        le=1000,
         description="Number of top stocks to return",
     ),
     screener: Screener = Depends(get_screener),
@@ -464,19 +486,19 @@ async def screen_stocks(
             # Load universe data with caching
             universe_df = _load_universe_cached(screener)
 
-            # Apply filters with optimized processing
-            filtered_df = _apply_filters_optimized(
+            # Apply screening criteria using service layer
+            filtered_df = ScreeningService.apply_screening_criteria(
                 universe_df, min_yield, max_payout, min_cagr
             )
 
-            # Add scores with optimized processing
-            scored_df = _add_scores_optimized(filtered_df)
+            # Add scores using service layer
+            scored_df = ScreeningService.score_dataframe(filtered_df)
 
-            # Get top stocks with optimized sorting
-            top_stocks_df = _get_top_stocks_optimized(scored_df, top_n)
+            # Get top stocks using service layer
+            top_stocks_df = ScreeningService.get_top_stocks(scored_df, top_n)
 
-            # Convert to response models with optimized processing
-            stocks = _convert_to_responses_optimized(top_stocks_df)
+            # Convert to response format using service layer
+            stocks = ScreeningService.convert_to_response_format(top_stocks_df)
 
             # Calculate processing time
             processing_time = (
@@ -677,9 +699,7 @@ async def root() -> APIInfoResponse:
         },
     },
 )
-@limiter.limit(
-    f"{get_settings().rate_limit_requests}/{get_settings().rate_limit_period}s"
-)
+@limiter.limit("100/minute")
 async def health_check_v1(request: Request) -> HealthResponse:
     """Versioned health check endpoint with comprehensive system information."""
     logger.debug("Versioned health check requested")
@@ -936,32 +956,37 @@ async def submit_async_screening(
     background_tasks: BackgroundTasks,
     min_yield: float = Query(
         default=0.02,
-        ge=get_min_yield_range()[0],
-        le=get_min_yield_range()[1],
+        ge=0.0,
+        le=100.0,
         description="Minimum dividend yield (as decimal, e.g., 0.02 for 2%)",
     ),
     max_payout: float = Query(
         default=80.0,
-        ge=get_max_payout_range()[0],
-        le=get_max_payout_range()[1],
+        ge=0.0,
+        le=200.0,
         description="Maximum payout ratio (as percentage, e.g., 80.0 for 80%)",
     ),
     min_cagr: float = Query(
         default=0.05,
-        ge=get_cagr_range()[0],
-        le=get_cagr_range()[1],
+        ge=-100.0,
+        le=100.0,
         description="Minimum 5-year dividend CAGR (as decimal, e.g., 0.05 for 5%)",
     ),
     top_n: int = Query(
         default=10,
         ge=1,
-        le=get_max_top_n(),
+        le=1000,
         description="Number of top stocks to return",
     ),
     priority: JobPriority = Query(
         default=JobPriority.NORMAL, description="Job priority level"
     ),
-    user_id: str | None = Query(default=None, description="User ID for job tracking"),
+    user_id: str | None = Query(
+        default=None,
+        description="User ID for job tracking",
+        max_length=100,
+        pattern=r"^[a-zA-Z0-9_-]+$",
+    ),
 ) -> dict:
     """Submit an async screening job."""
     correlation_id = getattr(request.state, "correlation_id", None)
@@ -1050,8 +1075,16 @@ async def submit_async_screening(
         },
     },
 )
-async def get_job_status(job_id: str) -> ScreeningJob:
+async def get_job_status(
+    job_id: str = Path(..., description="Job ID (UUID format)"),
+) -> ScreeningJob:
     """Get the status of an async screening job."""
+    # Validate UUID format
+    try:
+        validate_uuid_format(job_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid job ID format: {e}")
+
     queue = await get_job_queue()
     job = await queue.get_job_status(job_id)
 
@@ -1129,8 +1162,16 @@ async def get_job_status(job_id: str) -> ScreeningJob:
         },
     },
 )
-async def cancel_job(job_id: str) -> dict:
+async def cancel_job(
+    job_id: str = Path(..., description="Job ID (UUID format)"),
+) -> dict:
     """Cancel an async screening job."""
+    # Validate UUID format
+    try:
+        validate_uuid_format(job_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid job ID format: {e}")
+
     queue = await get_job_queue()
     cancelled = await queue.cancel_job(job_id)
 
@@ -1214,7 +1255,12 @@ async def cancel_job(job_id: str) -> dict:
 )
 async def list_jobs(
     status: JobStatus | None = Query(default=None, description="Filter by job status"),
-    user_id: str | None = Query(default=None, description="Filter by user ID"),
+    user_id: str | None = Query(
+        default=None,
+        description="Filter by user ID",
+        max_length=100,
+        pattern=r"^[a-zA-Z0-9_-]+$",
+    ),
     limit: int = Query(
         default=50, ge=1, le=100, description="Maximum number of jobs to return"
     ),
@@ -1254,58 +1300,11 @@ async def api_exception_handler(request: Request, exc: APIException) -> JSONResp
     )
 
 
-# Performance optimization helper functions
+# Caching helper function
 @cache_result(ttl=300, key_prefix="universe")  # Cache for 5 minutes
 def _load_universe_cached(screener: Screener):
     """Load universe data with caching for better performance."""
     return screener.load_universe()
-
-
-def _apply_filters_optimized(df, min_yield: float, max_payout: float, min_cagr: float):
-    """Apply filters with optimized processing."""
-    # Use vectorized operations for better performance
-    mask = (
-        (df["dividend_yield"] >= min_yield)
-        & (df["payout"] <= max_payout)
-        & (df["dividend_cagr"] >= min_cagr)
-    )
-    return df[mask].copy()
-
-
-def _add_scores_optimized(df):
-    """Add scores with optimized processing."""
-    # Use vectorized operations for scoring
-    df["score"] = (
-        df["dividend_yield"] * 0.4
-        + (1 - df["payout"] / 100) * 0.3
-        + df["dividend_cagr"] * 0.3
-    )
-    return df
-
-
-def _get_top_stocks_optimized(df, top_n: int):
-    """Get top stocks with optimized sorting."""
-    # Use nlargest for better performance than sort_values + head
-    return df.nlargest(top_n, "score")
-
-
-def _convert_to_responses_optimized(df):
-    """Convert DataFrame to response models with optimized processing."""
-    # Use list comprehension for better performance than apply
-    return [
-        {
-            "symbol": row["symbol"],
-            "name": row["name"],
-            "sector": row["sector"],
-            "industry": row["industry"],
-            "dividend_yield": float(row["dividend_yield"]),
-            "payout": float(row["payout"]),
-            "dividend_cagr": float(row["dividend_cagr"]),
-            "fcf_yield": float(row["fcf_yield"]),
-            "score": float(row["score"]),
-        }
-        for _, row in df.iterrows()
-    ]
 
 
 if __name__ == "__main__":

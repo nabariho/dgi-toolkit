@@ -8,8 +8,6 @@ This module provides async processing capabilities for handling large datasets:
 """
 
 import asyncio
-
-# Configure logging
 import logging
 import time
 import uuid
@@ -21,6 +19,7 @@ from fastapi import BackgroundTasks
 from pydantic import BaseModel, Field
 
 from api.caching import cache_result
+from api.config import get_settings
 from api.observability import get_observability_manager
 from dgi.screener import Screener
 
@@ -80,10 +79,35 @@ class JobQueue:
 
     def __init__(self):
         """Initialize the job queue."""
+        settings = get_settings()
         self.jobs: dict[str, ScreeningJob] = {}
         self.running_jobs: dict[str, asyncio.Task] = {}
-        self.max_concurrent_jobs = 3
+        self.max_concurrent_jobs = settings.max_concurrent_jobs
+        self.job_timeout_seconds = settings.job_timeout_seconds
         self.observability = get_observability_manager()
+        self._cleanup_task: asyncio.Task | None = None
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit with proper cleanup."""
+        if self._cleanup_task:
+            self._cleanup_task.cancel()
+            try:
+                await self._cleanup_task
+            except asyncio.CancelledError:
+                pass
+
+        # Cancel all running jobs
+        for task in self.running_jobs.values():
+            task.cancel()
+
+        # Wait for all tasks to complete
+        if self.running_jobs:
+            await asyncio.gather(*self.running_jobs.values(), return_exceptions=True)
 
     async def submit_job(
         self,
@@ -109,7 +133,7 @@ class JobQueue:
         self.jobs[job.job_id] = job
 
         # Log business event
-        self.observability.log_business_event(
+        await self.observability.log_business_event(
             "job_submitted",
             {
                 "job_id": job.job_id,
@@ -150,7 +174,7 @@ class JobQueue:
                 del self.running_jobs[job_id]
 
             # Log business event
-            self.observability.log_business_event(
+            await self.observability.log_business_event(
                 "job_cancelled", {"job_id": job_id}, job.user_id
             )
 
@@ -210,7 +234,7 @@ class JobQueue:
                 self.running_jobs[job.job_id] = task
 
     async def _process_job(self, job: ScreeningJob):
-        """Process a screening job."""
+        """Process a screening job with proper async error handling."""
         try:
             job.status = JobStatus.RUNNING
             job.started_at = datetime.utcnow()
@@ -219,11 +243,11 @@ class JobQueue:
             job.progress = 0.1
 
             # Log business event
-            self.observability.log_business_event(
+            await self.observability.log_business_event(
                 "job_started", {"job_id": job.job_id}, job.user_id
             )
 
-            # Step 1: Load data
+            # Step 1: Load data asynchronously
             await asyncio.sleep(0.1)  # Simulate async work
             job.current_step = 2
             job.step_description = "Applying filters"
@@ -248,7 +272,7 @@ class JobQueue:
             job.progress = 0.9
 
             # Step 5: Finalize results
-            await asyncio.sleep(0.1)  # Simulate async work
+            await asyncio.sleep(0.1)
 
             # Generate mock results (in real implementation, this would use the screener)
             job.result = {
@@ -282,7 +306,7 @@ class JobQueue:
             job.step_description = "Completed"
 
             # Log business event
-            self.observability.log_business_event(
+            await self.observability.log_business_event(
                 "job_completed",
                 {
                     "job_id": job.job_id,
@@ -296,6 +320,7 @@ class JobQueue:
             job.status = JobStatus.CANCELLED
             job.completed_at = datetime.utcnow()
             job.step_description = "Cancelled"
+            logger.info(f"Job {job.job_id} was cancelled")
 
         except Exception as e:
             job.status = JobStatus.FAILED
@@ -305,12 +330,12 @@ class JobQueue:
 
             # Log error
             logger.error(f"Job {job.job_id} failed: {e}")
-            self.observability.record_error(
+            await self.observability.record_error(
                 "job_processing_error", str(e), "async_processing"
             )
 
             # Log business event
-            self.observability.log_business_event(
+            await self.observability.log_business_event(
                 "job_failed", {"job_id": job.job_id, "error": str(e)}, job.user_id
             )
 
@@ -321,6 +346,17 @@ class JobQueue:
 
             # Process queue for next jobs
             await self._process_queue()
+
+    async def _periodic_cleanup(self):
+        """Periodic cleanup of old jobs."""
+        while True:
+            try:
+                await asyncio.sleep(3600)  # Run every hour
+                await self.cleanup_old_jobs()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in periodic cleanup: {e}")
 
     async def cleanup_old_jobs(self, max_age_hours: int = 24):
         """Clean up old completed/failed jobs."""
@@ -340,12 +376,16 @@ class JobQueue:
 
 
 # Global job queue instance
-job_queue = JobQueue()
+_job_queue: JobQueue | None = None
 
 
 async def get_job_queue() -> JobQueue:
     """Get the global job queue instance."""
-    return job_queue
+    global _job_queue
+    if _job_queue is None:
+        _job_queue = JobQueue()
+        await _job_queue.__aenter__()
+    return _job_queue
 
 
 @cache_result(ttl=300, key_prefix="async_screening")
@@ -356,25 +396,13 @@ async def async_screen_stocks(
     start_time = time.time()
 
     try:
-        # Load universe data
-        universe_df = screener.load_universe()
-
-        # Apply filters
-        filtered_df = universe_df[
-            (universe_df["dividend_yield"] >= min_yield)
-            & (universe_df["payout"] <= max_payout)
-            & (universe_df["dividend_cagr"] >= min_cagr)
-        ].copy()
-
-        # Add scores
-        filtered_df["score"] = (
-            filtered_df["dividend_yield"] * 0.4
-            + (1 - filtered_df["payout"] / 100) * 0.3
-            + filtered_df["dividend_cagr"] * 0.3
+        # Use the async screener method
+        result_df = await screener.screen_async(
+            min_yield=min_yield,
+            max_payout=max_payout,
+            min_cagr=min_cagr,
+            top_n=top_n,
         )
-
-        # Get top stocks
-        top_stocks_df = filtered_df.nlargest(top_n, "score")
 
         # Convert to response format
         stocks = [
@@ -389,7 +417,7 @@ async def async_screen_stocks(
                 "fcf_yield": float(row["fcf_yield"]),
                 "score": float(row["score"]),
             }
-            for _, row in top_stocks_df.iterrows()
+            for _, row in result_df.iterrows()
         ]
 
         processing_time = (time.time() - start_time) * 1000

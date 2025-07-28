@@ -36,10 +36,10 @@ class APISettings(BaseSettings):
 
     # Rate limiting
     rate_limit_requests: int = Field(
-        default=100, description="Number of requests allowed per period"
+        default=100, ge=1, le=10000, description="Number of requests allowed per period"
     )
     rate_limit_period: int = Field(
-        default=60, description="Rate limit period in seconds"
+        default=60, ge=1, le=3600, description="Rate limit period in seconds"
     )
 
     # CORS settings
@@ -70,7 +70,7 @@ class APISettings(BaseSettings):
 
     # Validation settings
     max_top_n: int = Field(
-        default=100, description="Maximum number of stocks to return"
+        default=100, ge=1, le=1000, description="Maximum number of stocks to return"
     )
     min_yield_range: tuple[float, float] = Field(
         default=(0.0, 100.0), description="Valid range for dividend yield"
@@ -80,6 +80,33 @@ class APISettings(BaseSettings):
     )
     cagr_range: tuple[float, float] = Field(
         default=(-100.0, 100.0), description="Valid range for dividend CAGR"
+    )
+
+    # Caching settings
+    cache_default_ttl: int = Field(
+        default=300, ge=1, le=86400, description="Default cache TTL in seconds"
+    )
+    cache_max_size: int = Field(
+        default=1000, ge=1, le=100000, description="Maximum number of cache entries"
+    )
+
+    # Async processing settings
+    max_concurrent_jobs: int = Field(
+        default=3,
+        ge=1,
+        le=100,
+        description="Maximum number of concurrent background jobs",
+    )
+    job_timeout_seconds: int = Field(
+        default=300, ge=1, le=3600, description="Job timeout in seconds"
+    )
+
+    # File processing settings
+    max_file_size_mb: int = Field(
+        default=50, ge=1, le=1000, description="Maximum file size in MB"
+    )
+    allowed_file_extensions: list[str] = Field(
+        default=[".csv"], description="Allowed file extensions"
     )
 
     @field_validator("data_path")
@@ -122,6 +149,40 @@ class APISettings(BaseSettings):
         """Validate rate limit period is positive."""
         if v <= 0:
             raise ValueError("rate_limit_period must be positive")
+        return v
+
+    @field_validator("min_yield_range")
+    @classmethod
+    def validate_min_yield_range(cls, v: tuple[float, float]) -> tuple[float, float]:
+        """Validate min yield range is valid."""
+        if len(v) != 2 or v[0] >= v[1]:
+            raise ValueError(
+                "min_yield_range must be a tuple of (min, max) where min < max"
+            )
+        if v[0] < 0 or v[1] > 100:
+            raise ValueError("min_yield_range values must be between 0 and 100")
+        return v
+
+    @field_validator("max_payout_range")
+    @classmethod
+    def validate_max_payout_range(cls, v: tuple[float, float]) -> tuple[float, float]:
+        """Validate max payout range is valid."""
+        if len(v) != 2 or v[0] >= v[1]:
+            raise ValueError(
+                "max_payout_range must be a tuple of (min, max) where min < max"
+            )
+        if v[0] < 0 or v[1] > 200:
+            raise ValueError("max_payout_range values must be between 0 and 200")
+        return v
+
+    @field_validator("cagr_range")
+    @classmethod
+    def validate_cagr_range(cls, v: tuple[float, float]) -> tuple[float, float]:
+        """Validate CAGR range is valid."""
+        if len(v) != 2 or v[0] >= v[1]:
+            raise ValueError("cagr_range must be a tuple of (min, max) where min < max")
+        if v[0] < -100 or v[1] > 100:
+            raise ValueError("cagr_range values must be between -100 and 100")
         return v
 
     @field_validator("max_top_n")

@@ -4,7 +4,7 @@ import unittest
 
 import pandas as pd
 
-from dgi.filtering import DefaultFilter, FilterStrategy
+from dgi.filtering import BaseFilter, DefaultFilter
 
 
 class TestDefaultFilter(unittest.TestCase):
@@ -134,14 +134,14 @@ class TestFilterStrategyInterface(unittest.TestCase):
     """Tests for FilterStrategy interface."""
 
     def test_filter_strategy_is_abstract(self) -> None:
-        """Test that FilterStrategy cannot be instantiated directly."""
+        """Test that BaseFilter cannot be instantiated directly."""
         with self.assertRaises(TypeError):
-            FilterStrategy()  # type: ignore
+            BaseFilter()  # type: ignore
 
     def test_custom_filter_implementation(self) -> None:
         """Test custom filter strategy implementation."""
 
-        class SectorFilter(FilterStrategy):
+        class SectorFilter(BaseFilter):
             def __init__(self, allowed_sectors: list[str]) -> None:
                 self.allowed_sectors = allowed_sectors
 
@@ -186,8 +186,8 @@ class TestFilterStrategyInterface(unittest.TestCase):
     def test_composite_filter_implementation(self) -> None:
         """Test composite filter that combines multiple strategies."""
 
-        class CompositeFilter(FilterStrategy):
-            def __init__(self, *filters: FilterStrategy) -> None:
+        class CompositeFilter(BaseFilter):
+            def __init__(self, *filters: BaseFilter) -> None:
                 self.filters = filters
 
             def filter(
@@ -204,7 +204,7 @@ class TestFilterStrategyInterface(unittest.TestCase):
                     )
                 return result
 
-        class MinimumRowsFilter(FilterStrategy):
+        class MinimumRowsFilter(BaseFilter):
             def filter(
                 self,
                 df: pd.DataFrame,

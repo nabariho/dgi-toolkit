@@ -55,3 +55,5 @@ tests/test_data/
 .env
 .env.local
 .env.test
+node_modules
+venv/

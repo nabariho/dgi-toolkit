@@ -424,11 +424,11 @@ def test_screener_with_custom_filter():
     """Test screener accepts custom filter strategy."""
     from unittest.mock import Mock
 
-    from dgi.filtering import FilterStrategy
+    from dgi.filtering import BaseFilter
     from dgi.repositories.base import CompanyDataRepository
     from dgi.screener import Screener
 
-    class TestFilter(FilterStrategy):
+    class TestFilter(BaseFilter):
         def filter(self, df, min_yield, max_payout, min_cagr):
             # Test filter that returns only first row
             return df.head(1)
@@ -444,12 +444,12 @@ def test_apply_filters_uses_strategy():
     """Test that apply_filters delegates to the filter strategy."""
     from unittest.mock import Mock
 
-    from dgi.filtering import FilterStrategy
+    from dgi.filtering import BaseFilter
     from dgi.repositories.base import CompanyDataRepository
     from dgi.screener import Screener
 
     # Mock filter strategy
-    mock_filter = Mock(spec=FilterStrategy)
+    mock_filter = Mock(spec=BaseFilter)
     expected_result = pd.DataFrame({"test": [1, 2, 3]})
     mock_filter.filter.return_value = expected_result
 

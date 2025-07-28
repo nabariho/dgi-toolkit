@@ -2,11 +2,10 @@
 
 from fastapi import Depends
 
-from dgi.models.company import CompanyData
+from dgi.factory import create_repository, create_screener
+from dgi.repositories.base import CompanyDataRepository
 from dgi.repositories.csv import CsvCompanyDataRepository
-from dgi.scoring import DefaultScoring
 from dgi.screener import Screener
-from dgi.validation import DgiRowValidator, PydanticRowValidation
 
 from .config import get_settings
 from .logging_config import get_logger
@@ -23,26 +22,23 @@ def get_settings_dependency():
     return get_settings()
 
 
-def get_data_repository() -> CsvCompanyDataRepository:
+def get_data_repository() -> CompanyDataRepository:
     """Get data repository dependency.
 
     Returns:
-        Configured CsvCompanyDataRepository instance
+        Configured CompanyDataRepository instance
     """
     settings = get_settings()
 
-    # Create validator
-    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-
-    # Create repository with configured data path
-    repository = CsvCompanyDataRepository(settings.data_path, validator)
+    # Use factory to create repository
+    repository = create_repository(settings.data_path, "production")
 
     logger.info(f"Created data repository with path: {settings.data_path}")
     return repository
 
 
 def get_screener(
-    repository: CsvCompanyDataRepository = Depends(get_data_repository),
+    repository: CompanyDataRepository = Depends(get_data_repository),
 ) -> Screener:
     """Get screener dependency.
 
@@ -52,34 +48,35 @@ def get_screener(
     Returns:
         Configured Screener instance
     """
-    # Create scoring strategy
-    scoring_strategy = DefaultScoring()
-
-    # Create screener with dependencies
-    screener = Screener(repository=repository, scoring_strategy=scoring_strategy)
+    # Use factory to create screener
+    screener = create_screener(repository, factory_name="production")
 
     logger.info("Created screener with default scoring strategy")
     return screener
 
 
-def get_validator() -> DgiRowValidator:
+def get_validator():
     """Get validator dependency.
 
     Returns:
         Configured DgiRowValidator instance
     """
-    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+    from dgi.factory import create_validator
+
+    validator = create_validator("production")
     logger.debug("Created data validator")
     return validator
 
 
-def get_scoring_strategy() -> DefaultScoring:
+def get_scoring_strategy():
     """Get scoring strategy dependency.
 
     Returns:
-        DefaultScoring instance
+        ScoringStrategy instance
     """
-    return DefaultScoring()
+    from dgi.factory import create_scoring_strategy
+
+    return create_scoring_strategy("production")
 
 
 # Dependency providers for different configurations
@@ -91,17 +88,9 @@ def get_production_screener() -> Screener:
     """
     settings = get_settings()
 
-    # Create validator
-    validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-
-    # Create repository
-    repository = CsvCompanyDataRepository(settings.data_path, validator)
-
-    # Create scoring strategy
-    scoring_strategy = DefaultScoring()
-
-    # Create screener
-    screener = Screener(repository=repository, scoring_strategy=scoring_strategy)
+    # Use factory to create production screener
+    repository = create_repository(settings.data_path, "production")
+    screener = create_screener(repository, factory_name="production")
 
     logger.info("Created production screener")
     return screener
@@ -113,9 +102,14 @@ def get_test_screener() -> Screener:
     Returns:
         Screener configured for testing
     """
-    # For testing, we might want different configuration
-    # This could be overridden in test fixtures
-    return get_screener()
+    settings = get_settings()
+
+    # Use factory to create test screener
+    repository = create_repository(settings.data_path, "test")
+    screener = create_screener(repository, factory_name="test")
+
+    logger.info("Created test screener")
+    return screener
 
 
 # Dependency lifecycle management
