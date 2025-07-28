@@ -7,19 +7,17 @@ added without modifying existing factory code.
 
 import logging
 from collections.abc import Callable
-from typing import Any, Protocol, TypeVar
+from typing import Any, Protocol
 
 from dgi.exceptions import FactoryError
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
 
-
-class StrategyBuilder(Protocol[T]):
+class StrategyBuilder(Protocol):
     """Protocol for strategy builders."""
 
-    def __call__(self, **kwargs: Any) -> T:
+    def __call__(self, **kwargs: Any) -> Any:
         """Build a strategy instance."""
         ...
 

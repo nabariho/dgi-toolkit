@@ -4,7 +4,7 @@ This module provides focused factory interfaces that don't force implementations
 to support all creation methods, following the ISP principle.
 """
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from dgi.filtering import BaseFilter
 from dgi.repositories.base import CompanyDataRepository
@@ -63,11 +63,11 @@ class ScreenerFactory(Protocol):
 class ConfigurableFactory(Protocol):
     """Factory that supports configuration."""
 
-    def configure(self, config: dict[str, any]) -> None:
+    def configure(self, config: dict[str, Any]) -> None:
         """Configure the factory."""
         ...
 
-    def get_configuration(self) -> dict[str, any]:
+    def get_configuration(self) -> dict[str, Any]:
         """Get current configuration."""
         ...
 
@@ -210,7 +210,7 @@ class SimpleScoringFactory:
         from dgi.strategy_registry import get_strategy_registry
 
         registry = get_strategy_registry("scoring")
-        return registry.get_strategy(name=strategy_name or self.default_strategy)
+        return registry.get_strategy(name=strategy_name or self.default_strategy)  # type: ignore[no-any-return]
 
 
 class SimpleFilterFactory:
@@ -229,7 +229,7 @@ class SimpleFilterFactory:
         from dgi.strategy_registry import get_strategy_registry
 
         registry = get_strategy_registry("filtering")
-        return registry.get_strategy(name=strategy_name or self.default_strategy)
+        return registry.get_strategy(name=strategy_name or self.default_strategy)  # type: ignore[no-any-return]
 
 
 class SimpleRepositoryFactory:

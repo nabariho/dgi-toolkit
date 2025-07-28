@@ -5,7 +5,7 @@ following the Abstract Factory pattern and Dependency Inversion Principle.
 """
 
 from abc import ABC, abstractmethod
-from typing import Protocol
+from typing import Any, Protocol
 
 from dgi.exceptions import FactoryError
 from dgi.filtering import BaseFilter, DefaultFilter
@@ -298,7 +298,7 @@ def create_screener(
     repository: CompanyDataRepository,
     scoring_strategy: ScoringStrategy | None = None,
     filter_strategy: BaseFilter | None = None,
-    screening_service=None,
+    screening_service: Any = None,
     factory_name: str | None = None,
 ) -> Screener:
     """Create a screener using the specified factory."""

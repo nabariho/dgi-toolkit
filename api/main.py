@@ -35,7 +35,12 @@ from .async_processing import (
 )
 from .caching import cache_result, get_cache_stats
 from .config import get_settings, validate_configuration
-from .container import get_screener, init_container, shutdown_container
+from .container import (
+    get_screener,
+    get_screening_service_dependency,
+    init_container,
+    shutdown_container,
+)
 from .error_handlers import register_exception_handlers
 from .exceptions import APIException, ConfigurationError
 from .logging_config import RequestContextMiddleware, get_logger, setup_logging
@@ -472,6 +477,7 @@ async def screen_stocks(
         description="Number of top stocks to return",
     ),
     screener: Screener = Depends(get_screener),
+    screening_service: ScreeningService = Depends(get_screening_service_dependency),
 ) -> ScreenResponse:
     """Screen stocks using DGI criteria with observability."""
     start_time = time.time()
@@ -508,18 +514,18 @@ async def screen_stocks(
             # Load universe data with caching
             universe_df = _load_universe_cached(screener)
 
-            # Apply screening criteria using service layer
-            filtered_df = ScreeningService.apply_screening_criteria(
+            # Apply screening criteria using injected service
+            filtered_df = screening_service.apply_dgi_criteria(
                 universe_df, min_yield, max_payout, min_cagr
             )
 
-            # Add scores using service layer
-            scored_df = ScreeningService.score_dataframe(filtered_df)
+            # Add scores using injected service
+            scored_df = screening_service.score_dataframe(filtered_df)
 
-            # Get top stocks using service layer
+            # Get top stocks using static method (utility function)
             top_stocks_df = ScreeningService.get_top_stocks(scored_df, top_n)
 
-            # Convert to response format using service layer
+            # Convert to response format using static method (utility function)
             stocks = ScreeningService.convert_to_response_format(top_stocks_df)
 
             # Calculate processing time
