@@ -16,9 +16,7 @@ import tempfile
 from pathlib import Path
 
 from dgi.config import CoreSettings
-from dgi.config_management import (
-    ConfigurationManager,
-)
+from dgi.config_management import ConfigurationManager
 
 
 def demo_basic_configuration():
@@ -52,8 +50,8 @@ def demo_environment_config():
     print("=== Environment Configuration Demo ===")
 
     # Set some environment variables
-    os.environ["DGI_CORE_log_level"] = "WARNING"
-    os.environ["DGI_CORE_default_min_yield"] = "4.0"
+    os.environ["DGI_CORE_LOG_LEVEL"] = "WARNING"
+    os.environ["DGI_CORE_DEFAULT_MIN_YIELD"] = "4.0"
 
     manager = ConfigurationManager(CoreSettings)
     manager.add_environment_config("DGI_CORE_")
@@ -73,8 +71,8 @@ def demo_environment_config():
     print()
 
     # Clean up
-    del os.environ["DGI_CORE_log_level"]
-    del os.environ["DGI_CORE_default_min_yield"]
+    del os.environ["DGI_CORE_LOG_LEVEL"]
+    del os.environ["DGI_CORE_DEFAULT_MIN_YIELD"]
 
 
 def demo_file_config():
@@ -127,7 +125,7 @@ def demo_priority_ordering():
     print("=== Configuration Priority Demo ===")
 
     # Set environment variable
-    os.environ["DGI_DEMO_log_level"] = "CRITICAL"
+    os.environ["DGI_DEMO_LOG_LEVEL"] = "CRITICAL"
 
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create config file
@@ -149,7 +147,7 @@ def demo_priority_ordering():
         print()
 
     # Clean up
-    del os.environ["DGI_DEMO_log_level"]
+    del os.environ["DGI_DEMO_LOG_LEVEL"]
 
 
 def demo_validation_errors():

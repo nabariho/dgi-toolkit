@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from pydantic import ValidationError
 
-from dgi.exceptions import DataValidationError
+from dgi.exceptions import DataLoadError, DataValidationError
 from dgi.models import CompanyData
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import DefaultScoring
@@ -54,7 +54,7 @@ def test_load_universe_invalid_all_rows(tmp_path: Any) -> None:
     )
     screener = make_screener(str(csv))
     with pytest.raises(
-        DataValidationError,
+        DataLoadError,
         match="(Validation errors:|Missing expected columns|No valid rows found)",
     ):
         screener.load_universe()
@@ -246,7 +246,7 @@ def test_screener_missing_columns(tmp_path: Any) -> None:
     validator = DgiRowValidator(PydanticRowValidation(CompanyData))
     repo = CsvCompanyDataRepository(str(csv), validator)
     screener = Screener(repo)
-    with pytest.raises(DataValidationError):
+    with pytest.raises(DataLoadError):
         screener.load_universe()
 
 

@@ -12,6 +12,9 @@ from dgi.models import CompanyData
 from dgi.repositories.base import CompanyDataRepository
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import ScoringStrategy
+from dgi.services.api_response_mapper_service import ScreeningResponseMapper
+from dgi.services.data_loader_service import DataLoader, RepositoryDataLoader
+from dgi.services.resource_manager_service import ResourceManager
 from dgi.services.screening_service import ScreeningService
 from dgi.validation_utils import DgiRowValidator, PydanticRowValidation
 
@@ -37,6 +40,9 @@ class Screener:
         scoring_strategy: ScoringStrategy | None = None,
         filter_strategy: BaseFilter | None = None,
         screening_service: ScreeningService | None = None,
+        data_loader: DataLoader | None = None,
+        resource_manager: ResourceManager | None = None,
+        response_mapper: ScreeningResponseMapper | None = None,
     ) -> None:
         """Initialize screener with dependency injection.
 
@@ -46,21 +52,52 @@ class Screener:
             scoring_strategy: Optional scoring strategy
             filter_strategy: Optional filter strategy
             screening_service: Injected screening service (creates default if None)
+            data_loader: Injected data loader service (creates default if None)
+            resource_manager: Injected resource manager (creates default if None)
+            response_mapper: Injected response mapper (creates default if None)
         """
         self._repository = repository
         self._filters = filters or []
         self._scoring_strategy = scoring_strategy
         self._filter_strategy = filter_strategy or DefaultFilter()
 
-        # Use dependency injection for screening service
+        # Use dependency injection for focused services
         self._screening_service = screening_service or ScreeningService()
+        self._data_loader = data_loader or RepositoryDataLoader(repository)
+        self._resource_manager = resource_manager or ResourceManager()
+        self._response_mapper = response_mapper or ScreeningResponseMapper()
+
+    # Compatibility methods for backward compatibility during refactoring
+    def load_universe(self) -> DataFrame:
+        """Load and validate the raw fundamentals universe (compatibility method).
+
+        This method is maintained for backward compatibility during refactoring.
+        It delegates to the focused data loader service.
+        """
+        return self._data_loader.load_universe()
+
+    async def load_universe_async(self) -> DataFrame:
+        """Load and validate the raw fundamentals universe asynchronously (compatibility method).
+
+        This method is maintained for backward compatibility during refactoring.
+        It delegates to the focused data loader service.
+        """
+        return await self._data_loader.load_universe_async()
 
     def default_score(self, company: CompanyData) -> float:
-        """Calculate a default score for a company using the service layer."""
+        """Calculate a default score for a company (compatibility method).
+
+        This method is maintained for backward compatibility during refactoring.
+        It delegates to the screening service.
+        """
         return ScreeningService.calculate_composite_score(company)
 
     def rows_to_dataframe(self, rows: list[CompanyData]) -> DataFrame:
-        """Convert CompanyData objects to DataFrame using service layer."""
+        """Convert CompanyData objects to DataFrame (compatibility method).
+
+        This method is maintained for backward compatibility during refactoring.
+        It delegates to the screening service.
+        """
         return ScreeningService.rows_to_dataframe(rows)
 
     def screen(
@@ -84,8 +121,11 @@ class Screener:
             min_yield, max_payout, min_cagr, top_n
         )
 
-        # Load universe
-        df = self.load_universe()
+        # Load universe using focused data loader service
+        df = self._data_loader.load_universe()
+
+        # Track resource usage
+        self._resource_manager.track_resource(df)
 
         # Apply filters using injected service
         filtered = self._screening_service.apply_dgi_criteria(
@@ -120,8 +160,11 @@ class Screener:
         )
 
         try:
-            # Load universe asynchronously
-            df = await self.load_universe_async()
+            # Load universe asynchronously using focused data loader service
+            df = await self._data_loader.load_universe_async()
+
+            # Track resource usage
+            self._resource_manager.track_resource(df)
 
             # Apply filters (this is CPU-bound, so we run it in thread pool)
             loop = asyncio.get_event_loop()
@@ -147,32 +190,6 @@ class Screener:
         except Exception as e:
             logger.error(f"Async screening failed: {e}")
             raise
-
-    def load_universe(self) -> DataFrame:
-        """
-        Load and validate the raw fundamentals universe.
-        Returns a DataFrame with correct types, ready for screening.
-        Raises ValueError if validation fails or no valid rows are found.
-        """
-        logger.info(
-            f"Loading universe from repository: {type(self._repository).__name__}"
-        )
-        rows = self._repository.get_rows()
-        logger.info(f"Successfully loaded {len(rows)} valid rows from repository")
-        return self.rows_to_dataframe(rows)
-
-    async def load_universe_async(self) -> DataFrame:
-        """
-        Load and validate the raw fundamentals universe asynchronously.
-        Returns a DataFrame with correct types, ready for screening.
-        Raises ValueError if validation fails or no valid rows are found.
-        """
-        logger.info(
-            f"Loading universe asynchronously from repository: {type(self._repository).__name__}"
-        )
-        rows = await self._repository.get_rows_async()
-        logger.info(f"Successfully loaded {len(rows)} valid rows from repository")
-        return self.rows_to_dataframe(rows)
 
     def apply_filters(
         self,

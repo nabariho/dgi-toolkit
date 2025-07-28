@@ -154,10 +154,9 @@ class FileConfigStrategy(ConfigurationStrategy):
         config = {}
         for line in file_handle:
             line = line.strip()
-            if line and not line.startswith("#"):
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    config[key.strip()] = value.strip().strip("\"'")
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                config[key.strip()] = value.strip().strip("\"'")
         return config
 
     def is_available(self) -> bool:
