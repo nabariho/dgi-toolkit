@@ -4,16 +4,354 @@ This document provides a comprehensive overview of all implemented features in t
 Toolkit, mapping to business requirements and use cases for Dividend Growth Investing
 (DGI) portfolio management.
 
-## 📋 Feature Overview
+## 📋 Feature Status Overview
 
-| Feature ID | Component         | Business Value                            | Implementation Status |
-| ---------- | ----------------- | ----------------------------------------- | --------------------- |
-| DGIT-101   | Stock Screener    | Filter universe by DGI criteria           | ✅ Complete           |
-| DGIT-102   | Portfolio Builder | Build weighted portfolios from top stocks | ✅ Complete           |
-| DGIT-103   | CLI Interface     | Command-line access for power users       | ✅ Complete           |
-| DGIT-104   | Jupyter Demo      | Visual portfolio analysis & reporting     | ✅ Complete           |
-| DGIT-105   | Testing Suite     | Quality assurance & regression prevention | ✅ Complete           |
-| DGIT-106   | Documentation     | User onboarding & contribution guidelines | ✅ Complete           |
+### Status Legend
+
+- ✅ **Complete**: Fully implemented, tested, and documented
+- 🔄 **In Progress**: Currently being developed
+- 📋 **Planned**: Designed and prioritized for development
+- 💡 **Proposed**: Ideas under consideration
+- 🚫 **Deprecated**: No longer supported
+
+### Priority Levels
+
+- 🔴 **High**: Critical for core functionality
+- 🟡 **Medium**: Important for user experience
+- 🟢 **Low**: Nice-to-have features
+
+---
+
+## 🎯 Core Features (Complete)
+
+| Feature ID | Component         | Business Value                            | Status      | Priority  |
+| ---------- | ----------------- | ----------------------------------------- | ----------- | --------- |
+| DGIT-101   | Stock Screener    | Filter universe by DGI criteria           | ✅ Complete | 🔴 High   |
+| DGIT-102   | Portfolio Builder | Build weighted portfolios from top stocks | ✅ Complete | 🔴 High   |
+| DGIT-103   | CLI Interface     | Command-line access for power users       | ✅ Complete | 🟡 Medium |
+| DGIT-104   | Jupyter Demo      | Visual portfolio analysis & reporting     | ✅ Complete | 🟡 Medium |
+| DGIT-105   | Testing Suite     | Quality assurance & regression prevention | ✅ Complete | 🔴 High   |
+| DGIT-106   | Documentation     | User onboarding & contribution guidelines | ✅ Complete | 🟡 Medium |
+
+---
+
+## 🚀 Planned Features (Next Phase)
+
+| Feature ID | Component                  | Business Value                             | Status     | Priority  | Target Date |
+| ---------- | -------------------------- | ------------------------------------------ | ---------- | --------- | ----------- |
+| DGIT-301   | FastAPI Service Skeleton   | HTTP endpoints for screener integration    | 📋 Planned | 🔴 High   | TBD         |
+| DGIT-302   | Dockerised API             | Containerized service for cloud deployment | 📋 Planned | 🔴 High   | TBD         |
+| DGIT-303   | CI/CD Workflow             | Automated Docker image publishing          | 📋 Planned | 🟡 Medium | TBD         |
+| DGIT-304   | Integration Tests          | Automated API endpoint testing             | 📋 Planned | 🔴 High   | TBD         |
+| DGIT-305   | README & Swagger Link      | API documentation and examples             | 📋 Planned | 🟡 Medium | TBD         |
+| DGIT-401   | FinViz Scraper Tool        | Web scraping for fresh ticker data         | 📋 Planned | 🔴 High   | TBD         |
+| DGIT-402   | IEX Cloud Tool             | API integration for fundamentals data      | 📋 Planned | 🔴 High   | TBD         |
+| DGIT-403   | ResearchAgent Orchestrator | Automated research workflow                | 📋 Planned | 🔴 High   | TBD         |
+| DGIT-404   | Unit + Integration Tests   | Quality assurance for AI tools             | 📋 Planned | 🟡 Medium | TBD         |
+| DGIT-405   | LinkedIn Post Draft        | Marketing content for Sprint 2             | 📋 Planned | 🟢 Low    | TBD         |
+
+---
+
+### DGIT-301: FastAPI Service Skeleton - 📋 Planned (🔴 High Priority)
+
+**Business Problem**: Research analysts need HTTP endpoints to integrate the DGI
+screener into Excel or BI tools without requiring CLI access.
+
+**User Story**: _As a research analyst_ I want an HTTP endpoint that returns the same
+results as the CLI so I can integrate the screener into Excel or BI tools.
+
+**Acceptance Criteria**:
+
+- `main.py` boots FastAPI application
+- Root `/healthz` endpoint returns `200 OK` with `{"status":"up"}`
+- `/api/v1/screen` accepts query parameters: `min_cagr`, `min_yield`, `max_payout`,
+  `top_n`
+- Returns JSON list of stocks sorted by score
+- Swagger/Redoc documentation enabled
+
+**Technical Implementation**:
+
+- **File**: `api/main.py`
+- **Dependencies**: Re-use functions from `dgi.screener`
+- **Models**: Add Pydantic response models for type safety
+- **Validation**: Input parameter validation with meaningful error messages
+
+**Success Criteria**:
+
+- API responds in < 2 seconds for typical screening requests
+- JSON response matches CLI output format
+- OpenAPI documentation is auto-generated and accessible
+
+---
+
+### DGIT-302: Dockerised API - 📋 Planned (🔴 High Priority)
+
+**Business Problem**: DevOps teams need the service containerized for deployment in
+cloud environments without manual setup.
+
+**User Story**: _As DevOps_ I need the service containerized so we can run it in
+ECS/Fargate without manual setup.
+
+**Acceptance Criteria**:
+
+- New multistage `Dockerfile.api` builds `api` target
+- Runtime image size ≤ 150 MB
+- `ENTRYPOINT ["uvicorn","api.main:app","--host","0.0.0.0","--port","8080"]`
+- Exposes port 8080 for HTTP traffic
+
+**Technical Implementation**:
+
+- **File**: `Dockerfile.api`
+- **Base Image**: Re-use slim build template from existing Dockerfile
+- **Multi-stage**: Separate build and runtime stages for optimization
+- **Security**: Non-root user, minimal attack surface
+
+**Success Criteria**:
+
+- Container starts successfully in 30 seconds
+- Health check endpoint responds correctly
+- Image size stays under 150 MB limit
+
+---
+
+### DGIT-303: CI/CD Workflow - 📋 Planned (🟡 Medium Priority)
+
+**Business Problem**: Tech leads need automated Docker image publishing for seamless
+deployment.
+
+**User Story**: _As a tech-lead_ I want the Docker image published to GHCR on every
+merge to `main` so deployment is one click.
+
+**Acceptance Criteria**:
+
+- New GitHub Action `.github/workflows/cd.yml`
+- Builds `Dockerfile.api` for `linux/amd64` architecture
+- Size guard ensures image < 150 MB
+- `docker push ghcr.io/<user>/dgi-api:${{ github.sha }}` (only on `main` branch)
+
+**Technical Implementation**:
+
+- **File**: `.github/workflows/cd.yml`
+- **Cache**: Re-use CI cache step for efficiency
+- **Secrets**: Use GHCR token from repository secrets
+- **Triggers**: Only on pushes to `main` branch
+
+**Success Criteria**:
+
+- Automated builds complete in < 10 minutes
+- Images are properly tagged and pushed to GHCR
+- Failed builds provide clear error messages
+
+---
+
+### DGIT-304: Integration Tests - 📋 Planned (🔴 High Priority)
+
+**Business Problem**: QA teams need automated tests to ensure API endpoints never ship
+broken.
+
+**User Story**: _As QA_ I need automated tests that hit `/api/v1/screen` so we never
+ship a broken endpoint.
+
+**Acceptance Criteria**:
+
+- `tests/test_api.py` spins up FastAPI with `TestClient`
+- Status 200, JSON length ≤ `top_n`, schema validated
+- Included in coverage; overall ≥ 85%
+
+**Technical Implementation**:
+
+- **File**: `tests/test_api.py`
+- **Dependencies**: Add `fastapi`, `uvicorn[standard]`, `httpx` to dev dependencies
+- **Testing**: Use FastAPI TestClient for integration testing
+- **Coverage**: Ensure API endpoints are fully covered
+
+**Success Criteria**:
+
+- All API endpoints have integration tests
+- Tests run in < 30 seconds
+- Coverage remains ≥ 85% overall
+
+---
+
+### DGIT-305: README & Swagger Link - 📋 Planned (🟡 Medium Priority)
+
+**Business Problem**: New users need clear documentation to quickly start using the API.
+
+**User Story**: _As a new user_ I want clear docs so I can curl the API in < 5 min.
+
+**Acceptance Criteria**:
+
+- README "Quick Start (Docker)" section
+- Example `curl` call with expected output
+- Link to Swagger UI screenshot
+
+**Technical Implementation**:
+
+- **File**: Update `README.md`
+- **Content**: Add Docker-based quick start guide
+- **Examples**: Provide working curl commands
+- **Screenshots**: Include Swagger UI documentation
+
+**Success Criteria**:
+
+- New users can make their first API call in < 5 minutes
+- Documentation is clear and accurate
+- Examples work out-of-the-box
+
+---
+
+### DGIT-401: FinViz Scraper Tool - 📋 Planned (🔴 High Priority)
+
+**Business Problem**: Research agents need to query FinViz screener pages to pull fresh
+ticker lists without licensing costs.
+
+**User Story**: _As the research agent_ I need to query FinViz screener pages so I can
+pull fresh ticker lists without licensing costs.
+
+**Acceptance Criteria**:
+
+- `ai_tools/finviz_tool.py` exports `scrape_finviz(criteria:str)->list[str]`
+- Uses Playwright or `requests-html` for web scraping
+- Returns max 50 tickers with sector & yield where available
+- Handles anti-bot delays with retry logic
+
+**Technical Implementation**:
+
+- **File**: `ai_tools/finviz_tool.py`
+- **Dependencies**: Playwright or `requests-html`
+- **Error Handling**: Retry 3× with exponential backoff
+- **Criteria Format**: String parsing for "Dividend% > 4, Payout < 80"
+
+**Success Criteria**:
+
+- Successfully scrapes FinViz without being blocked
+- Returns structured data with ticker symbols and metadata
+- Handles rate limiting gracefully
+
+---
+
+### DGIT-402: IEX Cloud Tool - 📋 Planned (🔴 High Priority)
+
+**Business Problem**: AI agents need API access to fetch fundamentals for ticker
+validation and analysis.
+
+**User Story**: _As the agent_ I need an API call that fetches fundamentals for a list
+of tickers for validation.
+
+**Acceptance Criteria**:
+
+- `ai_tools/iex_tool.py` with function
+  `fetch_fundamentals(tickers:list[str])->pd.DataFrame`
+- Reads `IEX_TOKEN` from environment variables
+- Raises clear error if token is absent
+- Unit test uses `pytest-vcr` cassette for reliable testing
+
+**Technical Implementation**:
+
+- **File**: `ai_tools/iex_tool.py`
+- **API**: IEX Cloud fundamentals endpoint
+- **Rate Limiting**: Free sandbox key covers 50 calls/min
+- **Testing**: VCR cassettes for reproducible tests
+
+**Success Criteria**:
+
+- Successfully fetches fundamentals for provided tickers
+- Returns structured DataFrame with financial metrics
+- Handles API rate limits and errors gracefully
+
+---
+
+### DGIT-403: ResearchAgent Orchestrator - 📋 Planned (🔴 High Priority)
+
+**Business Problem**: AI power-users need a one-command agent that automates the entire
+research workflow.
+
+**User Story**: _As an AI power-user_ I want a one-command agent that merges FinViz +
+IEX data, de-dupes, runs the screener filter, and outputs a ranked CSV.
+
+**Acceptance Criteria**:
+
+- `ai_chat/agent_demo.py` initialises `crewAI.Agent` with 2 tools +
+  `dgi.screener.apply_filters`
+- Agent prints thought/action logs for transparency
+- Final CSV stored to `output/candidates_<date>.csv`
+- Works headless via `python -m ai_chat.agent_demo`
+
+**Technical Implementation**:
+
+- **File**: `ai_chat/agent_demo.py`
+- **Framework**: Use `crewAI` "CrewWorker" if available; fallback to LangChain agent
+- **Workflow**: FinViz scraping → IEX validation → DGI screening → CSV output
+- **Logging**: Detailed thought process and action logs
+
+**Success Criteria**:
+
+- Complete end-to-end workflow execution
+- Generates ranked CSV with candidate stocks
+- Provides transparent logging of decision process
+
+---
+
+### DGIT-404: Unit + Integration Tests - 📋 Planned (🟡 Medium Priority)
+
+**Business Problem**: Quality assurance teams need comprehensive testing for scraper and
+API tools.
+
+**User Story**: Ensures scraper & API tool behave with mocks and recorded cassettes.
+
+**Acceptance Criteria**:
+
+- `tests/test_finviz.py`, `test_iex.py` reach ≥ 85% coverage for `ai_tools` package
+- Mock external dependencies for reliable testing
+- VCR cassettes for API response recording
+
+**Technical Implementation**:
+
+- **Files**: `tests/test_finviz.py`, `tests/test_iex.py`
+- **Coverage**: Target ≥ 85% for `ai_tools` package
+- **Mocking**: External API and web scraping dependencies
+- **VCR**: Record and replay API responses
+
+**Success Criteria**:
+
+- Comprehensive test coverage for all AI tools
+- Reliable test execution without external dependencies
+- Fast test execution with mocked responses
+
+---
+
+### DGIT-405: LinkedIn Post Draft - 📋 Planned (🟢 Low Priority)
+
+**Business Problem**: Marketing team needs publishable content to showcase Sprint 2
+achievements.
+
+**User Story**: Publishable content for Sprint 2.
+
+**Acceptance Criteria**:
+
+- `/docs/linkedin_post_week6.md` with hook, bullet features, GIF placeholder
+- Professional marketing content highlighting new capabilities
+- Ready for social media publication
+
+**Technical Implementation**:
+
+- **File**: `/docs/linkedin_post_week6.md`
+- **Content**: Hook, feature bullets, visual placeholders
+- **Format**: Markdown with LinkedIn-optimized structure
+
+**Success Criteria**:
+
+- Engaging content that highlights technical achievements
+- Professional presentation suitable for LinkedIn
+- Clear call-to-action for engagement
+
+---
+
+## 💡 Proposed Features (Future Consideration)
+
+| Feature ID | Component | Business Value | Status | Priority | Notes |
+| ---------- | --------- | -------------- | ------ | -------- | ----- |
+|            |           |                |        |          |       |
 
 ---
 
