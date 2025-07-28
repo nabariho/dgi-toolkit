@@ -2,6 +2,8 @@
 
 import unittest
 
+import pytest
+
 from dgi.models import CompanyData
 from dgi.scoring import (
     CompositeScoringStrategy,
@@ -36,9 +38,9 @@ class TestDefaultScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
 
     def test_default_scoring_edge_cases(self) -> None:
         """Test DefaultScoring with edge case values."""
@@ -57,9 +59,9 @@ class TestDefaultScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
 
         # Test with maximum values
         test_company = CompanyData(
@@ -74,9 +76,9 @@ class TestDefaultScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
 
 
 class TestDividendYieldScoring(unittest.TestCase):
@@ -98,11 +100,11 @@ class TestDividendYieldScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
         # Actual implementation: min(max(5.0 / 0.10, 0.0), 1.0) = min(max(50.0, 0.0), 1.0) = 1.0
-        self.assertEqual(score, 1.0)  # Capped at 1.0 since 5% / 10% = 50 > 1.0
+        assert score == 1.0  # Capped at 1.0 since 5% / 10% = 50 > 1.0
 
     def test_dividend_yield_scoring_edge_cases(self) -> None:
         """Test dividend yield scoring with edge cases."""
@@ -121,7 +123,7 @@ class TestDividendYieldScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 0.0)
+        assert score == 0.0
 
         # Test with maximum yield (should be capped at 1.0)
         test_company = CompanyData(
@@ -136,7 +138,7 @@ class TestDividendYieldScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 1.0)
+        assert score == 1.0
 
 
 class TestDividendGrowthScoring(unittest.TestCase):
@@ -158,10 +160,10 @@ class TestDividendGrowthScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
-        self.assertEqual(score, 0.5)  # 10% / 20% = 0.5
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
+        assert score == 0.5  # 10% / 20% = 0.5
 
     def test_dividend_growth_scoring_edge_cases(self) -> None:
         """Test dividend growth scoring with edge cases."""
@@ -180,7 +182,7 @@ class TestDividendGrowthScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 0.0)
+        assert score == 0.0
 
         # Test with maximum growth (should be capped at 1.0)
         test_company = CompanyData(
@@ -195,7 +197,7 @@ class TestDividendGrowthScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 1.0)
+        assert score == 1.0
 
 
 class TestPayoutRatioScoring(unittest.TestCase):
@@ -217,10 +219,10 @@ class TestPayoutRatioScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
-        self.assertEqual(score, 0.6)  # 1.0 - (40% / 100%) = 0.6
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
+        assert score == 0.6  # 1.0 - (40% / 100%) = 0.6
 
     def test_payout_ratio_scoring_edge_cases(self) -> None:
         """Test payout ratio scoring with edge cases."""
@@ -239,7 +241,7 @@ class TestPayoutRatioScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 1.0)
+        assert score == 1.0
 
         # Test with maximum payout ratio (worst score)
         test_company = CompanyData(
@@ -254,7 +256,7 @@ class TestPayoutRatioScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 0.0)
+        assert score == 0.0
 
 
 class TestFCFYieldScoring(unittest.TestCase):
@@ -276,10 +278,10 @@ class TestFCFYieldScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
-        self.assertEqual(score, 0.5)  # 10% / 20% = 0.5
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
+        assert score == 0.5  # 10% / 20% = 0.5
 
     def test_fcf_yield_scoring_edge_cases(self) -> None:
         """Test FCF yield scoring with edge cases."""
@@ -298,7 +300,7 @@ class TestFCFYieldScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 0.0)
+        assert score == 0.0
 
         # Test with maximum FCF yield (should be capped at 1.0)
         test_company = CompanyData(
@@ -313,7 +315,7 @@ class TestFCFYieldScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 1.0)
+        assert score == 1.0
 
 
 class TestSectorBonusScoring(unittest.TestCase):
@@ -335,8 +337,8 @@ class TestSectorBonusScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertEqual(score, 0.6)  # 0.5 base + 0.1 bonus
+        assert isinstance(score, float)
+        assert score == 0.6  # 0.5 base + 0.1 bonus
 
     def test_sector_bonus_scoring_non_preferred_sector(self) -> None:
         """Test sector bonus scoring with non-preferred sector."""
@@ -354,8 +356,8 @@ class TestSectorBonusScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertEqual(score, 0.5)  # 0.5 base only
+        assert isinstance(score, float)
+        assert score == 0.5  # 0.5 base only
 
     def test_sector_bonus_scoring_custom_bonus(self) -> None:
         """Test sector bonus scoring with custom bonus value."""
@@ -373,7 +375,7 @@ class TestSectorBonusScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 0.7)  # 0.5 base + 0.2 bonus
+        assert score == 0.7  # 0.5 base + 0.2 bonus
 
 
 class TestIndustryBonusScoring(unittest.TestCase):
@@ -395,8 +397,8 @@ class TestIndustryBonusScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertEqual(score, 0.55)  # 0.5 base + 0.05 bonus
+        assert isinstance(score, float)
+        assert score == 0.55  # 0.5 base + 0.05 bonus
 
     def test_industry_bonus_scoring_non_preferred_industry(self) -> None:
         """Test industry bonus scoring with non-preferred industry."""
@@ -414,8 +416,8 @@ class TestIndustryBonusScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertEqual(score, 0.5)  # 0.5 base only
+        assert isinstance(score, float)
+        assert score == 0.5  # 0.5 base only
 
     def test_industry_bonus_scoring_custom_bonus(self) -> None:
         """Test industry bonus scoring with custom bonus value."""
@@ -433,7 +435,7 @@ class TestIndustryBonusScoring(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertEqual(score, 0.65)  # 0.5 base + 0.15 bonus
+        assert score == 0.65  # 0.5 base + 0.15 bonus
 
 
 class TestCompositeScoringStrategy(unittest.TestCase):
@@ -457,11 +459,11 @@ class TestCompositeScoringStrategy(unittest.TestCase):
         )
 
         score = composite.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
         # Expected: (1.0 * 0.5 + 0.6 * 0.5) / 1.0 = 0.8
-        self.assertAlmostEqual(score, 0.8, places=2)
+        assert abs(score - 0.8) < 10 ** (-2)
 
     def test_composite_scoring_strategy_empty(self) -> None:
         """Test composite scoring strategy with no components."""
@@ -479,7 +481,7 @@ class TestCompositeScoringStrategy(unittest.TestCase):
         )
 
         score = composite.score(test_company)
-        self.assertEqual(score, 0.0)
+        assert score == 0.0
 
     def test_composite_scoring_strategy_zero_weights(self) -> None:
         """Test composite scoring strategy with zero weights."""
@@ -499,7 +501,7 @@ class TestCompositeScoringStrategy(unittest.TestCase):
         )
 
         score = composite.score(test_company)
-        self.assertEqual(score, 0.0)
+        assert score == 0.0
 
     def test_composite_scoring_strategy_multiple_components(self) -> None:
         """Test composite scoring strategy with multiple components."""
@@ -520,11 +522,11 @@ class TestCompositeScoringStrategy(unittest.TestCase):
         )
 
         score = composite.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
         # Expected: (1.0 * 0.3 + 0.6 * 0.3 + 0.5 * 0.4) / 1.0 = 0.68
-        self.assertAlmostEqual(score, 0.68, places=2)
+        assert abs(score - 0.68) < 10 ** (-2)
 
 
 class TestWeightedScoringStrategy(unittest.TestCase):
@@ -551,11 +553,11 @@ class TestWeightedScoringStrategy(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
         # Expected: 0.5*0.3 + 0.5*0.3 + 0.6*0.2 + 0.5*0.2 = 0.52
-        self.assertAlmostEqual(score, 0.52, places=2)
+        assert abs(score - 0.52) < 10 ** (-2)
 
     def test_weighted_scoring_strategy_edge_cases(self) -> None:
         """Test weighted scoring strategy with edge cases."""
@@ -574,9 +576,9 @@ class TestWeightedScoringStrategy(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
 
         # Test with maximum values
         test_company = CompanyData(
@@ -591,9 +593,9 @@ class TestWeightedScoringStrategy(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
 
     def test_weighted_scoring_strategy_custom_weights(self) -> None:
         """Test weighted scoring strategy with custom weights."""
@@ -616,11 +618,11 @@ class TestWeightedScoringStrategy(unittest.TestCase):
         )
 
         score = scoring.score(test_company)
-        self.assertIsInstance(score, float)
-        self.assertGreaterEqual(score, 0.0)
-        self.assertLessEqual(score, 1.0)
+        assert isinstance(score, float)
+        assert score >= 0.0
+        assert score <= 1.0
         # Expected: 0.8*0.5 + 0.75*0.3 + 0.7*0.1 + 0.6*0.1 = 0.755
-        self.assertAlmostEqual(score, 0.755, places=3)
+        assert abs(score - 0.755) < 10 ** (-3)
 
 
 class TestScoringStrategyInterface(unittest.TestCase):
@@ -628,7 +630,7 @@ class TestScoringStrategyInterface(unittest.TestCase):
 
     def test_scoring_strategy_is_abstract(self) -> None:
         """Test that ScoringStrategy cannot be instantiated directly."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             ScoringStrategy()  # type: ignore
 
     def test_custom_scoring_implementation(self) -> None:
@@ -651,7 +653,7 @@ class TestScoringStrategyInterface(unittest.TestCase):
 
         scoring = SimpleScoring()
         score = scoring.score(test_company)
-        self.assertEqual(score, 0.5)
+        assert score == 0.5
 
 
 if __name__ == "__main__":

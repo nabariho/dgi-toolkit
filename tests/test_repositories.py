@@ -4,6 +4,8 @@ import asyncio
 import unittest
 from unittest.mock import Mock, patch
 
+import pytest
+
 from dgi.models import CompanyData
 from dgi.repositories.base import AsyncCompanyDataRepository, CompanyDataRepository
 
@@ -13,13 +15,13 @@ class TestCompanyDataRepository(unittest.TestCase):
 
     def test_company_data_repository_is_abstract(self) -> None:
         """Test that CompanyDataRepository cannot be instantiated directly."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             CompanyDataRepository()  # type: ignore
 
     def test_company_data_repository_inheritance(self) -> None:
         """Test that CompanyDataRepository inherits from ABC."""
-        self.assertTrue(hasattr(CompanyDataRepository, "__abstractmethods__"))
-        self.assertIn("get_rows", CompanyDataRepository.__abstractmethods__)
+        assert hasattr(CompanyDataRepository, "__abstractmethods__")
+        assert "get_rows" in CompanyDataRepository.__abstractmethods__
 
     def test_concrete_implementation(self) -> None:
         """Test concrete implementation of CompanyDataRepository."""
@@ -52,11 +54,11 @@ class TestCompanyDataRepository(unittest.TestCase):
         repo = TestRepository()
         rows = repo.get_rows()
 
-        self.assertIsInstance(rows, list)
-        self.assertEqual(len(rows), 2)
-        self.assertIsInstance(rows[0], CompanyData)
-        self.assertEqual(rows[0].symbol, "TEST1")
-        self.assertEqual(rows[1].symbol, "TEST2")
+        assert isinstance(rows, list)
+        assert len(rows) == 2
+        assert isinstance(rows[0], CompanyData)
+        assert rows[0].symbol == "TEST1"
+        assert rows[1].symbol == "TEST2"
 
     @patch("asyncio.get_event_loop")
     def test_get_rows_async_success(self, mock_get_loop) -> None:
@@ -102,7 +104,7 @@ class TestCompanyDataRepository(unittest.TestCase):
 
         result = asyncio.run(test_async())
 
-        self.assertEqual(result, test_data)
+        assert result == test_data
         mock_loop.run_in_executor.assert_called_once_with(None, repo.get_rows)
 
     @patch("asyncio.get_event_loop")
@@ -135,7 +137,7 @@ class TestCompanyDataRepository(unittest.TestCase):
 
         # Test async method
         async def test_async():
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 await repo.get_rows_async()
 
         asyncio.run(test_async())
@@ -176,7 +178,7 @@ class TestCompanyDataRepository(unittest.TestCase):
 
         # Test async method
         async def test_async():
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
                 await repo.get_rows_async()
 
         asyncio.run(test_async())
@@ -206,7 +208,7 @@ class TestCompanyDataRepository(unittest.TestCase):
 
         # Test that sync method returns empty list
         sync_result = repo.get_rows()
-        self.assertEqual(len(sync_result), 0)
+        assert len(sync_result) == 0
 
         # Test that async method returns override data
         async def test_async():
@@ -214,8 +216,8 @@ class TestCompanyDataRepository(unittest.TestCase):
             return result
 
         async_result = asyncio.run(test_async())
-        self.assertEqual(len(async_result), 1)
-        self.assertEqual(async_result[0].symbol, "OVERRIDE")
+        assert len(async_result) == 1
+        assert async_result[0].symbol == "OVERRIDE"
 
 
 class TestAsyncCompanyDataRepository(unittest.TestCase):
@@ -243,8 +245,8 @@ class TestAsyncCompanyDataRepository(unittest.TestCase):
         repo = TestAsyncRepository()
 
         # Verify it has the required method
-        self.assertTrue(hasattr(repo, "get_rows_async"))
-        self.assertTrue(asyncio.iscoroutinefunction(repo.get_rows_async))
+        assert hasattr(repo, "get_rows_async")
+        assert asyncio.iscoroutinefunction(repo.get_rows_async)
 
         # Test the method works
         async def test_async():
@@ -252,8 +254,8 @@ class TestAsyncCompanyDataRepository(unittest.TestCase):
             return result
 
         result = asyncio.run(test_async())
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].symbol, "ASYNC1")
+        assert len(result) == 1
+        assert result[0].symbol == "ASYNC1"
 
     def test_async_company_data_repository_with_error(self) -> None:
         """Test AsyncCompanyDataRepository with error handling."""
@@ -266,7 +268,7 @@ class TestAsyncCompanyDataRepository(unittest.TestCase):
 
         # Test that it raises the expected exception
         async def test_async():
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 await repo.get_rows_async()
 
         asyncio.run(test_async())
@@ -286,7 +288,7 @@ class TestAsyncCompanyDataRepository(unittest.TestCase):
             return result
 
         result = asyncio.run(test_async())
-        self.assertEqual(result, [])
+        assert result == []
 
     def test_async_company_data_repository_multiple_rows(self) -> None:
         """Test AsyncCompanyDataRepository with multiple rows."""
@@ -324,9 +326,9 @@ class TestAsyncCompanyDataRepository(unittest.TestCase):
             return result
 
         result = asyncio.run(test_async())
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0].symbol, "ASYNC1")
-        self.assertEqual(result[1].symbol, "ASYNC2")
+        assert len(result) == 2
+        assert result[0].symbol == "ASYNC1"
+        assert result[1].symbol == "ASYNC2"
 
 
 class TestRepositoryIntegration(unittest.TestCase):
@@ -336,10 +338,10 @@ class TestRepositoryIntegration(unittest.TestCase):
         """Test that repository classes follow proper inheritance hierarchy."""
 
         # Test that CompanyDataRepository is abstract
-        self.assertTrue(hasattr(CompanyDataRepository, "__abstractmethods__"))
+        assert hasattr(CompanyDataRepository, "__abstractmethods__")
 
         # Test that AsyncCompanyDataRepository is a protocol
-        self.assertTrue(callable(AsyncCompanyDataRepository))
+        assert callable(AsyncCompanyDataRepository)
 
     def test_repository_method_signatures(self) -> None:
         """Test that repository methods have correct signatures."""
@@ -353,7 +355,7 @@ class TestRepositoryIntegration(unittest.TestCase):
 
         # Verify method exists and returns correct type
         result = repo.get_rows()
-        self.assertIsInstance(result, list)
+        assert isinstance(result, list)
 
         # Test async method signature
         async def test_async():
@@ -361,7 +363,7 @@ class TestRepositoryIntegration(unittest.TestCase):
             return result
 
         async_result = asyncio.run(test_async())
-        self.assertIsInstance(async_result, list)
+        assert isinstance(async_result, list)
 
     def test_repository_error_propagation(self) -> None:
         """Test that errors are properly propagated from repositories."""
@@ -373,12 +375,12 @@ class TestRepositoryIntegration(unittest.TestCase):
         repo = ErrorRepository()
 
         # Test sync error propagation
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             repo.get_rows()
 
         # Test async error propagation
         async def test_async():
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
                 await repo.get_rows_async()
 
         asyncio.run(test_async())

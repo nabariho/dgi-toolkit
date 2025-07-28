@@ -36,7 +36,7 @@ class TestDefaultFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 3)
+        assert len(result) == 3
         pd.testing.assert_frame_equal(result, test_df)
 
     def test_default_filter_all_fail(self) -> None:
@@ -55,7 +55,7 @@ class TestDefaultFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
         self.assertEqual(
             list(result.columns), ["dividend_yield", "payout", "dividend_cagr"]
         )
@@ -78,11 +78,11 @@ class TestDefaultFilter(unittest.TestCase):
         )
 
         # Only row 2 should pass all filters
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result.iloc[0]["dividend_yield"], 3.0)
-        self.assertEqual(result.iloc[0]["payout"], 40.0)
-        self.assertEqual(result.iloc[0]["dividend_cagr"], 6.0)
-        self.assertEqual(result.iloc[0]["symbol"], "C")
+        assert len(result) == 1
+        assert result.iloc[0]["dividend_yield"] == 3.0
+        assert result.iloc[0]["payout"] == 40.0
+        assert result.iloc[0]["dividend_cagr"] == 6.0
+        assert result.iloc[0]["symbol"] == "C"
 
     def test_default_filter_edge_values(self) -> None:
         """Test DefaultFilter with edge case values."""
@@ -101,7 +101,7 @@ class TestDefaultFilter(unittest.TestCase):
         )
 
         # Both rows should pass (inclusive bounds)
-        self.assertEqual(len(result), 2)
+        assert len(result) == 2
 
     def test_default_filter_empty_dataframe(self) -> None:
         """Test DefaultFilter with empty input DataFrame."""
@@ -115,7 +115,7 @@ class TestDefaultFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
         self.assertEqual(
             list(result.columns), ["dividend_yield", "payout", "dividend_cagr"]
         )
@@ -137,7 +137,7 @@ class TestDefaultFilter(unittest.TestCase):
         )
 
         # All rows should pass
-        self.assertEqual(len(result), 3)
+        assert len(result) == 3
 
     def test_default_filter_missing_columns(self) -> None:
         """Test DefaultFilter with missing required columns."""
@@ -156,8 +156,8 @@ class TestDefaultFilter(unittest.TestCase):
         )
 
         # Should return empty DataFrame with same structure
-        self.assertEqual(len(result), 0)
-        self.assertEqual(list(result.columns), ["dividend_yield", "payout"])
+        assert len(result) == 0
+        assert list(result.columns) == ["dividend_yield", "payout"]
 
 
 class TestYieldOnlyFilter(unittest.TestCase):
@@ -180,8 +180,8 @@ class TestYieldOnlyFilter(unittest.TestCase):
         )
 
         # Should only filter by yield, ignore other parameters
-        self.assertEqual(len(result), 3)  # 2.0, 2.5, 3.0 pass
-        self.assertTrue(all(result["dividend_yield"] >= 2.0))
+        assert len(result) == 3  # 2.0, 2.5, 3.0 pass
+        assert all(result["dividend_yield"] >= 2.0)
 
     def test_yield_only_filter_empty_dataframe(self) -> None:
         """Test YieldOnlyFilter with empty DataFrame."""
@@ -193,7 +193,7 @@ class TestYieldOnlyFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
     def test_yield_only_filter_missing_column(self) -> None:
         """Test YieldOnlyFilter with missing dividend_yield column."""
@@ -211,7 +211,7 @@ class TestYieldOnlyFilter(unittest.TestCase):
         )
 
         # Should return empty DataFrame
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
 
 class TestPayoutOnlyFilter(unittest.TestCase):
@@ -234,8 +234,8 @@ class TestPayoutOnlyFilter(unittest.TestCase):
         )
 
         # Should only filter by payout, ignore other parameters
-        self.assertEqual(len(result), 2)  # 30.0, 50.0 pass
-        self.assertTrue(all(result["payout"] <= 60.0))
+        assert len(result) == 2  # 30.0, 50.0 pass
+        assert all(result["payout"] <= 60.0)
 
     def test_payout_only_filter_empty_dataframe(self) -> None:
         """Test PayoutOnlyFilter with empty DataFrame."""
@@ -247,7 +247,7 @@ class TestPayoutOnlyFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
     def test_payout_only_filter_missing_column(self) -> None:
         """Test PayoutOnlyFilter with missing payout column."""
@@ -265,7 +265,7 @@ class TestPayoutOnlyFilter(unittest.TestCase):
         )
 
         # Should return empty DataFrame
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
 
 class TestGrowthOnlyFilter(unittest.TestCase):
@@ -288,8 +288,8 @@ class TestGrowthOnlyFilter(unittest.TestCase):
         )
 
         # Should only filter by growth, ignore other parameters
-        self.assertEqual(len(result), 2)  # 5.0, 7.0 pass
-        self.assertTrue(all(result["dividend_cagr"] >= 5.0))
+        assert len(result) == 2  # 5.0, 7.0 pass
+        assert all(result["dividend_cagr"] >= 5.0)
 
     def test_growth_only_filter_empty_dataframe(self) -> None:
         """Test GrowthOnlyFilter with empty DataFrame."""
@@ -301,7 +301,7 @@ class TestGrowthOnlyFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
     def test_growth_only_filter_missing_column(self) -> None:
         """Test GrowthOnlyFilter with missing dividend_cagr column."""
@@ -319,7 +319,7 @@ class TestGrowthOnlyFilter(unittest.TestCase):
         )
 
         # Should return empty DataFrame
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
 
 class TestSectorFilter(unittest.TestCase):
@@ -343,8 +343,8 @@ class TestSectorFilter(unittest.TestCase):
         )
 
         # Should only filter by sector, ignore other parameters
-        self.assertEqual(len(result), 3)  # Technology, Finance, Technology
-        self.assertTrue(all(result["sector"].isin(["Technology", "Finance"])))
+        assert len(result) == 3  # Technology, Finance, Technology
+        assert all(result["sector"].isin(["Technology", "Finance"]))
 
     def test_sector_filter_empty_dataframe(self) -> None:
         """Test SectorFilter with empty DataFrame."""
@@ -356,7 +356,7 @@ class TestSectorFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
     def test_sector_filter_missing_column(self) -> None:
         """Test SectorFilter with missing sector column."""
@@ -375,7 +375,7 @@ class TestSectorFilter(unittest.TestCase):
         )
 
         # Should return empty DataFrame
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
     def test_sector_filter_no_matches(self) -> None:
         """Test SectorFilter when no sectors match."""
@@ -395,7 +395,7 @@ class TestSectorFilter(unittest.TestCase):
         )
 
         # Should return empty DataFrame
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
 
 class TestCompositeFilter(unittest.TestCase):
@@ -419,9 +419,9 @@ class TestCompositeFilter(unittest.TestCase):
 
         # Should apply both filters: yield >= 2.0 AND payout <= 60.0
         # Only row 2 (index 2) passes both: yield=3.0 >= 2.0 and payout=50.0 <= 60.0
-        self.assertEqual(len(result), 1)  # Only one row passes both filters
-        self.assertTrue(all(result["dividend_yield"] >= 2.0))
-        self.assertTrue(all(result["payout"] <= 60.0))
+        assert len(result) == 1  # Only one row passes both filters
+        assert all(result["dividend_yield"] >= 2.0)
+        assert all(result["payout"] <= 60.0)
 
     def test_composite_filter_empty_dataframe(self) -> None:
         """Test CompositeFilter with empty DataFrame."""
@@ -435,7 +435,7 @@ class TestCompositeFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
     def test_composite_filter_add_filter(self) -> None:
         """Test CompositeFilter add_filter method."""
@@ -455,7 +455,7 @@ class TestCompositeFilter(unittest.TestCase):
         )
 
         # Should apply DefaultFilter (all pass) then TopNFilter (limit to 2)
-        self.assertEqual(len(result), 2)
+        assert len(result) == 2
 
 
 class TestTopNFilter(unittest.TestCase):
@@ -478,9 +478,9 @@ class TestTopNFilter(unittest.TestCase):
         )
 
         # Should return top 2 rows
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result.iloc[0]["dividend_yield"], 2.5)
-        self.assertEqual(result.iloc[1]["dividend_yield"], 3.0)
+        assert len(result) == 2
+        assert result.iloc[0]["dividend_yield"] == 2.5
+        assert result.iloc[1]["dividend_yield"] == 3.0
 
     def test_top_n_filter_with_base_filter(self) -> None:
         """Test TopNFilter with base filter."""
@@ -505,8 +505,8 @@ class TestTopNFilter(unittest.TestCase):
         # Row 2: yield=3.0 >= 2.0, payout=50.0 <= 60.0, cagr=7.0 >= 5.0 (passes)
         # Row 3: yield=4.0 >= 2.0, payout=80.0 > 60.0 (fails)
         # So only row 2 passes, and TopNFilter(2) returns it
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result.iloc[0]["dividend_yield"], 3.0)
+        assert len(result) == 1
+        assert result.iloc[0]["dividend_yield"] == 3.0
 
     def test_top_n_filter_empty_dataframe(self) -> None:
         """Test TopNFilter with empty DataFrame."""
@@ -520,7 +520,7 @@ class TestTopNFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
     def test_top_n_filter_n_larger_than_dataframe(self) -> None:
         """Test TopNFilter when n is larger than DataFrame size."""
@@ -539,7 +539,7 @@ class TestTopNFilter(unittest.TestCase):
         )
 
         # Should return all rows
-        self.assertEqual(len(result), 3)
+        assert len(result) == 3
 
 
 class TestRankingFilter(unittest.TestCase):
@@ -562,9 +562,9 @@ class TestRankingFilter(unittest.TestCase):
         )
 
         # Should return top 2 rows sorted by dividend_yield descending
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result.iloc[0]["dividend_yield"], 5.0)
-        self.assertEqual(result.iloc[1]["dividend_yield"], 4.0)
+        assert len(result) == 2
+        assert result.iloc[0]["dividend_yield"] == 5.0
+        assert result.iloc[1]["dividend_yield"] == 4.0
 
     def test_ranking_filter_ascending(self) -> None:
         """Test RankingFilter with ascending sort."""
@@ -583,9 +583,9 @@ class TestRankingFilter(unittest.TestCase):
         )
 
         # Should return top 2 rows sorted by dividend_yield ascending
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result.iloc[0]["dividend_yield"], 2.5)
-        self.assertEqual(result.iloc[1]["dividend_yield"], 3.0)
+        assert len(result) == 2
+        assert result.iloc[0]["dividend_yield"] == 2.5
+        assert result.iloc[1]["dividend_yield"] == 3.0
 
     def test_ranking_filter_missing_column(self) -> None:
         """Test RankingFilter with missing sort column."""
@@ -604,7 +604,7 @@ class TestRankingFilter(unittest.TestCase):
         )
 
         # Should return top 2 rows without sorting
-        self.assertEqual(len(result), 2)
+        assert len(result) == 2
 
     def test_ranking_filter_empty_dataframe(self) -> None:
         """Test RankingFilter with empty DataFrame."""
@@ -618,7 +618,7 @@ class TestRankingFilter(unittest.TestCase):
             test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0
         )
 
-        self.assertEqual(len(result), 0)
+        assert len(result) == 0
 
 
 class TestFilterStrategyInterface(unittest.TestCase):
@@ -671,8 +671,8 @@ class TestFilterStrategyInterface(unittest.TestCase):
         )
 
         # Should only return Tech sector stocks
-        self.assertEqual(len(result), 2)
-        self.assertTrue(all(result["sector"] == "Tech"))
+        assert len(result) == 2
+        assert all(result["sector"] == "Tech")
 
     def test_composite_filter_implementation(self) -> None:
         """Test composite filter that combines multiple strategies."""
@@ -718,7 +718,7 @@ class TestFilterStrategyInterface(unittest.TestCase):
         result = composite.filter(test_df, min_yield=2.0, max_payout=60.0, min_cagr=5.0)
 
         # Should apply both filters: all pass DefaultFilter, but limited to 2 rows
-        self.assertEqual(len(result), 2)
+        assert len(result) == 2
 
 
 if __name__ == "__main__":
