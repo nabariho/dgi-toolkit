@@ -52,20 +52,16 @@ class SecurityValidationError(DataValidationError):
     """Raised when security validation fails (input sanitization, etc.)."""
 
 
-
 class PathValidationError(DataValidationError):
     """Raised when file path validation fails."""
-
 
 
 class URLValidationError(DataValidationError):
     """Raised when URL validation fails."""
 
 
-
 class DataFrameValidationError(DataValidationError):
     """Raised when DataFrame validation fails."""
-
 
 
 # Screening and Business Logic Exceptions
@@ -89,10 +85,8 @@ class FilterError(ScreeningError):
     """Raised when filtering operations fail."""
 
 
-
 class ScoringError(ScreeningError):
     """Raised when scoring calculations fail."""
-
 
 
 class PortfolioError(DGIException):
@@ -137,15 +131,12 @@ class DataNotFoundError(RepositoryError):
     """Raised when requested data is not found in repository."""
 
 
-
 class DataCorruptionError(RepositoryError):
     """Raised when data is corrupted or in unexpected format."""
 
 
-
 class DataAccessError(RepositoryError):
     """Raised when data access is denied or fails."""
-
 
 
 # Configuration and System Exceptions
@@ -223,7 +214,6 @@ class UserInputError(CLIError):
     """Raised when user input is invalid."""
 
 
-
 # Performance and Resource Exceptions
 class PerformanceError(DGIException):
     """Raised when performance thresholds are exceeded."""
@@ -271,4 +261,3 @@ class ResourceError(DGIException):
 # This should be deprecated in favor of the new hierarchy
 class ValidationError(DataValidationError):
     """Legacy validation error - use DataValidationError instead."""
-

@@ -1,8 +1,9 @@
 # Technical Debt - DGI Toolkit
 
-This document tracks technical debt items identified through comprehensive code review to improve code
-quality, maintainability, and adherence to enterprise best practices. Each item includes
-priority level, effort estimation, and detailed implementation guidance for junior developers.
+This document tracks technical debt items identified through comprehensive code review
+to improve code quality, maintainability, and adherence to enterprise best practices.
+Each item includes priority level, effort estimation, and detailed implementation
+guidance for junior developers.
 
 ## 📋 Technical Debt Overview
 
@@ -25,20 +26,26 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-001: API Validation System Dysfunction ✅ **COMPLETED**
 
-**Priority**: 🔴 Critical  
-**Effort**: M (1-2 days)  
-**Category**: Functionality  
+**Priority**: 🔴 Critical
+**Effort**: M (1-2 days)
+**Category**: Functionality
 **Status**: ✅ **COMPLETED** - 2025-07-28
 
-**Problem**: All API endpoints were returning 422 validation errors instead of successful responses. The health endpoint `/healthz` and root endpoint `/` were failing with "3 validation errors" and "6 validation errors" respectively, preventing basic API functionality.
+**Problem**: All API endpoints were returning 422 validation errors instead of
+successful responses. The health endpoint `/healthz` and root endpoint `/` were failing
+with "3 validation errors" and "6 validation errors" respectively, preventing basic API
+functionality.
 
-**Root Cause**: 
+**Root Cause**:
+
 - Response schema mismatch between API endpoints and Pydantic models
 - Health endpoints were returning fields not defined in `HealthResponse` schema
 - Root endpoints were returning fields not defined in `APIInfoResponse` schema
 
 **Solution Implemented**:
-1. **Fixed HealthResponse Schema**: Updated both `/healthz` and `/api/v1/health` endpoints to return correct fields:
+
+1. **Fixed HealthResponse Schema**: Updated both `/healthz` and `/api/v1/health`
+   endpoints to return correct fields:
    - `status`: "healthy" (was "up")
    - `timestamp`: datetime.now()
    - `version`: API version
@@ -46,7 +53,8 @@ priority level, effort estimation, and detailed implementation guidance for juni
    - `dependencies`: dict with data_file and system_metrics status
    - `metrics`: dict with memory, CPU, and environment info
 
-2. **Fixed APIInfoResponse Schema**: Updated both `/` and `/api/v1/` endpoints to return correct fields:
+2. **Fixed APIInfoResponse Schema**: Updated both `/` and `/api/v1/` endpoints to return
+   correct fields:
    - `name`: API name (was "message")
    - `version`: API version
    - `description`: API description
@@ -58,11 +66,13 @@ priority level, effort estimation, and detailed implementation guidance for juni
 3. **Updated Tests**: Modified test expectations to match new schema structure
 
 **Files Modified**:
+
 - `api/main.py` - Fixed response structures for all endpoints
 - `api/schemas/responses.py` - Added datetime import
 - `tests/test_api.py` - Updated test expectations
 
 **Results**:
+
 - ✅ All 50 API tests now pass (was 9 failing)
 - ✅ `/healthz` endpoint returns 200 OK
 - ✅ `/` root endpoint returns 200 OK
@@ -75,23 +85,28 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-002: Inconsistent Exception Handling Architecture ✅ **COMPLETED**
 
-**Priority**: 🟡 High  
-**Effort**: M (1-2 days)  
-**Category**: Architecture  
+**Priority**: 🟡 High
+**Effort**: M (1-2 days)
+**Category**: Architecture
 **Status**: ✅ **COMPLETED** - 2024-12-19
 
-**Problem**: Multiple exception handling approaches exist across the codebase without a unified strategy, violating the DRY principle and making error handling unpredictable.
+**Problem**: Multiple exception handling approaches exist across the codebase without a
+unified strategy, violating the DRY principle and making error handling unpredictable.
 
 **Issues Identified**:
+
 - `dgi.exceptions` has minimal exceptions (only `DataValidationError`)
-- `api.exceptions` has comprehensive exception hierarchy 
+- `api.exceptions` has comprehensive exception hierarchy
 - Core DGI modules use generic Python exceptions instead of domain-specific ones
 - Inconsistent error propagation patterns between layers
 
 **Solution Implemented**:
+
 1. ✅ **Created unified exception hierarchy** in `dgi/exceptions.py`:
    - `DGIException` base class with error context support
-   - Domain-specific exceptions: `DataValidationError`, `ScreeningError`, `PortfolioError`, `RepositoryError`, `FactoryError`, `URLValidationError`, `DataFrameValidationError`
+   - Domain-specific exceptions: `DataValidationError`, `ScreeningError`,
+     `PortfolioError`, `RepositoryError`, `FactoryError`, `URLValidationError`,
+     `DataFrameValidationError`
    - Consistent error message formatting with field names and values
 
 2. ✅ **Migrated all validation utilities** to use unified hierarchy:
@@ -110,6 +125,7 @@ priority level, effort estimation, and detailed implementation guidance for juni
    - All 231 tests now passing with unified exception handling
 
 **Benefits Achieved**:
+
 - ✅ Consistent error messages and handling across codebase
 - ✅ Better debugging with detailed error context
 - ✅ Improved user experience with clear error messages
@@ -117,6 +133,7 @@ priority level, effort estimation, and detailed implementation guidance for juni
 - ✅ Proper exception chaining and error details
 
 **Files Modified**:
+
 - `dgi/exceptions.py` - Created comprehensive exception hierarchy
 - `dgi/validation_utils.py` - Updated to use unified exceptions
 - `dgi/factory.py` - Updated to use `FactoryError`
@@ -126,24 +143,29 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-003: Service Layer Implementation Gaps
 
-**Priority**: 🟡 High  
-**Effort**: L (3-5 days)  
-**Category**: Architecture  
+**Priority**: 🟡 High
+**Effort**: L (3-5 days)
+**Category**: Architecture
 
-**Problem**: Service layer (`dgi/services.py`) exists but contains 173 lines of untested, unused code with 0% coverage. Business logic is scattered between domain classes and service classes.
+**Problem**: Service layer (`dgi/services.py`) exists but contains 173 lines of
+untested, unused code with 0% coverage. Business logic is scattered between domain
+classes and service classes.
 
 **Issues Identified**:
+
 - `dgi/services.py` has 0% test coverage and appears unused
 - Business logic duplicated between `dgi/services/` and `dgi/services.py`
 - Service layer pattern is partially implemented
 - No clear separation between domain logic and application services
 
 **Impact**:
+
 - Business logic is difficult to test in isolation
 - Code duplication leads to maintenance issues
 - Unclear which service classes to use for specific operations
 
 **Solution Steps**:
+
 1. **Audit**: Determine which service implementations are actively used
 2. **Consolidate**: Remove unused `dgi/services.py` or migrate logic to proper services
 3. **Standardize**: Ensure all business logic goes through service layer
@@ -151,26 +173,31 @@ priority level, effort estimation, and detailed implementation guidance for juni
 5. **Document**: Clear guidelines on when to use services vs. domain classes
 
 **Files to Modify**:
+
 - `dgi/services.py` - Remove or migrate to proper service classes
 - `dgi/services/` - Ensure all business logic is properly implemented
 - `tests/` - Add comprehensive service layer tests
 
 ### TD-004: Strategy Pattern Implementation Violations ✅ **COMPLETED**
 
-**Priority**: 🟡 High  
-**Effort**: M (1-2 days)  
-**Category**: Design Patterns  
+**Priority**: 🟡 High
+**Effort**: M (1-2 days)
+**Category**: Design Patterns
 **Status**: ✅ **COMPLETED** - 2024-12-19
 
-**Problem**: Strategy pattern is inconsistently implemented across filtering and scoring components, with duplicate class definitions and improper abstractions.
+**Problem**: Strategy pattern is inconsistently implemented across filtering and scoring
+components, with duplicate class definitions and improper abstractions.
 
 **Issues Identified**:
-- `dgi/filtering.py` has duplicate class definitions (`SectorFilter` defined twice at lines 41 and 140)
+
+- `dgi/filtering.py` has duplicate class definitions (`SectorFilter` defined twice at
+  lines 41 and 140)
 - Mixed use of ABC classes and Protocol classes for same interface
 - Strategy pattern not fully implemented for scoring algorithms
 - Inconsistent naming conventions for strategy implementations
 
 **Solution Implemented**:
+
 1. ✅ **Cleaned up filtering.py**:
    - Removed duplicate `SectorFilter` and `CompositeFilter` class definitions
    - Eliminated Protocol classes and standardized on ABC pattern
@@ -195,6 +222,7 @@ priority level, effort estimation, and detailed implementation guidance for juni
    - Easy to add new filtering/scoring strategies
 
 **Benefits Achieved**:
+
 - ✅ Eliminated duplicate class definitions
 - ✅ Consistent use of ABC pattern across all strategies
 - ✅ Improved code maintainability and readability
@@ -202,34 +230,41 @@ priority level, effort estimation, and detailed implementation guidance for juni
 - ✅ Clear strategy pattern implementation
 
 **Files Modified**:
+
 - `dgi/filtering.py` - Cleaned up duplicate classes, standardized on ABC
 - `dgi/scoring.py` - Removed Protocol classes, standardized on ABC
 - Added comprehensive documentation for strategy pattern usage
 
 ### TD-005: Missing Comprehensive Data Validation ✅ **COMPLETED**
 
-**Priority**: 🟡 High  
-**Effort**: M (1-2 days)  
-**Category**: Data Quality  
+**Priority**: 🟡 High
+**Effort**: M (1-2 days)
+**Category**: Data Quality
 **Status**: ✅ **COMPLETED** - 2024-12-19
 
-**Problem**: Data validation is inconsistently applied across different layers and doesn't follow enterprise patterns for data validation pipelines.
+**Problem**: Data validation is inconsistently applied across different layers and
+doesn't follow enterprise patterns for data validation pipelines.
 
 **Issues Identified**:
-- Multiple validation implementations (`validation.py`, `validation_utils.py`, `services/validation_service.py`)
+
+- Multiple validation implementations (`validation.py`, `validation_utils.py`,
+  `services/validation_service.py`)
 - Business rules scattered across validation, service, and domain layers
 - No comprehensive input sanitization strategy
 - Missing validation for edge cases (infinity, NaN values in financial data)
 
 **Solution Implemented**:
+
 1. ✅ **Consolidated validation logic**:
-   - Updated `dgi/services/validation_service.py` to leverage unified validation utilities
+   - Updated `dgi/services/validation_service.py` to leverage unified validation
+     utilities
    - Eliminated code duplication by reusing `dgi/validation_utils.py` functions
    - Ensured consistent error handling across all validation layers
 
 2. ✅ **Added comprehensive financial data validation**:
    - Created `validate_financial_value()` for edge case handling (NaN, infinity)
-   - Added domain-specific validation functions: `validate_dividend_yield()`, `validate_payout_ratio()`, `validate_dividend_growth()`, `validate_fcf_yield()`
+   - Added domain-specific validation functions: `validate_dividend_yield()`,
+     `validate_payout_ratio()`, `validate_dividend_growth()`, `validate_fcf_yield()`
    - Implemented `validate_company_data_comprehensive()` for complete data validation
 
 3. ✅ **Enhanced validation pipeline**:
@@ -243,6 +278,7 @@ priority level, effort estimation, and detailed implementation guidance for juni
    - Comprehensive input sanitization to prevent security vulnerabilities
 
 **Benefits Achieved**:
+
 - ✅ Unified validation strategy across all layers
 - ✅ Comprehensive edge case handling for financial data
 - ✅ Improved data quality and consistency
@@ -250,7 +286,9 @@ priority level, effort estimation, and detailed implementation guidance for juni
 - ✅ Better error messages and debugging capabilities
 
 **Files Modified**:
-- `dgi/services/validation_service.py` - Consolidated to use unified validation utilities
+
+- `dgi/services/validation_service.py` - Consolidated to use unified validation
+  utilities
 - `dgi/validation_utils.py` - Added comprehensive financial data validation functions
 - All validation now uses consistent error handling and business rules
 
@@ -260,19 +298,22 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-006: Dependency Injection Container Improvements
 
-**Priority**: 🟢 Medium  
-**Effort**: M (1-2 days)  
-**Category**: Architecture  
+**Priority**: 🟢 Medium
+**Effort**: M (1-2 days)
+**Category**: Architecture
 
-**Problem**: Dependency injection is manually implemented without leveraging established DI frameworks, making it harder to manage dependencies in larger applications.
+**Problem**: Dependency injection is manually implemented without leveraging established
+DI frameworks, making it harder to manage dependencies in larger applications.
 
 **Issues Identified**:
+
 - Manual dependency management in `api/dependencies.py`
 - No lifecycle management for expensive resources
 - Singleton pattern manually implemented without thread safety considerations
 - Missing dependency scoping (request, session, application level)
 
 **Solution Steps**:
+
 1. **Research**: Evaluate DI frameworks like `dependency-injector` or `lagom`
 2. **Implement**: Replace manual DI with framework-based approach
 3. **Scope**: Add proper dependency scoping for different lifecycle needs
@@ -281,19 +322,22 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-007: Incomplete Type Safety Implementation
 
-**Priority**: 🟢 Medium  
-**Effort**: S (3-4 hours)  
-**Category**: Type Safety  
+**Priority**: 🟢 Medium
+**Effort**: S (3-4 hours)
+**Category**: Type Safety
 
-**Problem**: Type hints are inconsistently applied and mypy reports 21 errors indicating incomplete type safety.
+**Problem**: Type hints are inconsistently applied and mypy reports 21 errors indicating
+incomplete type safety.
 
 **Issues Identified**:
+
 - Functions missing return type annotations
 - Generic types without proper type parameters
 - Inconsistent use of Union vs | syntax for Python 3.10+
 - Missing type annotations in `dgi/factory.py` and `dgi/repositories/csv.py`
 
 **Solution Steps**:
+
 1. **Fix**: Resolve all 21 mypy errors reported in test run
 2. **Standardize**: Use modern type hint syntax consistently
 3. **Annotate**: Add missing type annotations to all public interfaces
@@ -302,19 +346,22 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-008: Test Coverage and Quality Gaps
 
-**Priority**: 🟢 Medium  
-**Effort**: L (3-5 days)  
-**Category**: Testing  
+**Priority**: 🟢 Medium
+**Effort**: L (3-5 days)
+**Category**: Testing
 
-**Problem**: Test coverage is 64% overall with several critical modules having insufficient coverage, particularly in error handling paths.
+**Problem**: Test coverage is 64% overall with several critical modules having
+insufficient coverage, particularly in error handling paths.
 
 **Coverage Gaps**:
+
 - `api/mappers.py`: 0% coverage (53 lines untested)
 - `dgi/services.py`: 0% coverage (173 lines untested)
 - `api/async_processing.py`: 32% coverage
 - `api/observability.py`: 48% coverage
 
 **Solution Steps**:
+
 1. **Prioritize**: Focus on modules with 0% coverage first
 2. **Integration**: Add integration tests for API endpoints (currently failing)
 3. **Error paths**: Test error handling and edge cases
@@ -323,19 +370,22 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-009: Resource Management and Memory Leaks
 
-**Priority**: 🟢 Medium  
-**Effort**: S (3-4 hours)  
-**Category**: Performance  
+**Priority**: 🟢 Medium
+**Effort**: S (3-4 hours)
+**Category**: Performance
 
-**Problem**: Resource management patterns are inconsistently applied, with potential memory leaks in data processing pipelines.
+**Problem**: Resource management patterns are inconsistently applied, with potential
+memory leaks in data processing pipelines.
 
 **Issues Identified**:
+
 - `ResourceMonitor` class exists but may not be properly utilized
 - Context managers not consistently used for resource cleanup
 - DataFrame processing without explicit memory management
 - No monitoring for memory leaks in long-running processes
 
 **Solution Steps**:
+
 1. **Audit**: Review all resource allocation patterns
 2. **Context managers**: Ensure all resources use proper context management
 3. **Monitor**: Implement memory usage monitoring in production
@@ -344,19 +394,22 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-010: Configuration Management Enhancement
 
-**Priority**: 🟢 Medium  
-**Effort**: S (3-4 hours)  
-**Category**: Configuration  
+**Priority**: 🟢 Medium
+**Effort**: S (3-4 hours)
+**Category**: Configuration
 
-**Problem**: Configuration is spread across multiple files without a unified configuration strategy or environment-specific overrides.
+**Problem**: Configuration is spread across multiple files without a unified
+configuration strategy or environment-specific overrides.
 
 **Issues Identified**:
+
 - Configuration logic in both `dgi/config.py` and `api/config.py`
 - No configuration validation at startup
 - Missing environment-specific configuration files
 - No configuration secrets management
 
 **Solution Steps**:
+
 1. **Unify**: Create single configuration management strategy
 2. **Validate**: Add configuration validation at application startup
 3. **Environment**: Support environment-specific configuration files
@@ -369,13 +422,15 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-011: Code Organization and Module Structure
 
-**Priority**: 🔵 Low  
-**Effort**: XS (1-2 hours)  
-**Category**: Organization  
+**Priority**: 🔵 Low
+**Effort**: XS (1-2 hours)
+**Category**: Organization
 
-**Problem**: Some modules have unclear responsibilities and could be better organized following domain-driven design principles.
+**Problem**: Some modules have unclear responsibilities and could be better organized
+following domain-driven design principles.
 
 **Solution Steps**:
+
 1. **Reorganize**: Group related functionality into domain-specific modules
 2. **Naming**: Improve module and class naming to reflect their responsibilities
 3. **Documentation**: Add module-level documentation explaining purpose
@@ -383,19 +438,22 @@ priority level, effort estimation, and detailed implementation guidance for juni
 
 ### TD-012: Performance Optimization Opportunities
 
-**Priority**: 🔵 Low  
-**Effort**: M (1-2 days)  
-**Category**: Performance  
+**Priority**: 🔵 Low
+**Effort**: M (1-2 days)
+**Category**: Performance
 
-**Problem**: Several performance optimization opportunities exist in data processing pipelines.
+**Problem**: Several performance optimization opportunities exist in data processing
+pipelines.
 
 **Opportunities Identified**:
+
 - DataFrame operations could use vectorization
 - Caching strategies could be improved
 - Async processing could be expanded
 - Database connection pooling for future implementations
 
 **Solution Steps**:
+
 1. **Profile**: Add performance profiling to identify bottlenecks
 2. **Optimize**: Implement vectorized operations where appropriate
 3. **Cache**: Improve caching strategies for frequently accessed data
@@ -420,7 +478,7 @@ priority level, effort estimation, and detailed implementation guidance for juni
 ## 🎯 **Recommended Implementation Order**
 
 1. **TD-001** (Critical) - Fix API validation system for basic functionality
-2. **TD-002** (High) - Standardize exception handling across codebase  
+2. **TD-002** (High) - Standardize exception handling across codebase
 3. **TD-004** (High) - Fix strategy pattern implementation violations
 4. **TD-005** (High) - Implement comprehensive data validation
 5. **TD-003** (High) - Complete service layer implementation
@@ -437,7 +495,8 @@ priority level, effort estimation, and detailed implementation guidance for juni
 ### For Junior Developers
 
 1. **Start Small**: Begin with XS or S effort items to build confidence
-2. **Test First**: Write tests before making changes, especially for Critical and High priority items
+2. **Test First**: Write tests before making changes, especially for Critical and High
+   priority items
 3. **Single Responsibility**: Each PR should address one technical debt item only
 4. **Documentation**: Update documentation when changing interfaces or behavior
 5. **Review**: Request code review for all changes, especially architectural ones
@@ -473,7 +532,8 @@ priority level, effort estimation, and detailed implementation guidance for juni
 - **SOLID Principles**: Clean Architecture by Robert C. Martin
 - **Design Patterns**: Gang of Four Design Patterns
 - **Clean Code**: Clean Code by Robert C. Martin
-- **Enterprise Patterns**: Patterns of Enterprise Application Architecture by Martin Fowler
+- **Enterprise Patterns**: Patterns of Enterprise Application Architecture by Martin
+  Fowler
 - **Python Best Practices**: Effective Python by Brett Slatkin
 - **API Design**: REST API Design Rulebook by Mark Masse
 - **Testing**: Growing Object-Oriented Software, Guided by Tests by Freeman & Pryce
@@ -483,14 +543,17 @@ priority level, effort estimation, and detailed implementation guidance for juni
 Based on analysis of `features.md`, the following feature requirements need attention:
 
 ### DGIT-301: FastAPI Service Skeleton
+
 - ✅ Basic FastAPI application structure exists
 - ❌ Health endpoint returning 422 instead of 200 (TD-001)
 - ❌ Integration tests failing due to validation issues
 - ✅ Swagger/OpenAPI documentation enabled
 
 ### Missing Integration Points
+
 - API parameter validation needs to match CLI validation ranges
 - Response schemas need alignment with business logic expectations
 - Error handling should provide meaningful messages for invalid parameters
 
-**Recommendation**: Address TD-001 (API validation system) immediately to ensure DGIT-301 compliance.
+**Recommendation**: Address TD-001 (API validation system) immediately to ensure
+DGIT-301 compliance.

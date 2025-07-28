@@ -1,6 +1,5 @@
 """Tests for the service layer business logic."""
 
-
 import pandas as pd
 import pytest
 
