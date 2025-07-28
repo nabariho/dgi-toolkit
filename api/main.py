@@ -471,7 +471,7 @@ async def screen_stocks(
 
     try:
         # Log business event
-        observability_manager.log_business_event(
+        await observability_manager.log_business_event(
             "stock_screening_started",
             {
                 "min_yield": min_yield,
@@ -537,7 +537,7 @@ async def screen_stocks(
             )
 
             # Log business event
-            observability_manager.log_business_event(
+            await observability_manager.log_business_event(
                 "stock_screening_completed",
                 {
                     "stocks_returned": len(stocks),
@@ -568,7 +568,7 @@ async def screen_stocks(
         observability_manager.record_error("screening_error", str(e), "/api/v1/screen")
 
         # Log business event
-        observability_manager.log_business_event(
+        await observability_manager.log_business_event(
             "stock_screening_error",
             {
                 "error": str(e),

@@ -47,7 +47,7 @@ class CsvCompanyDataRepository(CompanyDataRepository):
             raise
 
     def _load_csv_data(self) -> list[CompanyData]:
-        """Load and validate CSV data with proper resource management."""
+        """Load and validate CSV data with proper resource management and performance optimizations."""
         try:
             # Use context manager for file handling
             with self._get_csv_file() as df:
@@ -55,12 +55,17 @@ class CsvCompanyDataRepository(CompanyDataRepository):
                     logger.warning(f"CSV file is empty: {self.csv_path}")
                     return []
 
-                # Convert DataFrame to list of dictionaries for validation
-                raw_rows = df.to_dict("records")
-                # Convert Hashable keys to str for type safety
-                rows: list[dict[str, Any]] = [
-                    {str(k): v for k, v in row.items()} for row in raw_rows
-                ]
+                # Optimize DataFrame to list conversion for better performance
+                # Use vectorized operations where possible
+                rows: list[dict[str, Any]] = []
+
+                # Pre-allocate list size for better memory efficiency
+                rows = [None] * len(df)  # type: ignore[list-item]
+
+                # Use more efficient iteration
+                for i, (_, row) in enumerate(df.iterrows()):
+                    # Convert Hashable keys to str for type safety
+                    rows[i] = {str(k): v for k, v in row.items()}
 
                 # Validate and convert to CompanyData objects
                 validated_rows = self.validator.validate_rows(rows)

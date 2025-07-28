@@ -57,22 +57,81 @@ class ScreeningService:
 
     @staticmethod
     def score_dataframe(df: DataFrame) -> DataFrame:
-        """Score all rows in DataFrame."""
-        df = df.copy()
-
+        """Score all rows in DataFrame using vectorized operations for better performance."""
         if df.empty:
             return df
 
-        # Convert each row to CompanyData and score
-        def score_row(row: Any) -> float:
-            try:
-                company = CompanyData(**row.to_dict())
-                return ScreeningService.calculate_composite_score(company)
-            except Exception as e:
-                logger.error(f"Error scoring row: {e}")
-                return 0.0
+        # Use vectorized operations instead of row-by-row processing
+        try:
+            from dgi.scoring_config import get_scoring_config
 
-        df["score"] = df.apply(score_row, axis=1)
+            config = get_scoring_config()
+
+            # Get column names with fallbacks
+            payout_col = "payout" if "payout" in df.columns else "payout_ratio"
+            cagr_col = (
+                "dividend_cagr"
+                if "dividend_cagr" in df.columns
+                else "dividend_growth_5y"
+            )
+            fcf_col = "fcf_yield" if "fcf_yield" in df.columns else "fcf_yield"
+
+            # Vectorized yield score calculation
+            yield_score = df["dividend_yield"].fillna(0) * config.weights.yield_weight
+
+            # Vectorized growth score calculation
+            growth_score = df[cagr_col].fillna(0) * config.weights.growth_weight
+
+            # Vectorized payout penalty calculation
+            payout_penalty = (
+                df[payout_col].fillna(0) - config.weights.payout_penalty_threshold
+            ).clip(lower=0) * config.weights.payout_penalty_weight
+
+            # Vectorized FCF yield score calculation
+            fcf_score = df[fcf_col].fillna(0) * config.weights.fcf_yield_weight
+
+            # Vectorized sector bonus calculation
+            sector_bonus = (
+                df["sector"].isin(config.preferred_sectors).astype(float)
+                * config.weights.sector_bonus
+            )
+
+            # Vectorized industry bonus calculation
+            industry_bonus = (
+                df["industry"].isin(config.preferred_industries).astype(float)
+                * config.weights.industry_bonus
+            )
+
+            # Calculate total score vectorized
+            total_score = (
+                yield_score
+                + growth_score
+                + payout_penalty
+                + fcf_score
+                + sector_bonus
+                + industry_bonus
+            )
+
+            # Apply normalization and bounds
+            df = df.copy()  # Create a copy to avoid SettingWithCopyWarning
+            df["score"] = total_score.clip(0.0, 1.0)
+
+        except Exception as e:
+            logger.error(
+                f"Error in vectorized scoring: {e}, falling back to row-by-row processing"
+            )
+
+            # Fallback to original method if vectorized approach fails
+            def score_row(row: Any) -> float:
+                try:
+                    company = CompanyData(**row.to_dict())
+                    return ScreeningService.calculate_composite_score(company)
+                except Exception as e:
+                    logger.error(f"Error scoring row: {e}")
+                    return 0.0
+
+            df["score"] = df.apply(score_row, axis=1)
+
         return df
 
     @staticmethod
@@ -182,24 +241,27 @@ class ScreeningService:
     def apply_screening_criteria(
         df: DataFrame, min_yield: float, max_payout: float, min_cagr: float
     ) -> DataFrame:
-        """Apply screening criteria to DataFrame."""
+        """Apply screening criteria to DataFrame using vectorized operations for better performance."""
         if df.empty:
             return df
 
-        filtered_df = df.copy()
+        # Build boolean mask for vectorized filtering
+        mask: Any = True  # Start with all rows included
 
         # Apply yield filter
-        if "dividend_yield" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["dividend_yield"] >= min_yield]
+        if "dividend_yield" in df.columns:
+            mask &= df["dividend_yield"] >= min_yield
 
         # Apply payout filter
-        if "payout" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["payout"] <= max_payout]
+        if "payout" in df.columns:
+            mask &= df["payout"] <= max_payout
 
         # Apply CAGR filter
-        if "dividend_cagr" in filtered_df.columns:
-            filtered_df = filtered_df[filtered_df["dividend_cagr"] >= min_cagr]
+        if "dividend_cagr" in df.columns:
+            mask &= df["dividend_cagr"] >= min_cagr
 
+        # Apply all filters at once
+        filtered_df: DataFrame = df[mask]
         return filtered_df
 
     @staticmethod

@@ -12,7 +12,7 @@ import contextlib
 import logging
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -52,7 +52,7 @@ class ScreeningJob(BaseModel):
     job_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     status: JobStatus = JobStatus.PENDING
     priority: JobPriority = JobPriority.NORMAL
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     started_at: datetime | None = None
     completed_at: datetime | None = None
     progress: float = 0.0  # 0.0 to 1.0
@@ -165,7 +165,7 @@ class JobQueue:
 
         if job.status in [JobStatus.PENDING, JobStatus.RUNNING]:
             job.status = JobStatus.CANCELLED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
 
             # Cancel running task if exists
             if job_id in self.running_jobs:
@@ -236,7 +236,7 @@ class JobQueue:
         """Process a screening job with proper async error handling."""
         try:
             job.status = JobStatus.RUNNING
-            job.started_at = datetime.utcnow()
+            job.started_at = datetime.now(UTC)
             job.current_step = 1
             job.step_description = "Loading data"
             job.progress = 0.1
@@ -300,7 +300,7 @@ class JobQueue:
             }
 
             job.status = JobStatus.COMPLETED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             job.progress = 1.0
             job.step_description = "Completed"
 
@@ -317,13 +317,13 @@ class JobQueue:
 
         except asyncio.CancelledError:
             job.status = JobStatus.CANCELLED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             job.step_description = "Cancelled"
             logger.info(f"Job {job.job_id} was cancelled")
 
         except Exception as e:
             job.status = JobStatus.FAILED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             job.error_message = str(e)
             job.step_description = "Failed"
 
@@ -359,7 +359,7 @@ class JobQueue:
 
     async def cleanup_old_jobs(self, max_age_hours: int = 24):
         """Clean up old completed/failed jobs."""
-        cutoff_time = datetime.utcnow() - timedelta(hours=max_age_hours)
+        cutoff_time = datetime.now(UTC) - timedelta(hours=max_age_hours)
 
         jobs_to_remove = [
             job_id

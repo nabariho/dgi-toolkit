@@ -1,5 +1,8 @@
 """Dependency injection container for DGI Toolkit API."""
 
+import threading
+from typing import Any
+
 from fastapi import Depends
 
 from dgi.factory import create_repository, create_screener
@@ -114,40 +117,69 @@ def get_test_screener() -> Screener:
 
 # Dependency lifecycle management
 class DependencyContainer:
-    """Container for managing dependency lifecycle."""
+    """Container for managing dependency lifecycle with thread safety."""
 
     def __init__(self):
-        """Initialize dependency container."""
-        self._screener = None
-        self._repository = None
-        self._validator = None
+        """Initialize dependency container with thread safety."""
+        self._screener: Screener | None = None
+        self._repository: CsvCompanyDataRepository | None = None
+        self._validator: Any = None
+        self._lock = threading.RLock()  # Reentrant lock for thread safety
 
     def get_screener(self) -> Screener:
-        """Get screener with singleton pattern.
+        """Get screener with thread-safe singleton pattern.
 
         Returns:
             Screener instance
         """
-        if self._screener is None:
-            self._screener = get_production_screener()
-        return self._screener
+        with self._lock:
+            if self._screener is None:
+                self._screener = get_production_screener()
+            return self._screener
 
     def get_repository(self) -> CsvCompanyDataRepository:
-        """Get repository with singleton pattern.
+        """Get repository with thread-safe singleton pattern.
 
         Returns:
             CsvCompanyDataRepository instance
         """
-        if self._repository is None:
-            self._repository = get_data_repository()
-        return self._repository
+        with self._lock:
+            if self._repository is None:
+                self._repository = get_data_repository()
+            return self._repository
+
+    def get_validator(self) -> Any:
+        """Get validator with thread-safe singleton pattern.
+
+        Returns:
+            Validator instance
+        """
+        with self._lock:
+            if self._validator is None:
+                self._validator = get_validator()
+            return self._validator
 
     def reset(self) -> None:
-        """Reset all dependencies (useful for testing)."""
-        self._screener = None
-        self._repository = None
-        self._validator = None
-        logger.info("Dependency container reset")
+        """Reset all dependencies (useful for testing) with thread safety."""
+        with self._lock:
+            self._screener = None
+            self._repository = None
+            self._validator = None
+            logger.info("Dependency container reset")
+
+    def cleanup(self) -> None:
+        """Clean up resources and perform proper shutdown."""
+        with self._lock:
+            if self._repository is not None:
+                try:
+                    self._repository.cleanup()
+                except Exception as e:
+                    logger.error(f"Error cleaning up repository: {e}")
+
+            self._screener = None
+            self._repository = None
+            self._validator = None
+            logger.info("Dependency container cleaned up")
 
 
 # Global dependency container
@@ -161,3 +193,41 @@ def get_dependency_container() -> DependencyContainer:
         DependencyContainer instance
     """
     return dependency_container
+
+
+# Dependency scoping utilities
+class DependencyScope:
+    """Context manager for dependency scoping."""
+
+    def __init__(self, container: DependencyContainer):
+        """Initialize dependency scope."""
+        self.container = container
+        self._original_screener = None
+        self._original_repository = None
+
+    def __enter__(self):
+        """Enter dependency scope."""
+        # Store original dependencies
+        self._original_screener = self.container._screener
+        self._original_repository = self.container._repository
+
+        # Reset for new scope
+        self.container._screener = None
+        self.container._repository = None
+
+        return self.container
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit dependency scope."""
+        # Restore original dependencies
+        self.container._screener = self._original_screener
+        self.container._repository = self._original_repository
+
+
+def get_scoped_dependencies() -> DependencyScope:
+    """Get scoped dependencies for request-level isolation.
+
+    Returns:
+        DependencyScope context manager
+    """
+    return DependencyScope(dependency_container)
