@@ -3,6 +3,7 @@
 import os
 
 import pytest
+from pydantic import ValidationError
 
 from dgi.scoring_config import (
     ScoringConfig,
@@ -329,13 +330,13 @@ class TestGlobalConfig:
         config = get_scoring_config()
 
         # Test that weights are frozen
-        with pytest.raises(Exception):  # Pydantic ValidationError or AttributeError
+        with pytest.raises(ValidationError):
             config.weights.yield_weight = 2.0
 
         # Test that thresholds are frozen
-        with pytest.raises(Exception):  # Pydantic ValidationError or AttributeError
+        with pytest.raises(ValidationError):
             config.thresholds.max_total_score = 200.0
 
         # Test that the main config is frozen
-        with pytest.raises(Exception):  # Pydantic ValidationError or AttributeError
+        with pytest.raises(ValidationError):
             config.preferred_sectors = ["New Sector"]
