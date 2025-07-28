@@ -140,17 +140,32 @@ class APISettings(BaseSettings):
     )
 
 
-# Global settings instance
-settings = APISettings()
+# Global settings instance - lazy loading to support test isolation
+_settings = None
 
 
 def get_settings() -> APISettings:
-    """Get the global settings instance.
+    """Get the global settings instance with lazy loading.
+
+    This ensures that environment variables are read at the time of access,
+    not at module import time, which is crucial for test isolation.
 
     Returns:
         APISettings instance
     """
-    return settings
+    global _settings
+    if _settings is None:
+        _settings = APISettings()
+    return _settings
+
+
+def reset_settings() -> None:
+    """Reset the global settings instance (useful for testing).
+
+    This allows tests to set environment variables and get fresh settings.
+    """
+    global _settings
+    _settings = None
 
 
 def validate_configuration() -> None:
@@ -159,6 +174,8 @@ def validate_configuration() -> None:
     Raises:
         ValueError: If configuration is invalid
     """
+    settings = get_settings()
+
     # Check if data file exists
     if not os.path.exists(settings.data_path):
         raise ValueError(f"Data file not found: {settings.data_path}")

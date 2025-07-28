@@ -46,6 +46,11 @@ def test_client(test_csv_file: Path) -> Generator[TestClient, None, None]:
         # Set test data path
         os.environ["DGI_DATA_PATH"] = str(test_csv_file)
 
+        # Reset settings to ensure fresh configuration
+        from api.config import reset_settings
+
+        reset_settings()
+
         # Create test client
         with TestClient(app) as client:
             yield client
@@ -56,6 +61,11 @@ def test_client(test_csv_file: Path) -> Generator[TestClient, None, None]:
             os.environ["DGI_DATA_PATH"] = original_data_path
         else:
             os.environ.pop("DGI_DATA_PATH", None)
+
+        # Reset settings again to ensure clean state
+        from api.config import reset_settings
+
+        reset_settings()
 
 
 @pytest.fixture
@@ -90,6 +100,11 @@ def test_environment():
             if key_var in os.environ:
                 del os.environ[key_var]
 
+        # Reset settings to ensure fresh configuration
+        from api.config import reset_settings
+
+        reset_settings()
+
         yield
 
     finally:
@@ -99,6 +114,11 @@ def test_environment():
                 os.environ[var] = value
             else:
                 os.environ.pop(var, None)
+
+        # Reset settings again to ensure clean state
+        from api.config import reset_settings
+
+        reset_settings()
 
 
 @pytest.fixture(scope="session")
