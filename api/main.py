@@ -1,5 +1,7 @@
 """FastAPI application for DGI Toolkit API service."""
 
+import os
+
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -40,11 +42,17 @@ class HealthResponse(BaseModel):
     status: str = Field(default="up", description="Service status")
 
 
+def get_data_path() -> str:
+    """Get the data file path from environment or use default."""
+    return os.environ.get("DGI_DATA_PATH", "data/fundamentals_small.csv")
+
+
 # Initialize screener with default configuration
 def get_screener() -> Screener:
     """Get configured screener instance."""
     validator = DgiRowValidator(PydanticRowValidation(CompanyData))
-    repo = CsvCompanyDataRepository("data/fundamentals_small.csv", validator)
+    data_path = get_data_path()
+    repo = CsvCompanyDataRepository(data_path, validator)
     return Screener(repo, scoring_strategy=DefaultScoring())
 
 
