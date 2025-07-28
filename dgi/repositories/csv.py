@@ -8,6 +8,7 @@ from typing import Any
 
 import pandas as pd
 
+from dgi.exceptions import DataLoadError, DataValidationError, RepositoryDataError
 from dgi.models import CompanyData
 from dgi.repositories.base import CompanyDataRepository
 from dgi.validation_utils import (
@@ -42,9 +43,12 @@ class CsvCompanyDataRepository(CompanyDataRepository):
         try:
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, self._load_csv_data)
+        except (OSError, FileNotFoundError) as e:
+            logger.error(f"Async CSV loading failed - file error: {e}")
+            raise DataLoadError(f"Failed to load CSV file: {e}") from e
         except Exception as e:
-            logger.error(f"Async CSV loading failed: {e}")
-            raise
+            logger.error(f"Async CSV loading failed - unexpected error: {e}")
+            raise DataLoadError(f"Unexpected error during CSV loading: {e}") from e
 
     def _load_csv_data(self) -> list[CompanyData]:
         """Load and validate CSV data with proper resource management and performance optimizations."""
@@ -84,9 +88,21 @@ class CsvCompanyDataRepository(CompanyDataRepository):
                 self._resource_monitor.register_object(df)
 
                 return validated_rows
-        except Exception as e:
-            logger.error(f"Failed to load CSV data from {self.csv_path}: {e}")
+        except (FileNotFoundError, PermissionError, OSError) as e:
+            logger.error(f"File system error loading CSV from {self.csv_path}: {e}")
+            raise DataLoadError(f"Failed to access CSV file: {e}") from e
+        except pd.errors.EmptyDataError as e:
+            logger.error(f"Empty CSV file: {self.csv_path}")
+            raise DataLoadError(f"CSV file is empty: {e}") from e
+        except pd.errors.ParserError as e:
+            logger.error(f"CSV parsing error in {self.csv_path}: {e}")
+            raise DataLoadError(f"Failed to parse CSV file: {e}") from e
+        except DataValidationError:
+            # Re-raise validation errors as-is for expected test behavior
             raise
+        except Exception as e:
+            logger.error(f"Unexpected error loading CSV data from {self.csv_path}: {e}")
+            raise RepositoryDataError(f"Unexpected repository error: {e}") from e
 
     @contextmanager
     def _get_csv_file(self) -> Generator[pd.DataFrame, None, None]:

@@ -257,6 +257,15 @@ class ResourceError(DGIException):
         super().__init__(message, details)
 
 
+# Additional specific exceptions for enhanced error handling
+class DataLoadError(DataAccessError):
+    """Raised when data loading fails."""
+
+
+class RepositoryDataError(RepositoryError):
+    """Raised when repository data operations fail."""
+
+
 # Legacy compatibility - keep existing exception for backward compatibility
 # This should be deprecated in favor of the new hierarchy
 class ValidationError(DataValidationError):
