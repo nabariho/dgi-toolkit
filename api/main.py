@@ -23,7 +23,8 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from dgi.screener import Screener
-from dgi.services import ScreeningService, ValidationService
+from dgi.services.screening_service import ScreeningService
+from dgi.services.validation_service import ValidationService
 
 from .async_processing import (
     JobPriority,

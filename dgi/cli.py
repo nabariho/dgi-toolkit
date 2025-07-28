@@ -7,7 +7,7 @@ from dgi.cli_helpers import render_screen_table
 from dgi.config import get_config
 from dgi.factory import create_repository, create_screener
 from dgi.portfolio import build
-from dgi.services import ValidationService
+from dgi.services.validation_service import ValidationService
 
 config = get_config()
 

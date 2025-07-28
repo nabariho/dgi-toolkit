@@ -223,3 +223,51 @@ class ScreeningService:
             records.append(formatted_record)
 
         return records
+
+    @staticmethod
+    def calculate_screening_metrics(df: DataFrame) -> dict[str, Any]:
+        """Calculate business metrics from screening results."""
+        if df.empty:
+            return {
+                "total_stocks": 0,
+                "average_yield": 0.0,
+                "average_payout": 0.0,
+                "average_cagr": 0.0,
+                "average_score": 0.0,
+                "sector_distribution": {},
+                "industry_distribution": {},
+            }
+
+        metrics = {
+            "total_stocks": len(df),
+            "average_yield": (
+                float(df["dividend_yield"].mean())
+                if "dividend_yield" in df.columns
+                else 0.0
+            ),
+            "average_payout": (
+                float(df["payout"].mean()) if "payout" in df.columns else 0.0
+            ),
+            "average_cagr": (
+                float(df["dividend_cagr"].mean())
+                if "dividend_cagr" in df.columns
+                else 0.0
+            ),
+            "average_score": (
+                float(df["score"].mean()) if "score" in df.columns else 0.0
+            ),
+        }
+
+        # Calculate sector distribution
+        if "sector" in df.columns:
+            metrics["sector_distribution"] = df["sector"].value_counts().to_dict()
+        else:
+            metrics["sector_distribution"] = {}
+
+        # Calculate industry distribution
+        if "industry" in df.columns:
+            metrics["industry_distribution"] = df["industry"].value_counts().to_dict()
+        else:
+            metrics["industry_distribution"] = {}
+
+        return metrics

@@ -5,7 +5,7 @@ from typing import Any
 
 from pandas import DataFrame
 
-from dgi.services import PortfolioService
+from dgi.services.portfolio_service import PortfolioService
 
 logger = logging.getLogger(__name__)
 

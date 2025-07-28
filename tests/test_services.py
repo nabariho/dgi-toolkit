@@ -5,7 +5,9 @@ import pytest
 
 from dgi.exceptions import DataValidationError, ScreeningError
 from dgi.models import CompanyData
-from dgi.services import PortfolioService, ScreeningService, ValidationService
+from dgi.services.portfolio_service import PortfolioService
+from dgi.services.screening_service import ScreeningService
+from dgi.services.validation_service import ValidationService
 
 
 class TestScreeningService:
