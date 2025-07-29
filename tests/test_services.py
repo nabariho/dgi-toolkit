@@ -307,7 +307,8 @@ class TestValidationService:
             fcf_yield=8.0,
         )
 
-        ValidationService.validate_company_data(company)
+        # Use the static method for single company validation
+        ValidationService.validate_company_data_static(company)
         # Should not raise any exception
 
     def test_sanitize_company_name(self):

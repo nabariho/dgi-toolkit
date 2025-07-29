@@ -148,6 +148,362 @@ type(scope): description
 
 ---
 
+## 🏗️ **Architecture & Design Principles**
+
+### **SOLID Principles Implementation**
+
+This project strictly follows SOLID principles. All code must adhere to these standards:
+
+#### **1. Single Responsibility Principle (SRP)**
+
+**Rule**: Every class should have only one reason to change.
+
+**Implementation Guidelines**:
+
+```python
+# ✅ GOOD: Single responsibility
+class DataLoader:
+    """Responsible only for loading data."""
+    def load_universe(self) -> DataFrame: ...
+
+class ResourceManager:
+    """Responsible only for resource management."""
+    def track_resource(self, resource: Any): ...
+
+# ❌ BAD: Multiple responsibilities
+class Screener:
+    """Handles screening, data loading, validation, and API responses."""
+    def screen(self): ...
+    def load_data(self): ...
+    def validate_data(self): ...
+    def format_response(self): ...
+```
+
+**Best Practices**:
+
+- Each class should have a clear, single purpose
+- Extract focused services for different concerns
+- Use dependency injection to compose functionality
+- Keep methods focused on one task
+
+#### **2. Open/Closed Principle (OCP)**
+
+**Rule**: Software entities should be open for extension but closed for modification.
+
+**Implementation Guidelines**:
+
+```python
+# ✅ GOOD: Open for extension
+class ScoringStrategy(ABC):
+    @abstractmethod
+    def calculate_score(self, company: CompanyData) -> float: ...
+
+class DefaultScoring(ScoringStrategy):
+    def calculate_score(self, company: CompanyData) -> float: ...
+
+class AdvancedScoring(ScoringStrategy):
+    def calculate_score(self, company: CompanyData) -> float: ...
+
+# Strategy registry for runtime extension
+class ScoringRegistry:
+    _strategies: Dict[str, Type[ScoringStrategy]] = {}
+
+    @classmethod
+    def register(cls, name: str, strategy: Type[ScoringStrategy]):
+        cls._strategies[name] = strategy
+
+# ❌ BAD: Requires modification to add new strategies
+class Screener:
+    def calculate_score(self, company: CompanyData) -> float:
+        if self.strategy == "default":
+            return self._default_score(company)
+        elif self.strategy == "advanced":
+            return self._advanced_score(company)
+        # Need to modify this method for new strategies
+```
+
+**Best Practices**:
+
+- Use abstract base classes and interfaces
+- Implement strategy patterns for algorithms
+- Use dependency injection for behavior composition
+- Create registries for runtime extension
+
+#### **3. Liskov Substitution Principle (LSP)**
+
+**Rule**: Subtypes must be substitutable for their base types.
+
+**Implementation Guidelines**:
+
+```python
+# ✅ GOOD: Proper inheritance
+class CompanyDataRepository(ABC):
+    @abstractmethod
+    def get_rows(self) -> List[CompanyData]: ...
+
+class CsvCompanyDataRepository(CompanyDataRepository):
+    def get_rows(self) -> List[CompanyData]: ...
+
+class DatabaseCompanyDataRepository(CompanyDataRepository):
+    def get_rows(self) -> List[CompanyData]: ...
+
+# Can substitute any implementation
+def process_data(repo: CompanyDataRepository):
+    data = repo.get_rows()  # Works with any implementation
+
+# ❌ BAD: Violates LSP
+class BaseRepository:
+    def get_rows(self) -> List[CompanyData]: ...
+
+class AsyncRepository(BaseRepository):
+    async def get_rows(self) -> List[CompanyData]:  # Different signature!
+        ...
+```
+
+**Best Practices**:
+
+- Ensure derived classes can be used anywhere the base class is expected
+- Maintain consistent method signatures
+- Don't throw new exceptions that base class doesn't throw
+- Preserve behavioral contracts
+
+#### **4. Interface Segregation Principle (ISP)**
+
+**Rule**: Clients should not be forced to depend on interfaces they don't use.
+
+**Implementation Guidelines**:
+
+```python
+# ✅ GOOD: Focused interfaces
+class DataReader(ABC):
+    @abstractmethod
+    def read_data(self) -> List[CompanyData]: ...
+
+class DataValidator(ABC):
+    @abstractmethod
+    def validate_data(self, data: List[CompanyData]) -> List[CompanyData]: ...
+
+class DataCache(ABC):
+    @abstractmethod
+    def get_cached_data(self) -> Optional[List[CompanyData]]: ...
+
+# Clients depend only on what they need
+class ScreeningService:
+    def __init__(self, reader: DataReader, validator: DataValidator):
+        self._reader = reader
+        self._validator = validator
+
+# ❌ BAD: Large interface forcing unnecessary dependencies
+class DataManager(ABC):
+    @abstractmethod
+    def read_data(self) -> List[CompanyData]: ...
+    @abstractmethod
+    def validate_data(self, data: List[CompanyData]) -> List[CompanyData]: ...
+    @abstractmethod
+    def cache_data(self, data: List[CompanyData]): ...
+    @abstractmethod
+    def backup_data(self, data: List[CompanyData]): ...
+    @abstractmethod
+    def archive_data(self, data: List[CompanyData]): ...
+```
+
+**Best Practices**:
+
+- Create small, focused interfaces
+- Use composition over inheritance
+- Split large interfaces into smaller, cohesive ones
+- Design interfaces from the client's perspective
+
+#### **5. Dependency Inversion Principle (DIP)**
+
+**Rule**: High-level modules should not depend on low-level modules. Both should depend
+on abstractions.
+
+**Implementation Guidelines**:
+
+```python
+# ✅ GOOD: Depend on abstractions
+class ScreeningService:
+    def __init__(
+        self,
+        data_loader: DataLoader,  # Abstract interface
+        scoring_strategy: ScoringStrategy,  # Abstract interface
+        filter_strategy: FilterStrategy,  # Abstract interface
+    ):
+        self._data_loader = data_loader
+        self._scoring_strategy = scoring_strategy
+        self._filter_strategy = filter_strategy
+
+# Factory creates concrete implementations
+class ServiceFactory:
+    def create_screening_service(self) -> ScreeningService:
+        return ScreeningService(
+            data_loader=self.create_data_loader(),
+            scoring_strategy=self.create_scoring_strategy(),
+            filter_strategy=self.create_filter_strategy(),
+        )
+
+# ❌ BAD: Direct dependency on concrete classes
+class ScreeningService:
+    def __init__(self):
+        self._data_loader = CsvCompanyDataRepository()  # Concrete dependency
+        self._scoring_strategy = DefaultScoring()  # Concrete dependency
+```
+
+**Best Practices**:
+
+- Define interfaces for all dependencies
+- Use dependency injection containers
+- Create factories for object creation
+- Mock interfaces in tests, not concrete classes
+
+### **Design Patterns**
+
+#### **Strategy Pattern**
+
+Use for interchangeable algorithms:
+
+```python
+class ScoringStrategy(ABC):
+    @abstractmethod
+    def calculate_score(self, company: CompanyData) -> float: ...
+
+class DefaultScoring(ScoringStrategy):
+    def calculate_score(self, company: CompanyData) -> float:
+        return company.dividend_yield * 0.4 + company.fcf_yield * 0.6
+
+class ConservativeScoring(ScoringStrategy):
+    def calculate_score(self, company: CompanyData) -> float:
+        return company.dividend_yield * 0.7 + company.fcf_yield * 0.3
+```
+
+#### **Repository Pattern**
+
+Use for data access abstraction:
+
+```python
+class CompanyDataRepository(ABC):
+    @abstractmethod
+    def get_rows(self) -> List[CompanyData]: ...
+    @abstractmethod
+    async def get_rows_async(self) -> List[CompanyData]: ...
+
+class CsvCompanyDataRepository(CompanyDataRepository):
+    def __init__(self, file_path: str, validator: DataValidator):
+        self._file_path = file_path
+        self._validator = validator
+```
+
+#### **Factory Pattern**
+
+Use for object creation:
+
+```python
+class ServiceFactory:
+    def create_data_loader(self, source: str) -> DataLoader:
+        if source == "csv":
+            return CsvDataLoader()
+        elif source == "database":
+            return DatabaseDataLoader()
+        else:
+            raise ValueError(f"Unknown data source: {source}")
+```
+
+#### **Observer Pattern**
+
+Use for event handling:
+
+```python
+class ScreeningEvent(ABC):
+    @abstractmethod
+    def notify(self, data: Any): ...
+
+class ScreeningService:
+    def __init__(self, observers: List[ScreeningEvent]):
+        self._observers = observers
+
+    def screen(self, criteria: ScreeningCriteria):
+        results = self._do_screening(criteria)
+        for observer in self._observers:
+            observer.notify(results)
+```
+
+### **Error Handling Patterns**
+
+#### **Unified Exception Hierarchy**
+
+```python
+class DgiException(Exception):
+    """Base exception for all DGI toolkit errors."""
+    pass
+
+class DataLoadError(DgiException):
+    """Raised when data loading fails."""
+    pass
+
+class ValidationError(DgiException):
+    """Raised when data validation fails."""
+    pass
+
+class ScreeningError(DgiException):
+    """Raised when screening operations fail."""
+    pass
+```
+
+#### **Proper Exception Handling**
+
+```python
+# ✅ GOOD: Specific exception handling
+try:
+    data = self._repository.get_rows()
+except FileNotFoundError as e:
+    logger.error(f"Data file not found: {e}")
+    raise DataLoadError(f"Data file not found: {e}") from e
+except ValidationError as e:
+    logger.error(f"Data validation failed: {e}")
+    raise
+except Exception as e:
+    logger.error(f"Unexpected error loading data: {e}")
+    raise DataLoadError(f"Unexpected error: {e}") from e
+
+# ❌ BAD: Generic exception handling
+try:
+    data = self._repository.get_rows()
+except Exception as e:  # Too broad
+    print(f"Error: {e}")  # No logging, no context
+    raise  # Loses original context
+```
+
+### **Async Programming Best Practices**
+
+#### **Proper Async Error Handling**
+
+```python
+async def screen_async(self, timeout: float = 30.0) -> DataFrame:
+    try:
+        return await asyncio.wait_for(
+            self._do_screening_async(),
+            timeout=timeout
+        )
+    except asyncio.TimeoutError:
+        logger.error(f"Screening timed out after {timeout}s")
+        raise ScreeningTimeoutError(f"Operation timed out after {timeout}s")
+    except Exception as e:
+        logger.error(f"Async screening failed: {e}")
+        raise ScreeningError(f"Async screening failed: {e}") from e
+```
+
+#### **Resource Management**
+
+```python
+async def process_data_async(self):
+    async with aiofiles.open(self._file_path, 'r') as file:
+        content = await file.read()
+        # File automatically closed after context
+```
+
+---
+
 ## ✅ **Before Committing Checklist**
 
 **⚠️ MANDATORY: Complete this checklist before every commit!**
@@ -243,6 +599,9 @@ echo "=== CHECKLIST COMPLETE ==="
 - ❌ **Debug code in commits** (remove `print()`, `debugger`)
 - ❌ **Hardcoded configuration** (use environment variables)
 - ❌ **Breaking existing functionality** (ensure backward compatibility)
+- ❌ **Violating SOLID principles** (follow design principles)
+- ❌ **Poor error handling** (use proper exception hierarchy)
+- ❌ **Missing type hints** (add types to all new code)
 
 ### **🆘 Quick Fixes**
 
@@ -492,6 +851,236 @@ open htmlcov/index.html
 
 ---
 
+## 🏗️ **Code Quality & Standards**
+
+### **Type Safety Requirements**
+
+#### **Core Business Logic (`dgi/` package)**
+
+- ✅ **100% type safety** with strict mypy configuration
+- ✅ **Type hints** for all functions, methods, and variables
+- ✅ **Generic types** for collections and complex data structures
+- ✅ **Protocols** for structural typing when appropriate
+
+```python
+# ✅ GOOD: Proper type hints
+from typing import List, Dict, Optional, Union
+from pandas import DataFrame
+
+def calculate_score(
+    company: CompanyData,
+    weights: Dict[str, float],
+    threshold: Optional[float] = None
+) -> float:
+    """Calculate company score with proper type hints."""
+    pass
+
+# ❌ BAD: Missing type hints
+def calculate_score(company, weights, threshold=None):
+    """Missing type information."""
+    pass
+```
+
+#### **API Layer (`api/` package)**
+
+- ✅ **Pydantic models** for request/response validation
+- ✅ **Type hints** for all endpoint functions
+- ✅ **Proper Field definitions** with modern Pydantic syntax
+
+```python
+# ✅ GOOD: Modern Pydantic usage
+from pydantic import BaseModel, Field, ConfigDict
+
+class ScreeningRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    min_yield: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Minimum dividend yield",
+        examples=[0.03, 0.05]
+    )
+    top_n: int = Field(
+        ge=1,
+        le=100,
+        description="Number of top results",
+        examples=[10, 25]
+    )
+
+# ❌ BAD: Deprecated Pydantic syntax
+class ScreeningRequest(BaseModel):
+    class Config:
+        extra = "forbid"
+
+    min_yield: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Minimum dividend yield",
+        example=0.03  # Deprecated: use examples
+    )
+```
+
+### **Error Handling Standards**
+
+#### **Unified Exception Hierarchy**
+
+```python
+# Base exception for all DGI toolkit errors
+class DgiException(Exception):
+    """Base exception for all DGI toolkit errors."""
+    pass
+
+# Specific exception types
+class DataLoadError(DgiException):
+    """Raised when data loading fails."""
+    pass
+
+class ValidationError(DgiException):
+    """Raised when data validation fails."""
+    pass
+
+class ScreeningError(DgiException):
+    """Raised when screening operations fail."""
+    pass
+
+class ConfigurationError(DgiException):
+    """Raised when configuration is invalid."""
+    pass
+```
+
+#### **Proper Exception Handling**
+
+```python
+# ✅ GOOD: Specific exception handling with context
+try:
+    data = self._repository.get_rows()
+except FileNotFoundError as e:
+    logger.error(f"Data file not found: {e}")
+    raise DataLoadError(f"Data file not found: {e}") from e
+except ValidationError as e:
+    logger.error(f"Data validation failed: {e}")
+    raise  # Re-raise validation errors as-is
+except Exception as e:
+    logger.error(f"Unexpected error loading data: {e}")
+    raise DataLoadError(f"Unexpected error: {e}") from e
+
+# ❌ BAD: Generic exception handling
+try:
+    data = self._repository.get_rows()
+except Exception as e:  # Too broad
+    print(f"Error: {e}")  # No logging, no context
+    raise  # Loses original context
+```
+
+### **Logging Standards**
+
+#### **Structured Logging**
+
+```python
+# ✅ GOOD: Structured logging with context
+logger.info(
+    "Screening completed successfully",
+    extra={
+        "correlation_id": correlation_id,
+        "user_id": user_id,
+        "parameters": {
+            "min_yield": min_yield,
+            "max_payout": max_payout,
+            "top_n": top_n
+        },
+        "results": {
+            "total_companies": len(results),
+            "execution_time_ms": execution_time
+        }
+    }
+)
+
+# ❌ BAD: Simple string logging
+logger.info(f"Screening completed with {len(results)} results")
+```
+
+#### **Log Levels**
+
+- **DEBUG**: Detailed information for debugging
+- **INFO**: General information about program execution
+- **WARNING**: Something unexpected happened but the program can continue
+- **ERROR**: A serious problem occurred
+- **CRITICAL**: A critical problem that may prevent the program from running
+
+### **Configuration Management**
+
+#### **Environment-Based Configuration**
+
+```python
+# ✅ GOOD: Environment-based configuration
+from dgi.config import get_config
+
+config = get_config()
+
+# Use configuration values
+min_yield = config.get("default_min_yield", 0.03)
+max_payout = config.get("default_max_payout", 0.75)
+
+# ❌ BAD: Hardcoded values
+min_yield = 0.03  # Hardcoded
+max_payout = 0.75  # Hardcoded
+```
+
+#### **Configuration Validation**
+
+```python
+# ✅ GOOD: Validate configuration at startup
+def validate_config(config: Dict[str, Any]) -> None:
+    required_keys = ["data_path", "log_level", "api_keys"]
+    for key in required_keys:
+        if key not in config:
+            raise ConfigurationError(f"Missing required config key: {key}")
+
+    if not os.path.exists(config["data_path"]):
+        raise ConfigurationError(f"Data path does not exist: {config['data_path']}")
+```
+
+### **Performance Considerations**
+
+#### **Async Operations**
+
+```python
+# ✅ GOOD: Proper async resource management
+async def process_data_async(self):
+    async with aiofiles.open(self._file_path, 'r') as file:
+        content = await file.read()
+        # File automatically closed after context
+
+    # Process content asynchronously
+    results = await self._process_content_async(content)
+    return results
+
+# ❌ BAD: Blocking operations in async context
+async def process_data_async(self):
+    with open(self._file_path, 'r') as file:  # Blocking!
+        content = file.read()
+    return content
+```
+
+#### **Caching Strategies**
+
+```python
+# ✅ GOOD: Proper caching with TTL
+class CachedDataLoader:
+    def __init__(self, data_loader: DataLoader, cache_ttl: int = 300):
+        self._data_loader = data_loader
+        self._cache_ttl = cache_ttl
+        self._cache = {}
+        self._cache_timestamps = {}
+
+    def _is_cache_valid(self, key: str) -> bool:
+        if key not in self._cache_timestamps:
+            return False
+        return time.time() - self._cache_timestamps[key] < self._cache_ttl
+```
+
+---
+
 ## Quality Assurance Workflow
 
 This project maintains high code quality standards through automated checks and
@@ -674,6 +1263,10 @@ poetry run isort --diff .
 4. **Focus on Core Logic** - Business logic in `dgi/` has highest standards
 5. **Document Changes** - Update relevant documentation
 6. **NEVER Use Production Data** - Always use test data with `TEST*` symbols
+7. **Follow SOLID Principles** - Apply design principles consistently
+8. **Use Type Hints** - Add types to all new code
+9. **Handle Errors Properly** - Use the unified exception hierarchy
+10. **Log Structured Data** - Include context in log messages
 
 ### CI/CD Integration
 
@@ -691,3 +1284,153 @@ The same quality checks run in CI:
 - Security vulnerabilities detected
 - Code formatting inconsistencies found
 - **Test isolation is compromised**
+- SOLID principles are violated
+- Error handling is inadequate
+
+---
+
+## 🔧 **Technical Debt Management**
+
+### **Current Technical Debt Status**
+
+This project actively manages technical debt through systematic identification and
+resolution. See `docs/tech-debt.md` for detailed tracking.
+
+#### **Critical Items (Immediate Action Required)**
+
+- **TD-013**: Pydantic Field Validation Type Safety Violations
+- **TD-014**: Mixed Testing Framework Usage Violations
+
+#### **High Priority Items (Next Sprint)**
+
+- **TD-016**: Dependency Inversion Principle Violations
+- **TD-017**: Open/Closed Principle Violations in Strategy Patterns
+- **TD-018**: Interface Segregation Principle Violations
+- **TD-019**: Inadequate Error Handling in Async Operations
+
+### **Technical Debt Resolution Process**
+
+1. **Identify**: Code reviews and automated analysis identify technical debt
+2. **Prioritize**: Items are prioritized by impact and effort
+3. **Plan**: Technical debt items are planned into development sprints
+4. **Implement**: Developers address technical debt systematically
+5. **Validate**: Changes are validated through tests and quality checks
+6. **Document**: Completed items are moved to `docs/fixed-tech-debt.md`
+
+### **Preventing Technical Debt**
+
+- **Code Reviews**: All changes require peer review
+- **Automated Checks**: CI/CD prevents introduction of new debt
+- **Refactoring**: Regular refactoring sessions
+- **Documentation**: Keep documentation up to date
+- **Testing**: Maintain high test coverage
+
+---
+
+## 📚 **Reference Materials**
+
+### **Books & Resources**
+
+- **SOLID Principles**: Clean Architecture by Robert C. Martin
+- **Design Patterns**: Gang of Four Design Patterns
+- **Clean Code**: Clean Code by Robert C. Martin
+- **Enterprise Patterns**: Patterns of Enterprise Application Architecture by Martin
+  Fowler
+- **Python Best Practices**: Effective Python by Brett Slatkin
+- **API Design**: REST API Design Rulebook by Mark Masse
+- **Testing**: Growing Object-Oriented Software, Guided by Tests by Freeman & Pryce
+
+### **Online Resources**
+
+- **Python Type Hints**: https://docs.python.org/3/library/typing.html
+- **Pydantic Documentation**: https://docs.pydantic.dev/
+- **FastAPI Documentation**: https://fastapi.tiangolo.com/
+- **Pytest Documentation**: https://docs.pytest.org/
+- **Ruff Documentation**: https://docs.astral.sh/ruff/
+
+### **Project-Specific Resources**
+
+- **Features Documentation**: `docs/FEATURES.md`
+- **Technical Debt Tracking**: `docs/tech-debt.md`
+- **API Reference**: `docs/API_REFERENCE.md`
+- **Architecture Documentation**: `docs/ARCHITECTURE.md`
+
+---
+
+## 🎯 **Definition of Done**
+
+A feature or fix is considered complete when:
+
+- [x] All automated tests pass (507/507 ✅)
+- [x] Code coverage maintained or improved (83% ✅)
+- [ ] Type checking passes (mypy) - **FAILING: 4 errors**
+- [x] Code style checks pass (ruff, black)
+- [x] Documentation updated
+- [x] Peer review completed
+- [x] Manual testing performed for UI/API changes
+- [x] SOLID principles followed
+- [x] Error handling implemented properly
+- [x] Logging includes appropriate context
+- [x] Configuration uses environment variables
+- [x] No hardcoded values in business logic
+- [x] Test isolation verified
+- [x] No production data used in tests
+- [x] Security scan passes
+- [x] Performance considerations addressed
+- [x] Technical debt items identified and tracked
+
+---
+
+## 🚨 **Emergency Procedures**
+
+### **Production Issues**
+
+1. **Immediate Response**
+   - Check application logs for errors
+   - Verify environment configuration
+   - Check external dependencies
+
+2. **Rollback Procedure**
+   - Revert to last known good deployment
+   - Update status in monitoring systems
+   - Notify stakeholders
+
+3. **Post-Incident**
+   - Document the incident
+   - Identify root cause
+   - Implement preventive measures
+   - Update runbooks
+
+### **Development Environment Issues**
+
+1. **Test Environment Problems**
+
+   ```bash
+   make clean
+   ./scripts/run-tests.sh --help
+   ```
+
+2. **Dependency Issues**
+
+   ```bash
+   poetry install --sync
+   poetry lock --no-update
+   ```
+
+3. **Quality Check Failures**
+   ```bash
+   make quality
+   # Address any remaining issues manually
+   ```
+
+### **Contact Information**
+
+- **Technical Lead**: [Contact Information]
+- **DevOps Team**: [Contact Information]
+- **Emergency Hotline**: [Contact Information]
+
+---
+
+This development guide ensures consistent, high-quality development practices across the
+entire team. All developers must follow these guidelines to maintain code quality,
+security, and maintainability.

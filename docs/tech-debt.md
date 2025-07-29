@@ -114,60 +114,6 @@ class TestScoring:
 
 ## 🟡 **HIGH PRIORITY ITEMS**
 
-### TD-015: Single Responsibility Principle Violations in Core Classes
-
-**Priority**: 🟡 High **Effort**: L (3-5 days) **Category**: SOLID Principles
-
-**Problem**: Multiple classes violate the Single Responsibility Principle by handling
-too many concerns, making them difficult to test, maintain, and extend.
-
-**Issues Identified**:
-
-- `dgi/screener.py`: Screener class handles data loading, filtering, scoring, async
-  operations, and API conversion
-- `dgi/repositories/csv.py`: CsvCompanyDataRepository handles file I/O, caching,
-  resource monitoring, validation, and memory management
-- `api/main.py`: FastAPI endpoints contain business logic instead of delegating to
-  service layer
-- `dgi/services/screening_service.py`: ScreeningService handles validation, filtering,
-  scoring, and data conversion
-
-**Solution Steps**:
-
-1. **Extract Data Loading Responsibilities**:
-
-   ```python
-   # Create separate classes
-   class DataLoader(ABC):
-       def load_universe(self) -> DataFrame: ...
-
-   class AsyncDataLoader(ABC):
-       async def load_universe_async(self) -> DataFrame: ...
-   ```
-
-2. **Extract Resource Management**:
-
-   ```python
-   class ResourceManager:
-       def __init__(self, monitor: ResourceMonitor): ...
-       def track_resource(self, resource: Any): ...
-       def cleanup(self): ...
-   ```
-
-3. **Extract API Response Mapping**:
-
-   ```python
-   class ScreeningResponseMapper:
-       def to_api_response(self, df: DataFrame) -> ScreenResponse: ...
-   ```
-
-4. **Refactor Service Layer**: Split large services into focused, single-purpose
-   services
-5. **Update Dependency Injection**: Inject new focused dependencies instead of
-   monolithic ones
-
-**Impact**: Violates SOLID principles and makes code harder to maintain and test
-
 ### TD-016: Dependency Inversion Principle Violations
 
 **Priority**: 🟡 High **Effort**: M (1-2 days) **Category**: SOLID Principles

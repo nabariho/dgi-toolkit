@@ -6,10 +6,14 @@ validation utilities in dgi.validation_utils for consistent error handling.
 
 import logging
 import re
+from typing import Any
 
 from dgi.exceptions import DataValidationError
+from dgi.interfaces import ValidationService as ValidationServiceInterface
 from dgi.models import CompanyData
 from dgi.validation_utils import (
+    DgiRowValidator,
+    PydanticRowValidation,
     validate_cagr,
     validate_file_path,
     validate_numeric_bounds,
@@ -23,15 +27,33 @@ from dgi.validation_utils import (
 logger = logging.getLogger(__name__)
 
 
-class ValidationService:
+class ValidationService(ValidationServiceInterface):
     """Service class for validation business logic.
 
     This service leverages the unified validation utilities to ensure
     consistent error handling and validation logic across the application.
     """
 
+    def __init__(self):
+        """Initialize the validation service with a row validator."""
+        self._row_validator = DgiRowValidator(PydanticRowValidation(CompanyData))
+
+    def validate_company_data(self, data: list[dict[str, Any]]) -> list[CompanyData]:
+        """Validate company data using business rules.
+
+        Args:
+            data: List of dictionaries containing company data
+
+        Returns:
+            List of validated CompanyData objects
+
+        Raises:
+            DataValidationError: If validation fails
+        """
+        return self._row_validator.validate_rows(data)
+
     @staticmethod
-    def validate_company_data(company: CompanyData) -> None:
+    def validate_company_data_static(company: CompanyData) -> None:
         """Validate company data using business rules."""
         # Validate required fields
         if not company.symbol or not company.symbol.strip():
@@ -108,7 +130,7 @@ class ValidationService:
         field_name: str = "file_path",
     ) -> str:
         """Validate file path using business rules."""
-        return validate_file_path(file_path, allowed_extensions=allowed_extensions)
+        return validate_file_path(file_path, None, allowed_extensions)
 
     @staticmethod
     def validate_uuid_format(uuid_str: str, field_name: str = "uuid") -> str:
@@ -119,39 +141,44 @@ class ValidationService:
     def validate_financial_data_edge_cases(
         value: float, field_name: str = "value"
     ) -> float:
-        """Validate financial data for edge cases like infinity and NaN."""
+        """Validate financial data edge cases."""
         return validate_numeric_bounds(
-            value, min_val=float("-inf"), max_val=float("inf"), field_name=field_name
+            value, 0.0, float("inf"), field_name, allow_zero=True
         )
 
     @staticmethod
     def sanitize_for_logging(value: str) -> str:
-        """Sanitize value for safe logging."""
-        from dgi.validation_utils import sanitize_for_logging as _sanitize
+        """Sanitize value for logging to prevent sensitive data exposure."""
+        if not value:
+            return ""
 
-        return _sanitize(value)
+        # Truncate long values
+        if len(value) > 50:
+            return value[:47] + "..."
 
-    @staticmethod
+        return value
+
     def validate_screening_parameters(
-        min_yield: float, max_payout: float, min_cagr: float, top_n: int
+        self, min_yield: float, max_payout: float, min_cagr: float, top_n: int
     ) -> None:
-        """Validate screening parameters comprehensively."""
-        # Validate each parameter using unified validation
-        validate_yield_rate(min_yield, "min_yield")
-        validate_percentage(max_payout, "max_payout")
-        validate_cagr(min_cagr, "min_cagr")
-        validate_portfolio_size(top_n, "top_n")
+        """Validate screening parameters using business rules."""
+        try:
+            self.validate_yield_rate(min_yield, "min_yield")
+            self.validate_percentage(max_payout, "max_payout")
+            self.validate_cagr(min_cagr, "min_cagr")
+            self.validate_portfolio_size(top_n, "top_n")
+        except DataValidationError as e:
+            logger.error(f"Screening parameter validation failed: {e}")
+            raise
 
-        # Additional business rule validations
-        if min_yield > max_payout:
-            raise DataValidationError(
-                "Minimum yield cannot be greater than maximum payout",
-                field="screening_parameters",
-            )
 
-        if top_n > 1000:
-            raise DataValidationError(
-                "Top N cannot exceed 1000 for performance reasons",
-                field="top_n",
-                value=top_n,
-            )
+class ValidationServiceAdapter:
+    """Adapter to make ValidationService compatible with DgiRowValidator interface."""
+
+    def __init__(self, validation_service: ValidationService):
+        """Initialize with a validation service."""
+        self._validation_service = validation_service
+
+    def validate_rows(self, rows: list[dict[str, Any]]) -> list[CompanyData]:
+        """Validate rows using the validation service."""
+        return self._validation_service.validate_company_data(rows)

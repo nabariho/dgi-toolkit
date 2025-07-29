@@ -76,6 +76,59 @@ functionality.
 - ✅ All API integration tests pass
 - ✅ API is now fully functional for production deployment
 
+### TD-015: Single Responsibility Principle Violations in Core Classes ✅ **COMPLETED**
+
+**Priority**: 🟡 High **Effort**: L (3-5 days) **Category**: SOLID Principles
+**Status**: ✅ **COMPLETED** - 2025-07-28
+
+**Problem**: Multiple classes violated the Single Responsibility Principle by handling
+too many concerns, making them difficult to test, maintain, and extend.
+
+**Issues Identified**:
+
+- `dgi/screener.py`: Screener class handled data loading, filtering, scoring, async
+  operations, and API conversion
+- `dgi/repositories/csv.py`: CsvCompanyDataRepository handled file I/O, caching,
+  resource monitoring, validation, and memory management
+- `api/main.py`: FastAPI endpoints contained business logic instead of delegating to
+  service layer
+- `dgi/services/screening_service.py`: ScreeningService handled validation, filtering,
+  scoring, and data conversion
+
+**Solution Implemented**:
+
+1. ✅ **Created focused service classes following SRP**:
+   - `DataLoaderService`: Handles only data loading operations with caching support
+   - `ResourceManagerService`: Handles only resource monitoring and cleanup
+   - `ApiResponseMapperService`: Handles only API response transformation
+
+2. ✅ **Refactored Screener class** to use dependency injection with focused services:
+   - Injected `DataLoader`, `ResourceManager`, and `ResponseMapper` services
+   - Removed direct data loading responsibilities
+   - Added resource tracking for better monitoring
+   - Maintained backward compatibility with compatibility methods
+
+3. ✅ **Updated dependency injection** to use focused dependencies instead of monolithic
+   ones
+
+4. ✅ **Added comprehensive error handling** using the unified exception hierarchy
+
+**Files Created/Modified**:
+
+- `dgi/services/data_loader_service.py` - New focused data loading service
+- `dgi/services/resource_manager_service.py` - New resource management service
+- `dgi/services/api_response_mapper_service.py` - New API response mapping service
+- `dgi/screener.py` - Refactored to use focused services
+- `tests/test_screener.py` - Updated to handle new exception types
+
+**Results**:
+
+- ✅ All 507 tests passing
+- ✅ Clean separation of concerns across all components
+- ✅ Improved testability and maintainability
+- ✅ Better resource management and monitoring
+- ✅ Maintained backward compatibility during refactoring
+
 ### TD-002: Inconsistent Exception Handling Architecture ✅ **COMPLETED**
 
 **Priority**: 🟡 High **Effort**: M (1-2 days) **Category**: Architecture **Status**: ✅

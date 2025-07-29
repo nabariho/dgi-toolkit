@@ -9,18 +9,16 @@ from typing import Any, Protocol
 
 from dgi.exceptions import FactoryError
 from dgi.filtering import BaseFilter, DefaultFilter
-from dgi.models.company import CompanyData
-from dgi.repositories.base import CompanyDataRepository
+from dgi.interfaces import DataRepository, ScoringService, ValidationService
 from dgi.repositories.csv import CsvCompanyDataRepository
-from dgi.scoring import DefaultScoring, ScoringStrategy
+from dgi.scoring import DefaultScoring
 from dgi.screener import Screener
-from dgi.validation_utils import DgiRowValidator, PydanticRowValidation
 
 
 class RepositoryFactory(Protocol):
     """Protocol for repository factory."""
 
-    def create_repository(self, data_path: str) -> CompanyDataRepository:
+    def create_repository(self, data_path: str) -> DataRepository:
         """Create a data repository."""
         ...
 
@@ -28,7 +26,7 @@ class RepositoryFactory(Protocol):
 class ScoringStrategyFactory(Protocol):
     """Protocol for scoring strategy factory."""
 
-    def create_scoring_strategy(self) -> ScoringStrategy:
+    def create_scoring_strategy(self) -> ScoringService:
         """Create a scoring strategy."""
         ...
 
@@ -44,7 +42,7 @@ class FilterStrategyFactory(Protocol):
 class ValidatorFactory(Protocol):
     """Protocol for validator factory."""
 
-    def create_validator(self) -> DgiRowValidator:
+    def create_validator(self) -> ValidationService:
         """Create a validator."""
         ...
 
@@ -54,8 +52,8 @@ class ScreenerFactory(Protocol):
 
     def create_screener(
         self,
-        repository: CompanyDataRepository,
-        scoring_strategy: ScoringStrategy | None = None,
+        repository: DataRepository,
+        scoring_strategy: ScoringService | None = None,
         filter_strategy: BaseFilter | None = None,
     ) -> Screener:
         """Create a screener."""
@@ -66,11 +64,11 @@ class DependencyFactory(ABC):
     """Abstract factory for creating DGI Toolkit dependencies."""
 
     @abstractmethod
-    def create_repository(self, data_path: str) -> CompanyDataRepository:
+    def create_repository(self, data_path: str) -> DataRepository:
         """Create a data repository."""
 
     @abstractmethod
-    def create_scoring_strategy(self) -> ScoringStrategy:
+    def create_scoring_strategy(self) -> ScoringService:
         """Create a scoring strategy."""
 
     @abstractmethod
@@ -78,14 +76,14 @@ class DependencyFactory(ABC):
         """Create a filter strategy."""
 
     @abstractmethod
-    def create_validator(self) -> DgiRowValidator:
+    def create_validator(self) -> ValidationService:
         """Create a validator."""
 
     @abstractmethod
     def create_screener(
         self,
-        repository: CompanyDataRepository,
-        scoring_strategy: ScoringStrategy | None = None,
+        repository: DataRepository,
+        scoring_strategy: ScoringService | None = None,
         filter_strategy: BaseFilter | None = None,
     ) -> Screener:
         """Create a screener."""
@@ -94,12 +92,16 @@ class DependencyFactory(ABC):
 class ProductionDependencyFactory(DependencyFactory):
     """Production factory for creating dependencies."""
 
-    def create_repository(self, data_path: str) -> CompanyDataRepository:
+    def create_repository(self, data_path: str) -> DataRepository:
         """Create a CSV repository for production use."""
-        validator = self.create_validator()
-        return CsvCompanyDataRepository(data_path, validator)
+        validation_service = self.create_validator()
+        # Create adapter to make ValidationService compatible with CSV repository
+        from dgi.services.validation_service import ValidationServiceAdapter
 
-    def create_scoring_strategy(self) -> ScoringStrategy:
+        validator_adapter = ValidationServiceAdapter(validation_service)
+        return CsvCompanyDataRepository(data_path, validator_adapter)
+
+    def create_scoring_strategy(self) -> ScoringService:
         """Create the default scoring strategy for production."""
         return DefaultScoring()
 
@@ -107,14 +109,18 @@ class ProductionDependencyFactory(DependencyFactory):
         """Create the default filter strategy for production."""
         return DefaultFilter()
 
-    def create_validator(self) -> DgiRowValidator:
+    def create_validator(self) -> ValidationService:
         """Create a validator for production use."""
-        return DgiRowValidator(PydanticRowValidation(CompanyData))
+        from dgi.services.validation_service import (
+            ValidationService as ConcreteValidationService,
+        )
+
+        return ConcreteValidationService()
 
     def create_screener(
         self,
-        repository: CompanyDataRepository,
-        scoring_strategy: ScoringStrategy | None = None,
+        repository: DataRepository,
+        scoring_strategy: ScoringService | None = None,
         filter_strategy: BaseFilter | None = None,
     ) -> Screener:
         """Create a screener with production configuration."""
@@ -133,12 +139,16 @@ class ProductionDependencyFactory(DependencyFactory):
 class TestDependencyFactory(DependencyFactory):
     """Test factory for creating dependencies with test configuration."""
 
-    def create_repository(self, data_path: str) -> CompanyDataRepository:
+    def create_repository(self, data_path: str) -> DataRepository:
         """Create a CSV repository for testing."""
-        validator = self.create_validator()
-        return CsvCompanyDataRepository(data_path, validator)
+        validation_service = self.create_validator()
+        # Create adapter to make ValidationService compatible with CSV repository
+        from dgi.services.validation_service import ValidationServiceAdapter
 
-    def create_scoring_strategy(self) -> ScoringStrategy:
+        validator_adapter = ValidationServiceAdapter(validation_service)
+        return CsvCompanyDataRepository(data_path, validator_adapter)
+
+    def create_scoring_strategy(self) -> ScoringService:
         """Create the default scoring strategy for testing."""
         return DefaultScoring()
 
@@ -146,14 +156,18 @@ class TestDependencyFactory(DependencyFactory):
         """Create the default filter strategy for testing."""
         return DefaultFilter()
 
-    def create_validator(self) -> DgiRowValidator:
+    def create_validator(self) -> ValidationService:
         """Create a validator for testing."""
-        return DgiRowValidator(PydanticRowValidation(CompanyData))
+        from dgi.services.validation_service import (
+            ValidationService as ConcreteValidationService,
+        )
+
+        return ConcreteValidationService()
 
     def create_screener(
         self,
-        repository: CompanyDataRepository,
-        scoring_strategy: ScoringStrategy | None = None,
+        repository: DataRepository,
+        scoring_strategy: ScoringService | None = None,
         filter_strategy: BaseFilter | None = None,
     ) -> Screener:
         """Create a screener with test configuration."""
@@ -174,8 +188,8 @@ class MockDependencyFactory(DependencyFactory):
 
     def __init__(
         self,
-        mock_repository: CompanyDataRepository | None = None,
-        mock_scoring: ScoringStrategy | None = None,
+        mock_repository: DataRepository | None = None,
+        mock_scoring: ScoringService | None = None,
         mock_filter: BaseFilter | None = None,
     ) -> None:
         """Initialize mock factory with optional mock components."""
@@ -183,20 +197,25 @@ class MockDependencyFactory(DependencyFactory):
         self.mock_scoring = mock_scoring
         self.mock_filter = mock_filter
 
-    def create_repository(self, data_path: str) -> CompanyDataRepository:
+    def create_repository(self, data_path: str) -> DataRepository:
         """Create a mock repository for testing."""
         if self.mock_repository:
             return self.mock_repository
-        repository: CompanyDataRepository = CsvCompanyDataRepository(
-            data_path, self.create_validator()
+        validation_service = self.create_validator()
+        # Create adapter to make ValidationService compatible with CSV repository
+        from dgi.services.validation_service import ValidationServiceAdapter
+
+        validator_adapter = ValidationServiceAdapter(validation_service)
+        repository: DataRepository = CsvCompanyDataRepository(
+            data_path, validator_adapter
         )
         return repository
 
-    def create_scoring_strategy(self) -> ScoringStrategy:
+    def create_scoring_strategy(self) -> ScoringService:
         """Create a mock scoring strategy for testing."""
         if self.mock_scoring:
             return self.mock_scoring
-        strategy: ScoringStrategy = DefaultScoring()
+        strategy: ScoringService = DefaultScoring()
         return strategy
 
     def create_filter_strategy(self) -> BaseFilter:
@@ -206,14 +225,18 @@ class MockDependencyFactory(DependencyFactory):
         filter_strategy: BaseFilter = DefaultFilter()
         return filter_strategy
 
-    def create_validator(self) -> DgiRowValidator:
+    def create_validator(self) -> ValidationService:
         """Create a validator for testing."""
-        return DgiRowValidator(PydanticRowValidation(CompanyData))
+        from dgi.services.validation_service import (
+            ValidationService as ConcreteValidationService,
+        )
+
+        return ConcreteValidationService()
 
     def create_screener(
         self,
-        repository: CompanyDataRepository,
-        scoring_strategy: ScoringStrategy | None = None,
+        repository: DataRepository,
+        scoring_strategy: ScoringService | None = None,
         filter_strategy: BaseFilter | None = None,
     ) -> Screener:
         """Create a screener with mock configuration."""
@@ -288,15 +311,15 @@ def set_dependency_factory(name: str) -> None:
 # Convenience functions for creating dependencies
 def create_repository(
     data_path: str, factory_name: str | None = None
-) -> CompanyDataRepository:
+) -> DataRepository:
     """Create a repository using the specified factory."""
     factory = get_dependency_factory(factory_name)
     return factory.create_repository(data_path)
 
 
 def create_screener(
-    repository: CompanyDataRepository,
-    scoring_strategy: ScoringStrategy | None = None,
+    repository: DataRepository,
+    scoring_strategy: ScoringService | None = None,
     filter_strategy: BaseFilter | None = None,
     screening_service: Any = None,
     factory_name: str | None = None,
@@ -313,13 +336,13 @@ def create_screener(
     )
 
 
-def create_validator(factory_name: str | None = None) -> DgiRowValidator:
+def create_validator(factory_name: str | None = None) -> ValidationService:
     """Create a validator using the specified factory."""
     factory = get_dependency_factory(factory_name)
     return factory.create_validator()
 
 
-def create_scoring_strategy(factory_name: str | None = None) -> ScoringStrategy:
+def create_scoring_strategy(factory_name: str | None = None) -> ScoringService:
     """Create a scoring strategy using the specified factory."""
     factory = get_dependency_factory(factory_name)
     return factory.create_scoring_strategy()

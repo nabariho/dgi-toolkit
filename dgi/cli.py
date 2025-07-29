@@ -83,7 +83,7 @@ def screen(
             f"data_path={ValidationService.sanitize_for_logging(data_path)}"
         )
 
-        # Use factory to create dependencies
+        # Use factory to create dependencies with proper interfaces
         repo = create_repository(data_path, "production")
         screener = create_screener(repo, factory_name="production")
 
