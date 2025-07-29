@@ -37,18 +37,18 @@ Toolkit, mapping to business requirements and use cases for Dividend Growth Inve
 
 ## 🚀 Planned Features (Next Phase)
 
-| Feature ID | Component                  | Business Value                             | Status     | Priority  | Target Date |
-| ---------- | -------------------------- | ------------------------------------------ | ---------- | --------- | ----------- |
-| DGIT-301   | FastAPI Service Skeleton   | HTTP endpoints for screener integration    | 📋 Planned | 🔴 High   | TBD         |
-| DGIT-302   | Dockerised API             | Containerized service for cloud deployment | 📋 Planned | 🔴 High   | TBD         |
-| DGIT-303   | CI/CD Workflow             | Automated Docker image publishing          | 📋 Planned | 🟡 Medium | TBD         |
-| DGIT-304   | Integration Tests          | Automated API endpoint testing             | 📋 Planned | 🔴 High   | TBD         |
-| DGIT-305   | README & Swagger Link      | API documentation and examples             | 📋 Planned | 🟡 Medium | TBD         |
-| DGIT-401   | FinViz Scraper Tool        | Web scraping for fresh ticker data         | 📋 Planned | 🔴 High   | TBD         |
-| DGIT-402   | IEX Cloud Tool             | API integration for fundamentals data      | 📋 Planned | 🔴 High   | TBD         |
-| DGIT-403   | ResearchAgent Orchestrator | Automated research workflow                | 📋 Planned | 🔴 High   | TBD         |
-| DGIT-404   | Unit + Integration Tests   | Quality assurance for AI tools             | 📋 Planned | 🟡 Medium | TBD         |
-| DGIT-405   | LinkedIn Post Draft        | Marketing content for Sprint 2             | 📋 Planned | 🟢 Low    | TBD         |
+| Feature ID | Component                  | Business Value                             | Status      | Priority  | Target Date |
+| ---------- | -------------------------- | ------------------------------------------ | ----------- | --------- | ----------- |
+| DGIT-301   | FastAPI Service Skeleton   | HTTP endpoints for screener integration    | ✅ Complete | 🔴 High   | 2024-12-19  |
+| DGIT-302   | Dockerised API             | Containerized service for cloud deployment | 📋 Planned  | 🔴 High   | TBD         |
+| DGIT-303   | CI/CD Workflow             | Automated Docker image publishing          | 📋 Planned  | 🟡 Medium | TBD         |
+| DGIT-304   | Integration Tests          | Automated API endpoint testing             | 📋 Planned  | 🔴 High   | TBD         |
+| DGIT-305   | README & Swagger Link      | API documentation and examples             | 📋 Planned  | 🟡 Medium | TBD         |
+| DGIT-401   | FinViz Scraper Tool        | Web scraping for fresh ticker data         | 📋 Planned  | 🔴 High   | TBD         |
+| DGIT-402   | IEX Cloud Tool             | API integration for fundamentals data      | 📋 Planned  | 🔴 High   | TBD         |
+| DGIT-403   | ResearchAgent Orchestrator | Automated research workflow                | 📋 Planned  | 🔴 High   | TBD         |
+| DGIT-404   | Unit + Integration Tests   | Quality assurance for AI tools             | 📋 Planned  | 🟡 Medium | TBD         |
+| DGIT-405   | LinkedIn Post Draft        | Marketing content for Sprint 2             | 📋 Planned  | 🟢 Low    | TBD         |
 
 ---
 

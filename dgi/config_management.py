@@ -1,0 +1,437 @@
+"""
+Enhanced configuration management system with strategy patterns.
+
+This module provides enterprise-grade configuration management features:
+- Strategy pattern for different configuration sources
+- Configuration validation and composition
+- Environment-specific configuration loading
+- Hot-reload capabilities for dynamic updates
+- Configuration change monitoring and notifications
+"""
+
+import logging
+import threading
+import time
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from contextlib import contextmanager
+from enum import Enum
+from pathlib import Path
+from typing import Any, Generic, TypeVar, cast
+
+import yaml
+from pydantic import BaseModel
+from watchdog.events import FileSystemEventHandler
+
+from dgi.exceptions import ConfigurationError
+
+logger = logging.getLogger(__name__)
+
+T = TypeVar("T", bound=BaseModel)
+
+
+class ConfigurationSource(Enum):
+    """Configuration source types."""
+
+    ENVIRONMENT = "environment"
+    FILE = "file"
+    DATABASE = "database"
+    REMOTE = "remote"
+    DEFAULT = "default"
+
+
+class ConfigurationFormat(Enum):
+    """Configuration file formats."""
+
+    JSON = "json"
+    YAML = "yaml"
+    TOML = "toml"
+    ENV = "env"
+
+
+class ConfigurationStrategy(ABC):
+    """Abstract base class for configuration strategies."""
+
+    @abstractmethod
+    def load_config(self) -> dict[str, Any]:
+        """Load configuration data."""
+
+    @abstractmethod
+    def is_available(self) -> bool:
+        """Check if this configuration source is available."""
+
+    def get_priority(self) -> int:
+        """Get priority for this configuration source (lower = higher priority)."""
+        return 100
+
+
+class EnvironmentConfigStrategy(ConfigurationStrategy):
+    """Load configuration from environment variables."""
+
+    def __init__(self, prefix: str = "DGI_"):
+        """Initialize with environment variable prefix."""
+        self.prefix = prefix
+
+    def load_config(self) -> dict[str, Any]:
+        """Load configuration from environment variables."""
+        import os
+
+        config = {}
+        for key, value in os.environ.items():
+            if key.startswith(self.prefix):
+                # Remove prefix and convert to lowercase
+                config_key = key[len(self.prefix) :].lower()
+                config[config_key] = value
+
+        logger.debug(f"Loaded {len(config)} environment variables")
+        return config
+
+    def is_available(self) -> bool:
+        """Environment variables are always available."""
+        return True
+
+    def get_priority(self) -> int:
+        """Environment variables have highest priority."""
+        return 10
+
+
+class FileConfigStrategy(ConfigurationStrategy):
+    """Load configuration from files."""
+
+    def __init__(
+        self, file_path: str | Path, format_type: ConfigurationFormat | None = None
+    ):
+        """Initialize with file path and optional format type."""
+        self.file_path = Path(file_path)
+        self.format_type = format_type or self._detect_format()
+
+    def _detect_format(self) -> ConfigurationFormat:
+        """Detect file format from extension."""
+        suffix = self.file_path.suffix.lower()
+        if suffix == ".json":
+            return ConfigurationFormat.JSON
+        elif suffix in (".yml", ".yaml"):
+            return ConfigurationFormat.YAML
+        elif suffix == ".toml":
+            return ConfigurationFormat.TOML
+        elif suffix == ".env":
+            return ConfigurationFormat.ENV
+        else:
+            # Default to YAML
+            return ConfigurationFormat.YAML
+
+    def load_config(self) -> dict[str, Any]:
+        """Load configuration from file."""
+        try:
+            if self.format_type == ConfigurationFormat.JSON:
+                import json
+
+                with open(self.file_path) as f:
+                    config = json.load(f)
+            elif self.format_type == ConfigurationFormat.YAML:
+                with open(self.file_path) as f:
+                    config = yaml.safe_load(f) or {}
+            elif self.format_type == ConfigurationFormat.TOML:
+                import tomllib
+
+                with open(self.file_path, "rb") as f:
+                    config = tomllib.load(f)
+            elif self.format_type == ConfigurationFormat.ENV:
+                with open(self.file_path) as f:
+                    config = self._parse_env_file(f)
+            else:
+                raise ConfigurationError(f"Unsupported format: {self.format_type}")
+
+            # Ensure we return a dict[str, Any]
+            if not isinstance(config, dict):
+                config = {}
+
+            logger.info(f"Loaded configuration from {self.file_path}")
+            return cast(dict[str, Any], config)
+
+        except Exception as e:
+            raise ConfigurationError(
+                f"Failed to load config from {self.file_path}: {e}"
+            ) from e
+
+    def _parse_env_file(self, file_handle: Any) -> dict[str, Any]:
+        """Parse .env file format."""
+        config = {}
+        for line in file_handle:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                config[key.strip()] = value.strip().strip("\"'")
+        return config
+
+    def is_available(self) -> bool:
+        """Check if configuration file exists."""
+        return self.file_path.exists()
+
+    def get_priority(self) -> int:
+        """File configurations have medium priority."""
+        return 50
+
+
+class DefaultConfigStrategy(ConfigurationStrategy):
+    """Provide default configuration values."""
+
+    def __init__(self, defaults: dict[str, Any]):
+        """Initialize with default values."""
+        self.defaults = defaults
+
+    def load_config(self) -> dict[str, Any]:
+        """Return default configuration."""
+        logger.debug(f"Using default configuration with {len(self.defaults)} settings")
+        return self.defaults.copy()
+
+    def is_available(self) -> bool:
+        """Default configuration is always available."""
+        return True
+
+    def get_priority(self) -> int:
+        """Default configuration has lowest priority."""
+        return 999
+
+
+class ConfigurationComposer:
+    """Compose configuration from multiple sources with priority ordering."""
+
+    def __init__(self) -> None:
+        """Initialize configuration composer."""
+        self.strategies: list[ConfigurationStrategy] = []
+        self._cache: dict[str, Any] | None = None
+        self._cache_timestamp: float = 0
+        self._cache_ttl: float = 300  # 5 minutes
+
+    def add_strategy(self, strategy: ConfigurationStrategy) -> "ConfigurationComposer":
+        """Add a configuration strategy."""
+        self.strategies.append(strategy)
+        self._invalidate_cache()
+        return self
+
+    def compose_config(self, force_reload: bool = False) -> dict[str, Any]:
+        """Compose configuration from all available strategies."""
+        # Check cache first
+        if not force_reload and self._is_cache_valid():
+            assert self._cache is not None
+            return self._cache.copy()
+
+        # Sort strategies by priority
+        available_strategies = [s for s in self.strategies if s.is_available()]
+        available_strategies.sort(key=lambda s: s.get_priority())
+
+        # Compose configuration
+        composed_config = {}
+
+        for strategy in available_strategies:
+            try:
+                strategy_config = strategy.load_config()
+                # Merge with lower priority taking precedence for existing keys
+                for key, value in strategy_config.items():
+                    if key not in composed_config:
+                        composed_config[key] = value
+
+                logger.debug(f"Applied configuration from {type(strategy).__name__}")
+
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load config from {type(strategy).__name__}: {e}"
+                )
+                continue
+
+        # Cache the result
+        self._cache = composed_config
+        self._cache_timestamp = time.time()
+
+        logger.info(f"Composed configuration from {len(available_strategies)} sources")
+        return composed_config.copy()
+
+    def _is_cache_valid(self) -> bool:
+        """Check if cache is still valid."""
+        return (
+            self._cache is not None
+            and time.time() - self._cache_timestamp < self._cache_ttl
+        )
+
+    def _invalidate_cache(self) -> None:
+        """Invalidate the configuration cache."""
+        self._cache = None
+        self._cache_timestamp = 0
+
+
+class ConfigurationValidator:
+    """Validate configuration data against Pydantic models."""
+
+    def __init__(self, settings_class: type[BaseModel]):
+        """Initialize with settings class."""
+        self.settings_class = settings_class
+
+    def validate_config(self, config: dict[str, Any]) -> BaseModel:
+        """Validate and create settings instance."""
+        return self.settings_class(**config)
+
+    def validate_partial_config(self, config: dict[str, Any]) -> list[str]:
+        """Validate partial configuration and return validation errors."""
+        try:
+            self.settings_class(**config)
+            return []
+        except Exception as e:
+            return [str(e)]
+
+
+class ConfigurationChangeHandler(FileSystemEventHandler):
+    """Handle configuration file changes."""
+
+    def __init__(self, callback: Callable[[], None]):
+        """Initialize with callback function."""
+        super().__init__()
+        self.callback = callback
+
+    def on_modified(self, event: Any) -> None:
+        """Handle file modification events."""
+        if event.is_directory:
+            return
+
+        logger.info(f"Configuration file modified: {event.src_path}")
+        self.callback()
+
+
+class ConfigurationManager(Generic[T]):
+    """Enterprise configuration manager with hot-reload and validation."""
+
+    def __init__(self, settings_class: type[T]):
+        """Initialize configuration manager."""
+        self.settings_class = settings_class
+        self.composer = ConfigurationComposer()
+        self.validator = ConfigurationValidator(settings_class)
+        self._current_settings: T | None = None
+        self._observers: list[Any] = []
+        self._change_callbacks: list[Callable[[T], None]] = []
+        self._lock = threading.RLock()
+        self.change_handler = ConfigurationChangeHandler(self._on_config_change)
+
+    def add_environment_config(self, prefix: str = "DGI_") -> "ConfigurationManager[T]":
+        """Add environment variable configuration source."""
+        self.composer.add_strategy(EnvironmentConfigStrategy(prefix))
+        return self
+
+    def add_file_config(
+        self, file_path: str | Path, watch: bool = True
+    ) -> "ConfigurationManager[T]":
+        """Add file configuration source with optional file watching."""
+        strategy = FileConfigStrategy(file_path)
+        self.composer.add_strategy(strategy)
+
+        if watch and strategy.is_available():
+            self._watch_file(Path(file_path))
+
+        return self
+
+    def add_default_config(self, defaults: dict[str, Any]) -> "ConfigurationManager[T]":
+        """Add default configuration values."""
+        self.composer.add_strategy(DefaultConfigStrategy(defaults))
+        return self
+
+    def load_settings(self, force_reload: bool = False) -> T:
+        """Load and validate settings from all sources."""
+        with self._lock:
+            if not force_reload and self._current_settings is not None:
+                return self._current_settings
+
+            # Compose configuration
+            raw_config = self.composer.compose_config(force_reload)
+
+            # Validate and create settings instance
+            settings = self.validator.validate_config(raw_config)
+
+            # Store current settings
+            old_settings = self._current_settings
+            self._current_settings = cast(T, settings)
+
+            # Notify change callbacks if settings changed
+            if old_settings is not None and old_settings != settings:
+                self._notify_change_callbacks(cast(T, settings))
+
+            logger.info("Configuration loaded and validated successfully")
+            return cast(T, settings)
+
+    def get_current_settings(self) -> T | None:
+        """Get current settings without reloading."""
+        return self._current_settings
+
+    def reload_settings(self) -> T:
+        """Force reload settings from all sources."""
+        logger.info("Reloading configuration from all sources")
+        return self.load_settings(force_reload=True)
+
+    def add_change_callback(self, callback: Callable[[T], None]) -> None:
+        """Add callback to be notified when configuration changes."""
+        self._change_callbacks.append(callback)
+
+    def _watch_file(self, file_path: Path) -> None:
+        """Start watching a configuration file for changes."""
+        from watchdog.observers import Observer
+
+        observer = Observer()
+        observer.schedule(self.change_handler, str(file_path.parent), recursive=False)
+        observer.start()
+        self._observers.append(observer)
+
+    def _on_config_change(self) -> None:
+        """Handle configuration changes."""
+        try:
+            new_settings: T = self.load_settings(force_reload=True)
+            self._notify_change_callbacks(new_settings)
+        except Exception as e:
+            logger.error(f"Error reloading configuration: {e}")
+
+    def _notify_change_callbacks(self, new_settings: T) -> None:
+        """Notify all change callbacks with new settings."""
+        for callback in self._change_callbacks:
+            try:
+                callback(new_settings)
+            except Exception as e:
+                logger.error(f"Error in configuration change callback: {e}")
+
+    def stop_watching(self) -> None:
+        """Stop watching all configuration files."""
+        for observer in self._observers:
+            observer.stop()
+            observer.join()
+        self._observers.clear()
+
+    @contextmanager
+    def temporary_config(self, overrides: dict[str, Any]) -> Any:
+        """Context manager for temporary configuration overrides."""
+        original_settings = self._current_settings
+        try:
+            # Create temporary settings with overrides
+            if self._current_settings:
+                temp_config = self._current_settings.model_dump()
+                temp_config.update(overrides)
+                temp_settings = self.validator.validate_config(temp_config)
+                self._current_settings = cast(T, temp_settings)
+            yield self._current_settings
+        finally:
+            self._current_settings = original_settings
+
+
+def create_api_config_manager() -> ConfigurationManager[BaseModel]:
+    """Create a configuration manager for API settings."""
+    from dgi.config import Config
+
+    return cast(
+        ConfigurationManager[BaseModel],
+        ConfigurationManager(cast(type[BaseModel], Config)),
+    )
+
+
+def create_core_config_manager() -> ConfigurationManager[BaseModel]:
+    """Create a configuration manager for core settings."""
+    from dgi.config import Config
+
+    return cast(
+        ConfigurationManager[BaseModel],
+        ConfigurationManager(cast(type[BaseModel], Config)),
+    )

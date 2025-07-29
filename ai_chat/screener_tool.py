@@ -8,19 +8,23 @@ from typing import Any
 
 from langchain.tools import tool
 
+from dgi.config import get_config
 from dgi.models.company import CompanyData
 from dgi.repositories.csv import CsvCompanyDataRepository
 from dgi.scoring import DefaultScoring
 from dgi.screener import Screener
-from dgi.validation import DgiRowValidator, PydanticRowValidation
+from dgi.validation_utils import DgiRowValidator, PydanticRowValidation
+
+# Get configuration for default values
+config = get_config()
 
 
 @tool
 def screen_dividends(
-    min_yield: float = 0.0,
-    max_payout: float = 100.0,
-    min_cagr: float = 0.0,
-    top_n: int = 10,
+    min_yield: float = config.DEFAULT_SCREEN_MIN_YIELD,
+    max_payout: float = config.DEFAULT_SCREEN_MAX_PAYOUT,
+    min_cagr: float = config.DEFAULT_SCREEN_MIN_CAGR,
+    top_n: int = config.DEFAULT_TOP_N,
 ) -> list[dict[str, Any]]:
     """Screen dividend growth stocks based on financial criteria.
 

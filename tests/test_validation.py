@@ -3,10 +3,15 @@
 import unittest
 from typing import Any
 
+import pytest
 from pydantic import ValidationError
 
 from dgi.models import CompanyData
-from dgi.validation import DataValidationError, DgiRowValidator, PydanticRowValidation
+from dgi.validation_utils import (
+    DataValidationError,
+    DgiRowValidator,
+    PydanticRowValidation,
+)
 
 
 class TestDgiRowValidator(unittest.TestCase):
@@ -16,7 +21,7 @@ class TestDgiRowValidator(unittest.TestCase):
         """Test validation with empty list."""
         validator = DgiRowValidator(PydanticRowValidation(CompanyData))
         rows: list[dict[str, Any]] = []
-        with self.assertRaises(DataValidationError):
+        with pytest.raises(DataValidationError):
             validator.validate_rows(rows)
 
     def test_validate_missing_required_fields(self) -> None:
@@ -36,8 +41,8 @@ class TestDgiRowValidator(unittest.TestCase):
             },  # Valid row
         ]
         result = validator.validate_rows(rows)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].symbol, "MSFT")
+        assert len(result) == 1
+        assert result[0].symbol == "MSFT"
 
     def test_validate_invalid_data_types(self) -> None:
         """Test validation with invalid data types."""
@@ -47,7 +52,7 @@ class TestDgiRowValidator(unittest.TestCase):
             {"invalid": "object"},
             {"another": "invalid", "object": True},
         ]
-        with self.assertRaises(DataValidationError):
+        with pytest.raises(DataValidationError):
             validator.validate_rows(test_objects)  # type: ignore[arg-type]
 
     def test_validate_valid_rows(self) -> None:
@@ -76,9 +81,9 @@ class TestDgiRowValidator(unittest.TestCase):
             },
         ]
         results = validator.validate_rows(rows)
-        self.assertEqual(len(results), 2)
-        self.assertEqual(results[0].symbol, "AAPL")
-        self.assertEqual(results[1].symbol, "MSFT")
+        assert len(results) == 2
+        assert results[0].symbol == "AAPL"
+        assert results[1].symbol == "MSFT"
 
     def test_validate_raises_error_with_all_invalid(self) -> None:
         """Test that validation raises error when all rows are invalid."""
@@ -88,7 +93,7 @@ class TestDgiRowValidator(unittest.TestCase):
             {"symbol": "INVALID2"},  # Missing required fields
         ]
 
-        with self.assertRaises(DataValidationError):
+        with pytest.raises(DataValidationError):
             validator.validate_rows(rows)
 
     def test_validate_partial_errors_returns_valid_rows(self) -> None:
@@ -109,8 +114,8 @@ class TestDgiRowValidator(unittest.TestCase):
         ]
         # This should return the valid rows and log warnings about invalid ones
         result = validator.validate_rows(rows)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].symbol, "MSFT")
+        assert len(result) == 1
+        assert result[0].symbol == "MSFT"
 
     def test_validate_invalid_data_types_again(self) -> None:
         """Test validation with another set of invalid data types."""
@@ -120,7 +125,7 @@ class TestDgiRowValidator(unittest.TestCase):
             {"completely": "wrong", "structure": 123},
             {"not": "a", "valid": "company", "data": "object"},
         ]
-        with self.assertRaises(DataValidationError):
+        with pytest.raises(DataValidationError):
             validator.validate_rows(test_objects)  # type: ignore[arg-type]
 
 
@@ -141,15 +146,15 @@ class TestPydanticRowValidation(unittest.TestCase):
             "fcf_yield": 3.5,
         }
         result = validation.validate(row)
-        self.assertIsInstance(result, CompanyData)
-        self.assertEqual(result.symbol, "AAPL")
+        assert isinstance(result, CompanyData)
+        assert result.symbol == "AAPL"
 
     def test_pydantic_validation_failure(self) -> None:
         """Test pydantic validation failure."""
         validation = PydanticRowValidation(CompanyData)
         row = {"symbol": "AAPL"}  # Missing required fields
 
-        with self.assertRaises(ValidationError):
+        with pytest.raises(ValidationError):
             validation.validate(row)
 
 

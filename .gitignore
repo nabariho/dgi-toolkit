@@ -44,3 +44,16 @@ tests/__pycache__/
 # Allow data directory and its CSV files
 !data/
 !data/*.csv
+
+# Test data
+tests/test_data/
+*.test.csv
+*.test.json
+*.test.db
+
+# Environment files
+.env
+.env.local
+.env.test
+node_modules
+venv/
