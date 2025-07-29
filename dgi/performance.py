@@ -13,11 +13,11 @@ import time
 from collections.abc import Callable
 from contextlib import contextmanager
 from io import StringIO
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pandas as pd
-from numba import jit
+from numba import jit  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +27,12 @@ F = TypeVar("F", bound=Callable[..., Any])
 class PerformanceProfiler:
     """Performance profiler for identifying bottlenecks."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize performance profiler."""
         self.profiles: dict[str, pstats.Stats] = {}
 
     @contextmanager
-    def profile(self, name: str):
+    def profile(self, name: str) -> Any:
         """Context manager for profiling code blocks."""
         profiler = cProfile.Profile()
         start_time = time.time()
@@ -59,11 +59,11 @@ class PerformanceProfiler:
 
         s = StringIO()
         stats = self.profiles[name]
-        stats.stream = s
+        stats.stream = s  # type: ignore
         stats.print_stats(top_n)
         return s.getvalue()
 
-    def print_all_profiles(self):
+    def print_all_profiles(self) -> None:
         """Print all available profiles."""
         for name, stats in self.profiles.items():
             print(f"\n=== Profile: {name} ===")
@@ -74,18 +74,18 @@ class PerformanceProfiler:
 profiler = PerformanceProfiler()
 
 
-def profile_function(name: str | None = None):
+def profile_function(name: str | None = None) -> Callable[[F], F]:
     """Decorator to profile function execution."""
 
     def decorator(func: F) -> F:
         profile_name = name or f"{func.__module__}.{func.__name__}"
 
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             with profiler.profile(profile_name):
                 return func(*args, **kwargs)
 
-        return wrapper
+        return wrapper  # type: ignore
 
     return decorator
 
@@ -94,8 +94,10 @@ class VectorizedOperations:
     """Vectorized operations for improved performance."""
 
     @staticmethod
-    @jit(nopython=True)
-    def calculate_yield_score_vectorized(yields: np.ndarray) -> np.ndarray:
+    @jit(nopython=True)  # type: ignore
+    def calculate_yield_score_vectorized(
+        yields: np.ndarray[Any, Any],
+    ) -> np.ndarray[Any, Any]:
         """Vectorized dividend yield score calculation."""
         scores = np.zeros_like(yields)
 
@@ -112,8 +114,10 @@ class VectorizedOperations:
         return scores
 
     @staticmethod
-    @jit(nopython=True)
-    def calculate_payout_score_vectorized(payouts: np.ndarray) -> np.ndarray:
+    @jit(nopython=True)  # type: ignore
+    def calculate_payout_score_vectorized(
+        payouts: np.ndarray[Any, Any],
+    ) -> np.ndarray[Any, Any]:
         """Vectorized payout ratio score calculation."""
         scores = np.zeros_like(payouts)
 
@@ -127,13 +131,15 @@ class VectorizedOperations:
             elif payout <= 0.80:
                 scores[i] = 1.0 - (payout - 0.60) * 2.5
             else:
-                scores[i] = max(0.5 - (payout - 0.80) * 1.25, 0.0)
+                scores[i] = max(0.0, 1.0 - (payout - 0.80) * 5.0)
 
         return scores
 
     @staticmethod
-    @jit(nopython=True)
-    def calculate_growth_score_vectorized(growth_rates: np.ndarray) -> np.ndarray:
+    @jit(nopython=True)  # type: ignore
+    def calculate_growth_score_vectorized(
+        growth_rates: np.ndarray[Any, Any],
+    ) -> np.ndarray[Any, Any]:
         """Vectorized dividend growth score calculation."""
         scores = np.zeros_like(growth_rates)
 
@@ -141,25 +147,27 @@ class VectorizedOperations:
             if growth < 0.0:
                 scores[i] = 0.0
             elif growth <= 0.05:
-                scores[i] = growth * 10.0
+                scores[i] = growth / 0.05
             elif growth <= 0.15:
-                scores[i] = 0.5 + (growth - 0.05) * 5.0
+                scores[i] = 1.0
             else:
-                scores[i] = max(1.0 - (growth - 0.15) * 2.0, 0.0)
+                scores[i] = max(0.0, 1.0 - (growth - 0.15) * 2.0)
 
         return scores
 
     @staticmethod
-    @jit(nopython=True)
-    def calculate_fcf_score_vectorized(fcf_yields: np.ndarray) -> np.ndarray:
-        """Vectorized FCF yield score calculation."""
+    @jit(nopython=True)  # type: ignore
+    def calculate_fcf_score_vectorized(
+        fcf_yields: np.ndarray[Any, Any],
+    ) -> np.ndarray[Any, Any]:
+        """Vectorized free cash flow yield score calculation."""
         scores = np.zeros_like(fcf_yields)
 
-        for i, fcf in enumerate(fcf_yields):
-            if fcf <= 0.0:
+        for i, fcf_yield in enumerate(fcf_yields):
+            if fcf_yield < 0.0:
                 scores[i] = 0.0
-            elif fcf <= 0.10:
-                scores[i] = fcf * 10.0
+            elif fcf_yield <= 0.10:
+                scores[i] = fcf_yield / 0.10
             else:
                 scores[i] = 1.0
 
@@ -168,18 +176,19 @@ class VectorizedOperations:
     @classmethod
     def calculate_composite_scores_vectorized(
         cls,
-        yields: np.ndarray,
-        payouts: np.ndarray,
-        growth_rates: np.ndarray,
-        fcf_yields: np.ndarray,
-    ) -> np.ndarray:
-        """Calculate composite DGI scores using vectorized operations."""
+        yields: np.ndarray[Any, Any],
+        payouts: np.ndarray[Any, Any],
+        growth_rates: np.ndarray[Any, Any],
+        fcf_yields: np.ndarray[Any, Any],
+    ) -> np.ndarray[Any, Any]:
+        """Calculate composite scores using vectorized operations."""
+        # Calculate individual component scores
         yield_scores = cls.calculate_yield_score_vectorized(yields)
         payout_scores = cls.calculate_payout_score_vectorized(payouts)
         growth_scores = cls.calculate_growth_score_vectorized(growth_rates)
         fcf_scores = cls.calculate_fcf_score_vectorized(fcf_yields)
 
-        # Weighted combination
+        # Combine scores with weights
         composite_scores = (
             yield_scores * 0.40
             + payout_scores * 0.20
@@ -187,7 +196,7 @@ class VectorizedOperations:
             + fcf_scores * 0.10
         )
 
-        return composite_scores
+        return cast(np.ndarray[Any, Any], composite_scores)
 
 
 class DataFrameOptimizer:
@@ -274,7 +283,7 @@ class CacheOptimizer:
         self._access_order: list[str] = []
         self._hit_stats: dict[str, int] = {"hits": 0, "misses": 0}
 
-    def _evict_lru(self):
+    def _evict_lru(self) -> None:
         """Evict least recently used item."""
         if self._access_order:
             lru_key = self._access_order.pop(0)
@@ -292,7 +301,7 @@ class CacheOptimizer:
         self._hit_stats["misses"] += 1
         return None
 
-    def put(self, key: str, value: Any):
+    def put(self, key: str, value: Any) -> None:
         """Put item in cache with size management."""
         if key in self._cache:
             # Update existing item
@@ -345,7 +354,7 @@ class AsyncOptimizer:
         return pd.concat(results, ignore_index=True)
 
 
-def performance_benchmark(iterations: int = 1000):
+def performance_benchmark(iterations: int = 1000) -> dict[str, float]:
     """Benchmark different implementation approaches."""
 
     # Generate test data
@@ -383,12 +392,14 @@ def performance_benchmark(iterations: int = 1000):
     # Vectorized approach
     start_time = time.time()
     for _ in range(iterations):
-        scores = vectorized_ops.calculate_composite_scores_vectorized(
-            df["dividend_yield"].values,
-            df["payout"].values,
-            df["dividend_cagr"].values,
-            df["fcf_yield"].values,
+        scores_array = vectorized_ops.calculate_composite_scores_vectorized(
+            df["dividend_yield"].to_numpy(),
+            df["payout"].to_numpy(),
+            df["dividend_cagr"].to_numpy(),
+            df["fcf_yield"].to_numpy(),
         )
+        # Convert to list to avoid type issues
+        scores = scores_array.tolist()
     vectorized_time = time.time() - start_time
 
     speedup = non_vectorized_time / vectorized_time
@@ -414,13 +425,14 @@ def optimize_scoring_performance(df: pd.DataFrame) -> pd.DataFrame:
     # Use vectorized operations for scoring
     vectorized_ops = VectorizedOperations()
     scores = vectorized_ops.calculate_composite_scores_vectorized(
-        df_optimized["dividend_yield"].values,
-        df_optimized["payout"].values,
-        df_optimized["dividend_cagr"].values,
-        df_optimized["fcf_yield"].values,
+        df_optimized["dividend_yield"].to_numpy(),
+        df_optimized["payout"].to_numpy(),
+        df_optimized["dividend_cagr"].to_numpy(),
+        df_optimized["fcf_yield"].to_numpy(),
     )
 
-    df_optimized["dgi_score"] = scores
+    # Convert numpy array to list for DataFrame assignment
+    df_optimized["dgi_score"] = scores.tolist()
     return df_optimized
 
 

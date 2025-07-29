@@ -1,7 +1,7 @@
 """Factory services implementing Dependency Inversion Principle."""
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from dgi.config import get_config
 from dgi.interfaces import (
@@ -52,7 +52,7 @@ class ServiceFactory:
         """
         cache_key = f"scoring_service_{strategy}"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return cast(ScoringService, self._cache[cache_key])
 
         if strategy == "default":
             service = DefaultScoring()
@@ -61,7 +61,7 @@ class ServiceFactory:
             service = DefaultScoring()
 
         self._cache[cache_key] = service
-        return service
+        return cast(ScoringService, service)
 
     def create_filtering_service(self, strategy: str = "default") -> FilteringService:
         """Create a filtering service based on strategy.
@@ -74,13 +74,13 @@ class ServiceFactory:
         """
         cache_key = f"filtering_service_{strategy}"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return cast(FilteringService, self._cache[cache_key])
 
         # For now, we'll use the screening service as the filtering service
         # In the future, this could be split into separate services
         service = ScreeningService()
         self._cache[cache_key] = service
-        return service
+        return cast(FilteringService, service)
 
     def create_validation_service(self, strategy: str = "default") -> ValidationService:
         """Create a validation service based on strategy.
@@ -93,7 +93,7 @@ class ServiceFactory:
         """
         cache_key = f"validation_service_{strategy}"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return cast(ValidationService, self._cache[cache_key])
 
         if strategy == "default":
             service = ConcreteValidationService()
@@ -102,7 +102,7 @@ class ServiceFactory:
             service = ConcreteValidationService()
 
         self._cache[cache_key] = service
-        return service
+        return cast(ValidationService, service)
 
     def create_portfolio_service(self, strategy: str = "default") -> PortfolioService:
         """Create a portfolio service based on strategy.
@@ -115,7 +115,7 @@ class ServiceFactory:
         """
         cache_key = f"portfolio_service_{strategy}"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return cast(PortfolioService, self._cache[cache_key])
 
         if strategy == "default":
             service = ConcretePortfolioService()
@@ -124,9 +124,11 @@ class ServiceFactory:
             service = ConcretePortfolioService()
 
         self._cache[cache_key] = service
-        return service
+        return cast(PortfolioService, service)
 
-    def create_data_repository(self, source: str = "csv", **kwargs) -> DataRepository:
+    def create_data_repository(
+        self, source: str = "csv", **kwargs: Any
+    ) -> DataRepository:
         """Create a data repository based on source type.
 
         Args:
@@ -138,7 +140,7 @@ class ServiceFactory:
         """
         cache_key = f"data_repository_{source}_{hash(str(kwargs))}"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return cast(DataRepository, self._cache[cache_key])
 
         if source == "csv":
             csv_path = kwargs.get("csv_path", "data/fundamentals_small.csv")
@@ -153,7 +155,7 @@ class ServiceFactory:
             repository = CsvCompanyDataRepository(csv_path, validator)
 
         self._cache[cache_key] = repository
-        return repository
+        return cast(DataRepository, repository)
 
     def create_data_validator(self, strategy: str = "default") -> DataValidator:
         """Create a data validator based on strategy.
@@ -166,7 +168,7 @@ class ServiceFactory:
         """
         cache_key = f"data_validator_{strategy}"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return self._cache[cache_key]  # type: ignore
 
         if strategy == "default":
             validator = DgiRowValidator(PydanticRowValidation(CompanyData))
@@ -177,7 +179,7 @@ class ServiceFactory:
         self._cache[cache_key] = validator
         return validator
 
-    def create_configuration_service(self, **kwargs) -> ConfigurationService:
+    def create_configuration_service(self, **kwargs: Any) -> ConfigurationService:
         """Create a configuration service.
 
         Args:
@@ -188,15 +190,16 @@ class ServiceFactory:
         """
         cache_key = "configuration_service"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return cast(ConfigurationService, self._cache[cache_key])
 
         # For now, we'll create a simple configuration service
         # In the future, this could use the config management system
-        service = SimpleConfigurationService(self._config)
+        config_dict = self._config if isinstance(self._config, dict) else {}
+        service = SimpleConfigurationService(config_dict)
         self._cache[cache_key] = service
-        return service
+        return cast(ConfigurationService, service)
 
-    def create_logging_service(self, **kwargs) -> LoggingService:
+    def create_logging_service(self, **kwargs: Any) -> LoggingService:
         """Create a logging service.
 
         Args:
@@ -207,13 +210,13 @@ class ServiceFactory:
         """
         cache_key = "logging_service"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return cast(LoggingService, self._cache[cache_key])
 
         service = SimpleLoggingService()
         self._cache[cache_key] = service
-        return service
+        return cast(LoggingService, service)
 
-    def create_metrics_service(self, **kwargs) -> MetricsService:
+    def create_metrics_service(self, **kwargs: Any) -> MetricsService:
         """Create a metrics service.
 
         Args:
@@ -224,13 +227,13 @@ class ServiceFactory:
         """
         cache_key = "metrics_service"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return cast(MetricsService, self._cache[cache_key])
 
         service = SimpleMetricsService()
         self._cache[cache_key] = service
-        return service
+        return cast(MetricsService, service)
 
-    def create_cache_service(self, **kwargs) -> CacheService:
+    def create_cache_service(self, **kwargs: Any) -> CacheService:
         """Create a cache service.
 
         Args:
@@ -241,11 +244,11 @@ class ServiceFactory:
         """
         cache_key = "cache_service"
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            return cast(CacheService, self._cache[cache_key])
 
         service = SimpleCacheService()
         self._cache[cache_key] = service
-        return service
+        return cast(CacheService, service)
 
     def clear_cache(self) -> None:
         """Clear the factory cache."""
@@ -271,21 +274,27 @@ class SimpleConfigurationService(ConfigurationService):
 
     def reload_config(self) -> None:
         """Reload configuration."""
-        self._config = get_config()
+        config_obj = get_config()
+        if hasattr(config_obj, "model_dump"):
+            self._config = config_obj.model_dump()
+        else:
+            self._config = {}
 
 
 class SimpleLoggingService(LoggingService):
     """Simple implementation of LoggingService."""
 
-    def get_logger(self, name: str):
+    def get_logger(self, name: str) -> Any:
         """Get a logger instance."""
         return logging.getLogger(name)
 
-    def log_business_event(self, event_name: str, **metadata) -> None:
+    def log_business_event(self, event_name: str, **metadata: Any) -> None:
         """Log a business event."""
         logger.info(f"Business event: {event_name}", extra=metadata)
 
-    def log_performance_metric(self, metric_name: str, value: float, **labels) -> None:
+    def log_performance_metric(
+        self, metric_name: str, value: float, **labels: Any
+    ) -> None:
         """Log a performance metric."""
         logger.info(f"Performance metric: {metric_name} = {value}", extra=labels)
 
@@ -293,11 +302,11 @@ class SimpleLoggingService(LoggingService):
 class SimpleMetricsService(MetricsService):
     """Simple implementation of MetricsService."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize metrics storage."""
         self._metrics: dict[str, Any] = {}
 
-    def record_metric(self, name: str, value: float, **labels) -> None:
+    def record_metric(self, name: str, value: float, **labels: Any) -> None:
         """Record a metric."""
         if name not in self._metrics:
             self._metrics[name] = []
@@ -315,7 +324,7 @@ class SimpleMetricsService(MetricsService):
 class SimpleCacheService(CacheService):
     """Simple implementation of CacheService."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize cache storage."""
         self._cache: dict[str, Any] = {}
 
@@ -398,7 +407,7 @@ def create_portfolio_service(strategy: str = "default") -> PortfolioService:
     return _service_factory.create_portfolio_service(strategy)
 
 
-def create_data_repository(source: str = "csv", **kwargs) -> DataRepository:
+def create_data_repository(source: str = "csv", **kwargs: Any) -> DataRepository:
     """Create a data repository using the global factory.
 
     Args:

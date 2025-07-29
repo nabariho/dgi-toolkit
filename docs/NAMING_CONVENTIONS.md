@@ -1,6 +1,7 @@
 # Naming Conventions Guide - DGI Toolkit
 
-This document establishes comprehensive naming conventions for the DGI Toolkit project to ensure consistency, readability, and maintainability across the codebase.
+This document establishes comprehensive naming conventions for the DGI Toolkit project
+to ensure consistency, readability, and maintainability across the codebase.
 
 ## Table of Contents
 
@@ -15,16 +16,19 @@ This document establishes comprehensive naming conventions for the DGI Toolkit p
 ## General Principles
 
 ### Clarity Over Brevity
+
 - Prefer descriptive names over short abbreviations
 - Use full words when possible: `dividend_yield` instead of `div_yield`
 - Avoid ambiguous names: use `screening_criteria` instead of `criteria`
 
 ### Consistency
+
 - Follow the same naming pattern throughout the codebase
 - Use established domain terminology consistently
 - Maintain naming conventions across modules and packages
 
 ### Convention Adherence
+
 - Follow Python PEP 8 naming conventions strictly
 - Use snake_case for variables, functions, and modules
 - Use PascalCase for classes and exceptions
@@ -33,6 +37,7 @@ This document establishes comprehensive naming conventions for the DGI Toolkit p
 ## Python Naming Conventions
 
 ### Variables and Functions
+
 ```python
 # ✅ Good: snake_case
 min_dividend_yield = 2.0
@@ -55,6 +60,7 @@ def calcDgiScore(compData):
 ```
 
 ### Classes and Exceptions
+
 ```python
 # ✅ Good: PascalCase with descriptive names
 class CompanyDataRepository:
@@ -78,6 +84,7 @@ class Validator:  # Too generic
 ```
 
 ### Constants
+
 ```python
 # ✅ Good: UPPER_SNAKE_CASE
 DEFAULT_MIN_DIVIDEND_YIELD = 2.0
@@ -96,6 +103,7 @@ MAX_SIZE = 50  # Too generic
 ```
 
 ### Method and Property Names
+
 ```python
 # ✅ Good: descriptive method names
 def load_company_data(self) -> List[CompanyData]:
@@ -125,6 +133,7 @@ def calc_score(self):  # Abbreviated
 ## File and Directory Naming
 
 ### Python Files
+
 ```bash
 # ✅ Good: snake_case, descriptive
 screening_service.py
@@ -139,6 +148,7 @@ utils.py  # Too generic
 ```
 
 ### Directory Structure
+
 ```bash
 # ✅ Good: organized, clear hierarchy
 dgi/
@@ -165,6 +175,7 @@ dgi/
 ```
 
 ### Configuration Files
+
 ```bash
 # ✅ Good: clear purpose
 api.yaml
@@ -181,6 +192,7 @@ dev.env
 ## API and Configuration Naming
 
 ### API Endpoints
+
 ```python
 # ✅ Good: RESTful, clear resources
 /api/v1/screening/stocks
@@ -195,6 +207,7 @@ dev.env
 ```
 
 ### Configuration Keys
+
 ```python
 # ✅ Good: hierarchical, descriptive
 API_HOST = "0.0.0.0"
@@ -218,6 +231,7 @@ MIN_YIELD = 2.0
 ```
 
 ### Environment Variables
+
 ```bash
 # ✅ Good: prefixed, hierarchical
 DGI_API_HOST=0.0.0.0
@@ -236,11 +250,12 @@ LEVEL=INFO
 ## Database and Data Naming
 
 ### DataFrame Columns
+
 ```python
 # ✅ Good: snake_case, descriptive
 df_columns = [
     "symbol",
-    "company_name", 
+    "company_name",
     "sector",
     "industry",
     "dividend_yield",
@@ -254,7 +269,7 @@ df_columns = [
 df_columns = [
     "Symbol",
     "companyName",
-    "divYield", 
+    "divYield",
     "payout",
     "cagr5y",
     "fcfYield",
@@ -263,6 +278,7 @@ df_columns = [
 ```
 
 ### Model Field Names
+
 ```python
 # ✅ Good: consistent with data source
 class CompanyData(BaseModel):
@@ -286,6 +302,7 @@ class CompanyData(BaseModel):
 ## Testing Conventions
 
 ### Test File Names
+
 ```python
 # ✅ Good: mirrors source structure
 test_screening_service.py
@@ -300,6 +317,7 @@ test_models.py  # Too generic
 ```
 
 ### Test Function Names
+
 ```python
 # ✅ Good: descriptive test scenarios
 def test_screening_service_filters_by_dividend_yield():
@@ -326,6 +344,7 @@ def test_validation():
 ```
 
 ### Test Class Names
+
 ```python
 # ✅ Good: groups related functionality
 class TestScreeningService:
@@ -348,6 +367,7 @@ class Tests:
 ## Documentation Conventions
 
 ### README and Documentation Files
+
 ```bash
 # ✅ Good: clear purpose
 README.md
@@ -364,6 +384,7 @@ notes.md
 ```
 
 ### Code Comments and Docstrings
+
 ```python
 # ✅ Good: clear, descriptive
 def calculate_dividend_growth_score(
@@ -372,18 +393,18 @@ def calculate_dividend_growth_score(
     time_period_years: int
 ) -> float:
     """Calculate dividend growth score based on historical performance.
-    
+
     The score considers both current dividend yield and historical growth
     rate to provide a composite measure of dividend attractiveness.
-    
+
     Args:
         current_yield: Current annual dividend yield as a percentage
         historical_growth_rate: Average annual dividend growth rate over the period
         time_period_years: Number of years of historical data used
-        
+
     Returns:
         Composite dividend growth score between 0.0 and 1.0
-        
+
     Raises:
         ValueError: If yield or growth rate is negative
     """
@@ -398,6 +419,7 @@ def calc_score(yield_val, growth, period):
 ## Enforcement and Tools
 
 ### Automated Checks
+
 The following tools help enforce naming conventions:
 
 1. **Ruff**: Configured to check naming conventions
@@ -407,6 +429,7 @@ The following tools help enforce naming conventions:
 ### Configuration Examples
 
 #### Ruff Configuration
+
 ```toml
 [tool.ruff.lint.pep8-naming]
 # Enforce class names in PascalCase
@@ -415,8 +438,9 @@ staticmethod-decorators = ["staticmethod"]
 ```
 
 #### Code Review Checklist
+
 - [ ] Variable names use snake_case
-- [ ] Class names use PascalCase  
+- [ ] Class names use PascalCase
 - [ ] Constants use UPPER_SNAKE_CASE
 - [ ] Function names are descriptive
 - [ ] No abbreviations unless domain-standard
@@ -426,10 +450,11 @@ staticmethod-decorators = ["staticmethod"]
 ## Domain-Specific Conventions
 
 ### Financial Terms
+
 ```python
 # ✅ Good: consistent financial terminology
 dividend_yield          # Not div_yield or dividendYield
-payout_ratio            # Not payout or payoutRatio  
+payout_ratio            # Not payout or payoutRatio
 free_cash_flow_yield    # Not fcf_yield (spell out)
 dividend_cagr           # CAGR is standard abbreviation
 market_capitalization   # Not market_cap (spell out in models)
@@ -441,6 +466,7 @@ DEFAULT_PE_RATIO_MAX = 25.0  # OK in config
 ```
 
 ### DGI-Specific Terms
+
 ```python
 # ✅ Good: established DGI terminology
 dgi_score              # Dividend Growth Investing score
@@ -461,6 +487,9 @@ When updating naming conventions:
 
 ## Conclusion
 
-Consistent naming conventions improve code readability, maintainability, and team collaboration. These guidelines should be followed for all new code and applied when refactoring existing code.
+Consistent naming conventions improve code readability, maintainability, and team
+collaboration. These guidelines should be followed for all new code and applied when
+refactoring existing code.
 
-For questions or exceptions to these conventions, discuss with the team and document any project-specific decisions. 
+For questions or exceptions to these conventions, discuss with the team and document any
+project-specific decisions.

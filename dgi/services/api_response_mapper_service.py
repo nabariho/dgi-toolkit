@@ -33,17 +33,17 @@ class ScreeningResponseMapper:
             response_data = df.to_dict("records")
 
             # Ensure all values are serializable
-            serializable_data = []
+            serializable_data: list[dict[str, Any]] = []
             for record in response_data:
-                serializable_record = {}
+                serializable_record: dict[str, Any] = {}
                 for key, value in record.items():
                     # Handle NaN values and other non-serializable types
                     if pd.isna(value):
-                        serializable_record[key] = None
+                        serializable_record[str(key)] = None
                     elif isinstance(value, int | float | str | bool):
-                        serializable_record[key] = value
+                        serializable_record[str(key)] = value
                     else:
-                        serializable_record[key] = str(value)
+                        serializable_record[str(key)] = str(value)
                 serializable_data.append(serializable_record)
 
             logger.info(

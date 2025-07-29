@@ -102,15 +102,17 @@ class LoggingService(ABC):
     """Abstract interface for logging services."""
 
     @abstractmethod
-    def get_logger(self, name: str):
+    def get_logger(self, name: str) -> Any:
         """Get a logger instance."""
 
     @abstractmethod
-    def log_business_event(self, event_name: str, **metadata) -> None:
+    def log_business_event(self, event_name: str, **metadata: Any) -> None:
         """Log a business event."""
 
     @abstractmethod
-    def log_performance_metric(self, metric_name: str, value: float, **labels) -> None:
+    def log_performance_metric(
+        self, metric_name: str, value: float, **labels: Any
+    ) -> None:
         """Log a performance metric."""
 
 
@@ -118,7 +120,7 @@ class MetricsService(ABC):
     """Abstract interface for metrics services."""
 
     @abstractmethod
-    def record_metric(self, name: str, value: float, **labels) -> None:
+    def record_metric(self, name: str, value: float, **labels: Any) -> None:
         """Record a metric."""
 
     @abstractmethod
@@ -162,11 +164,11 @@ class FactoryService(ABC):
         """Create a filtering service."""
 
     @abstractmethod
-    def create_data_repository(self, source: str, **kwargs) -> DataRepository:
+    def create_data_repository(self, source: str, **kwargs: Any) -> DataRepository:
         """Create a data repository."""
 
     @abstractmethod
-    def create_configuration_service(self, **kwargs) -> ConfigurationService:
+    def create_configuration_service(self, **kwargs: Any) -> ConfigurationService:
         """Create a configuration service."""
 
 

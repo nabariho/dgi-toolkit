@@ -34,7 +34,7 @@ class ValidationService(ValidationServiceInterface):
     consistent error handling and validation logic across the application.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the validation service with a row validator."""
         self._row_validator = DgiRowValidator(PydanticRowValidation(CompanyData))
 
@@ -142,9 +142,7 @@ class ValidationService(ValidationServiceInterface):
         value: float, field_name: str = "value"
     ) -> float:
         """Validate financial data edge cases."""
-        return validate_numeric_bounds(
-            value, 0.0, float("inf"), field_name, allow_zero=True
-        )
+        return validate_numeric_bounds(value, 0.0, float("inf"), field_name)
 
     @staticmethod
     def sanitize_for_logging(value: str) -> str:
@@ -175,7 +173,7 @@ class ValidationService(ValidationServiceInterface):
 class ValidationServiceAdapter:
     """Adapter to make ValidationService compatible with DgiRowValidator interface."""
 
-    def __init__(self, validation_service: ValidationService):
+    def __init__(self, validation_service: ValidationService) -> None:
         """Initialize with a validation service."""
         self._validation_service = validation_service
 

@@ -103,7 +103,7 @@ class StructuredLogger:
         self.logger = logging.getLogger(name)
         self._setup_formatter()
 
-    def _setup_formatter(self):
+    def _setup_formatter(self) -> None:
         """Set up structured logging formatter."""
         # Check if handlers are already configured to avoid duplicate setup
         if not self.logger.handlers:
@@ -149,13 +149,13 @@ class StructuredLogger:
 
         return ", " + ", ".join(formatted_extras)
 
-    def info(self, message: str, extra: dict[str, Any] | None = None):
+    def info(self, message: str, extra: dict[str, Any] | None = None) -> None:
         """Log info message with business context."""
         context = self._get_context_extras(extra)
         extras_str = self._format_extras(context)
         self.logger.info(message, extra={"extras": extras_str})
 
-    def warning(self, message: str, extra: dict[str, Any] | None = None):
+    def warning(self, message: str, extra: dict[str, Any] | None = None) -> None:
         """Log warning message with business context."""
         context = self._get_context_extras(extra)
         extras_str = self._format_extras(context)
@@ -166,13 +166,13 @@ class StructuredLogger:
         message: str,
         extra: dict[str, Any] | None = None,
         exc_info: bool = False,
-    ):
+    ) -> None:
         """Log error message with business context."""
         context = self._get_context_extras(extra)
         extras_str = self._format_extras(context)
         self.logger.error(message, extra={"extras": extras_str}, exc_info=exc_info)
 
-    def debug(self, message: str, extra: dict[str, Any] | None = None):
+    def debug(self, message: str, extra: dict[str, Any] | None = None) -> None:
         """Log debug message with business context."""
         context = self._get_context_extras(extra)
         extras_str = self._format_extras(context)
@@ -182,13 +182,13 @@ class StructuredLogger:
 class BusinessMetricsCollector:
     """Collect and track business metrics for monitoring."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize metrics collector."""
         self._metrics: dict[str, Any] = {}
         self._business_metrics: dict[str, BusinessMetric] = {}
         self._init_default_metrics()
 
-    def _init_default_metrics(self):
+    def _init_default_metrics(self) -> None:
         """Initialize default business metrics."""
         # Screening operation metrics
         self.register_metric(
@@ -238,7 +238,7 @@ class BusinessMetricsCollector:
             )
         )
 
-    def register_metric(self, metric: BusinessMetric):
+    def register_metric(self, metric: BusinessMetric) -> None:
         """Register a new business metric."""
         self._business_metrics[metric.name] = metric
 
@@ -267,7 +267,7 @@ class BusinessMetricsCollector:
         metric_name: str,
         labels: dict[str, str] | None = None,
         value: float = 1.0,
-    ):
+    ) -> None:
         """Increment a counter metric."""
         if metric_name in self._metrics:
             metric = self._metrics[metric_name]
@@ -278,7 +278,7 @@ class BusinessMetricsCollector:
 
     def set_gauge(
         self, metric_name: str, value: float, labels: dict[str, str] | None = None
-    ):
+    ) -> None:
         """Set a gauge metric value."""
         if metric_name in self._metrics:
             metric = self._metrics[metric_name]
@@ -289,7 +289,7 @@ class BusinessMetricsCollector:
 
     def observe_histogram(
         self, metric_name: str, value: float, labels: dict[str, str] | None = None
-    ):
+    ) -> None:
         """Observe a value in a histogram metric."""
         if metric_name in self._metrics:
             metric = self._metrics[metric_name]
@@ -303,7 +303,10 @@ class BusinessMetricsCollector:
         if metric_name in self._metrics:
             metric = self._metrics[metric_name]
             if hasattr(metric, "_value"):
-                return metric._value._value
+                # Access the internal value safely
+                value = getattr(metric._value, "_value", None)
+                if isinstance(value, int | float):
+                    return float(value)
         return None
 
     def check_thresholds(self) -> list[dict[str, Any]]:
@@ -353,7 +356,7 @@ class PerformanceMonitor:
         self.structured_logger = StructuredLogger(__name__)
 
     @contextmanager
-    def monitor_operation(self, operation_name: str, **metadata):
+    def monitor_operation(self, operation_name: str, **metadata: Any) -> Any:
         """Context manager to monitor operation performance."""
         context = OperationContext(
             operation_name=operation_name,
@@ -439,22 +442,22 @@ class PerformanceMonitor:
 class ObservabilityManager:
     """Central manager for observability features."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize observability manager."""
         self.metrics = BusinessMetricsCollector()
         self.performance = PerformanceMonitor(self.metrics)
         self.structured_logger = StructuredLogger(__name__)
         self._alert_callbacks: list[Callable[[list[dict[str, Any]]], None]] = []
 
-    def set_correlation_id(self, correlation_id: str):
+    def set_correlation_id(self, correlation_id: str) -> None:
         """Set correlation ID for current context."""
         correlation_id_var.set(correlation_id)
 
-    def set_user_id(self, user_id: str):
+    def set_user_id(self, user_id: str) -> None:
         """Set user ID for current context."""
         user_id_var.set(user_id)
 
-    def set_request_id(self, request_id: str):
+    def set_request_id(self, request_id: str) -> None:
         """Set request ID for current context."""
         request_id_var.set(request_id)
 
@@ -468,7 +471,7 @@ class ObservabilityManager:
         correlation_id: str | None = None,
         user_id: str | None = None,
         request_id: str | None = None,
-    ):
+    ) -> Any:
         """Context manager for request-scoped observability."""
         # Store original values
         original_correlation = correlation_id_var.get()
@@ -495,11 +498,13 @@ class ObservabilityManager:
             user_id_var.set(original_user)
             request_id_var.set(original_request)
 
-    def add_alert_callback(self, callback: Callable[[list[dict[str, Any]]], None]):
+    def add_alert_callback(
+        self, callback: Callable[[list[dict[str, Any]]], None]
+    ) -> None:
         """Add callback for metric threshold alerts."""
         self._alert_callbacks.append(callback)
 
-    def check_alerts(self):
+    def check_alerts(self) -> None:
         """Check metric thresholds and trigger alerts."""
         alerts = self.metrics.check_thresholds()
         if alerts:
@@ -517,7 +522,7 @@ class ObservabilityManager:
                         f"Alert callback failed: {e}", exc_info=True
                     )
 
-    def start_metrics_server(self, port: int = 8001):
+    def start_metrics_server(self, port: int = 8001) -> None:
         """Start Prometheus metrics HTTP server."""
         start_http_server(port)
         self.structured_logger.info(
@@ -529,18 +534,18 @@ class ObservabilityManager:
 observability_manager = ObservabilityManager()
 
 
-def track_business_operation(operation_name: str, **metadata):
+def track_business_operation(operation_name: str, **metadata: Any) -> Callable[[F], F]:
     """Decorator to track business operations with metrics and logging."""
 
     def decorator(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             with observability_manager.performance.monitor_operation(
                 operation_name, **metadata
             ):
                 return func(*args, **kwargs)
 
-        return wrapper
+        return wrapper  # type: ignore
 
     return decorator
 
@@ -551,20 +556,20 @@ def get_structured_logger(name: str) -> StructuredLogger:
 
 
 # Convenience functions
-def log_business_event(event_name: str, **metadata):
+def log_business_event(event_name: str, **metadata: Any) -> None:
     """Log a business event with structured logging."""
     logger = get_structured_logger("business_events")
     logger.info(f"Business event: {event_name}", extra=metadata)
 
 
-def track_data_quality_metric(metric_name: str, value: float, **labels):
+def track_data_quality_metric(metric_name: str, value: float, **labels: Any) -> None:
     """Track a data quality metric."""
     observability_manager.metrics.observe_histogram(
         f"data_quality_{metric_name}", value, labels=labels
     )
 
 
-def track_user_action(action: str, user_id: str | None = None, **metadata):
+def track_user_action(action: str, user_id: str | None = None, **metadata: Any) -> None:
     """Track user actions for analytics."""
     observability_manager.metrics.increment_counter(
         "user_actions_total",

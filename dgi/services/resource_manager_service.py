@@ -188,7 +188,7 @@ class ResourceManager:
         return not has_leaks
 
     @contextmanager
-    def managed_resource(self, resource: Any):
+    def managed_resource(self, resource: Any) -> Any:
         """Context manager for automatic resource cleanup.
 
         Args:

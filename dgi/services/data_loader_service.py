@@ -2,10 +2,10 @@
 
 import logging
 from abc import ABC, abstractmethod
+from typing import Any, cast
 
 from pandas import DataFrame
 
-from dgi.exceptions import DataLoadError
 from dgi.models import CompanyData
 from dgi.repositories.base import CompanyDataRepository
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataLoader(ABC):
-    """Abstract base class for data loading operations."""
+    """Abstract interface for data loading operations."""
 
     @abstractmethod
     def load_universe(self) -> DataFrame:
@@ -33,7 +33,7 @@ class DataLoader(ABC):
 
 
 class AsyncDataLoader(ABC):
-    """Abstract base class for async data loading operations."""
+    """Abstract interface for async data loading operations."""
 
     @abstractmethod
     async def load_universe_async(self) -> DataFrame:
@@ -45,115 +45,97 @@ class AsyncDataLoader(ABC):
 
 
 class RepositoryDataLoader(DataLoader):
-    """Data loader that uses repository pattern for data access."""
+    """Data loader that uses a repository for data access."""
 
     def __init__(self, repository: CompanyDataRepository):
-        """Initialize with a data repository.
+        """Initialize with a repository.
 
         Args:
-            repository: Repository for data access operations
+            repository: Repository for data access
         """
         self._repository = repository
 
     def load_universe(self) -> DataFrame:
-        """Load company universe data as DataFrame.
+        """Load company universe data from repository.
 
         Returns:
             DataFrame containing company data
-
-        Raises:
-            DataLoadError: If data loading fails
         """
         try:
-            logger.info("Loading company universe data")
-            company_data = self._repository.get_rows()
-
-            if not company_data:
-                logger.warning("No company data found")
+            companies = self._repository.get_rows()
+            if not companies:
+                logger.warning("No companies found in repository")
                 return DataFrame()
 
-            # Convert to DataFrame using service layer
-            from dgi.services.screening_service import ScreeningService
+            # Convert to DataFrame
+            data = []
+            for company in companies:
+                data.append(company.model_dump())
 
-            df = ScreeningService.rows_to_dataframe(company_data)
-
-            logger.info(f"Successfully loaded {len(df)} companies")
+            df = DataFrame(data)
+            logger.info(f"Loaded {len(df)} companies from repository")
             return df
 
         except Exception as e:
-            logger.error(f"Failed to load company universe: {e}")
-            raise DataLoadError(f"Data loading failed: {e}") from e
+            logger.error(f"Error loading universe data: {e}")
+            raise
 
     async def load_universe_async(self) -> DataFrame:
-        """Load company universe data asynchronously.
+        """Load company universe data asynchronously from repository.
 
         Returns:
             DataFrame containing company data
-
-        Raises:
-            DataLoadError: If data loading fails
         """
         try:
-            logger.info("Loading company universe data asynchronously")
-            company_data = await self._repository.get_rows_async()
-
-            if not company_data:
-                logger.warning("No company data found")
+            companies = await self._repository.get_rows_async()
+            if not companies:
+                logger.warning("No companies found in repository")
                 return DataFrame()
 
-            # Convert to DataFrame using service layer
-            from dgi.services.screening_service import ScreeningService
+            # Convert to DataFrame
+            data = []
+            for company in companies:
+                data.append(company.model_dump())
 
-            df = ScreeningService.rows_to_dataframe(company_data)
-
-            logger.info(f"Successfully loaded {len(df)} companies asynchronously")
+            df = DataFrame(data)
+            logger.info(f"Loaded {len(df)} companies from repository (async)")
             return df
 
         except Exception as e:
-            logger.error(f"Failed to load company universe asynchronously: {e}")
-            raise DataLoadError(f"Async data loading failed: {e}") from e
+            logger.error(f"Error loading universe data (async): {e}")
+            raise
 
     def load_company_data(self) -> list[CompanyData]:
-        """Load company data as structured objects.
+        """Load company data as structured objects from repository.
 
         Returns:
             List of CompanyData objects
-
-        Raises:
-            DataLoadError: If data loading fails
         """
         try:
-            logger.info("Loading company data as structured objects")
-            company_data = self._repository.get_rows()
-
-            logger.info(f"Successfully loaded {len(company_data)} company objects")
-            return company_data
+            companies = self._repository.get_rows()
+            logger.info(f"Loaded {len(companies)} company objects from repository")
+            return companies
 
         except Exception as e:
-            logger.error(f"Failed to load company data: {e}")
-            raise DataLoadError(f"Company data loading failed: {e}") from e
+            logger.error(f"Error loading company data: {e}")
+            raise
 
     async def load_company_data_async(self) -> list[CompanyData]:
-        """Load company data as structured objects asynchronously.
+        """Load company data as structured objects asynchronously from repository.
 
         Returns:
             List of CompanyData objects
-
-        Raises:
-            DataLoadError: If data loading fails
         """
         try:
-            logger.info("Loading company data as structured objects asynchronously")
-            company_data = await self._repository.get_rows_async()
-
+            companies = await self._repository.get_rows_async()
             logger.info(
-                f"Successfully loaded {len(company_data)} company objects asynchronously"
+                f"Loaded {len(companies)} company objects from repository (async)"
             )
-            return company_data
+            return companies
 
         except Exception as e:
-            logger.error(f"Failed to load company data asynchronously: {e}")
-            raise DataLoadError(f"Async company data loading failed: {e}") from e
+            logger.error(f"Error loading company data (async): {e}")
+            raise
 
 
 class CachedDataLoader(DataLoader):
@@ -168,8 +150,8 @@ class CachedDataLoader(DataLoader):
         """
         self._data_loader = data_loader
         self._cache_ttl = cache_ttl
-        self._cache = {}
-        self._cache_timestamps = {}
+        self._cache: dict[str, Any] = {}
+        self._cache_timestamps: dict[str, float] = {}
 
     def _is_cache_valid(self, key: str) -> bool:
         """Check if cache entry is still valid.
@@ -197,7 +179,7 @@ class CachedDataLoader(DataLoader):
 
         if self._is_cache_valid(cache_key):
             logger.info("Returning cached universe data")
-            return self._cache[cache_key]
+            return cast(DataFrame, self._cache[cache_key])
 
         logger.info("Loading fresh universe data")
         df = self._data_loader.load_universe()
@@ -219,7 +201,7 @@ class CachedDataLoader(DataLoader):
 
         if self._is_cache_valid(cache_key):
             logger.info("Returning cached async universe data")
-            return self._cache[cache_key]
+            return cast(DataFrame, self._cache[cache_key])
 
         logger.info("Loading fresh async universe data")
         df = await self._data_loader.load_universe_async()
@@ -241,7 +223,7 @@ class CachedDataLoader(DataLoader):
 
         if self._is_cache_valid(cache_key):
             logger.info("Returning cached company data")
-            return self._cache[cache_key]
+            return cast(list[CompanyData], self._cache[cache_key])
 
         logger.info("Loading fresh company data")
         data = self._data_loader.load_company_data()
@@ -263,7 +245,7 @@ class CachedDataLoader(DataLoader):
 
         if self._is_cache_valid(cache_key):
             logger.info("Returning cached async company data")
-            return self._cache[cache_key]
+            return cast(list[CompanyData], self._cache[cache_key])
 
         logger.info("Loading fresh async company data")
         data = await self._data_loader.load_company_data_async()
@@ -277,6 +259,6 @@ class CachedDataLoader(DataLoader):
 
     def clear_cache(self) -> None:
         """Clear all cached data."""
-        logger.info("Clearing data cache")
         self._cache.clear()
         self._cache_timestamps.clear()
+        logger.info("Cache cleared")
